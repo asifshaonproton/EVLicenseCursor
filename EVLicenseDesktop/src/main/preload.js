@@ -88,6 +88,18 @@ contextBridge.exposeInMainWorld('electronAPI', {
     roles: {
         getAll: async () => {
             return await ipcRenderer.invoke('roles-get-all');
+        },
+        create: async (roleData, createdBy) => {
+            return await ipcRenderer.invoke('roles-create', roleData, createdBy);
+        },
+        update: async (roleId, roleData, updatedBy) => {
+            return await ipcRenderer.invoke('roles-update', roleId, roleData, updatedBy);
+        },
+        delete: async (roleId, deletedBy) => {
+            return await ipcRenderer.invoke('roles-delete', roleId, deletedBy);
+        },
+        getPermissions: async () => {
+            return await ipcRenderer.invoke('roles-get-permissions');
         }
     },
 

@@ -838,6 +838,117 @@ class DatabaseManager {
         }
     }
 
+    async createRole(roleData, createdBy) {
+        try {
+            const result = await this.runQuery(`
+                INSERT INTO roles (name, display_name, description, permissions, created_by)
+                VALUES (?, ?, ?, ?, ?)
+            `, [
+                roleData.name,
+                roleData.display_name,
+                roleData.description,
+                JSON.stringify(roleData.permissions),
+                createdBy
+            ]);
+
+            await this.logUserActivity(createdBy, 'CREATE_ROLE', 'roles', `Created role: ${roleData.name}`);
+            return { success: true, roleId: result.id };
+
+        } catch (error) {
+            console.error('❌ Error creating role:', error);
+            if (error.message.includes('UNIQUE constraint failed')) {
+                return { success: false, message: 'Role name already exists' };
+            }
+            return { success: false, message: 'Failed to create role' };
+        }
+    }
+
+    async updateRole(roleId, roleData, updatedBy) {
+        try {
+            const role = await this.getQuery(`SELECT name FROM roles WHERE id = ?`, [roleId]);
+            
+            await this.runQuery(`
+                UPDATE roles 
+                SET display_name = ?, description = ?, permissions = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+            `, [
+                roleData.display_name,
+                roleData.description,
+                JSON.stringify(roleData.permissions),
+                roleId
+            ]);
+
+            await this.logUserActivity(updatedBy, 'UPDATE_ROLE', 'roles', `Updated role: ${role.name}`);
+            return { success: true };
+
+        } catch (error) {
+            console.error('❌ Error updating role:', error);
+            return { success: false, message: 'Failed to update role' };
+        }
+    }
+
+    async deleteRole(roleId, deletedBy) {
+        try {
+            // Check if role is in use
+            const usersWithRole = await this.getQuery(`
+                SELECT COUNT(*) as count FROM users WHERE role_id = ?
+            `, [roleId]);
+
+            if (usersWithRole.count > 0) {
+                return { 
+                    success: false, 
+                    message: `Cannot delete role: ${usersWithRole.count} user(s) still have this role` 
+                };
+            }
+
+            // Get role info for logging
+            const role = await this.getQuery(`SELECT name FROM roles WHERE id = ?`, [roleId]);
+            
+            await this.runQuery(`
+                UPDATE roles 
+                SET is_active = 0, updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+            `, [roleId]);
+
+            await this.logUserActivity(deletedBy, 'DELETE_ROLE', 'roles', `Deleted role: ${role.name}`);
+            return { success: true };
+
+        } catch (error) {
+            console.error('❌ Error deleting role:', error);
+            return { success: false, message: 'Failed to delete role' };
+        }
+    }
+
+    async getPermissionsList() {
+        // Define available permissions with their categories
+        return {
+            licenses: {
+                name: 'License Management',
+                permissions: ['view', 'create', 'edit', 'delete', 'import', 'export']
+            },
+            users: {
+                name: 'User Management',
+                permissions: ['view', 'create', 'edit', 'delete', 'manage_roles']
+            },
+            roles: {
+                name: 'Role Management',
+                permissions: ['view', 'create', 'edit', 'delete']
+            },
+            settings: {
+                name: 'System Settings',
+                permissions: ['view', 'edit', 'backup', 'restore']
+            },
+            reports: {
+                name: 'Reports & Analytics',
+                permissions: ['view', 'generate', 'export']
+            },
+            system: {
+                name: 'System Administration',
+                permissions: ['view_logs', 'manage_database', 'system_config']
+            }
+        };
+    }
+
     async updateUser(userId, userData, updatedBy) {
         try {
             await this.runQuery(`

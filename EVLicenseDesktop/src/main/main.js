@@ -207,6 +207,42 @@ class EVLicenseDesktop {
             }
         });
 
+        ipcMain.handle('roles-create', async (event, roleData, createdBy) => {
+            try {
+                return await this.databaseManager.createRole(roleData, createdBy);
+            } catch (error) {
+                console.error('Error creating role:', error);
+                throw error;
+            }
+        });
+
+        ipcMain.handle('roles-update', async (event, roleId, roleData, updatedBy) => {
+            try {
+                return await this.databaseManager.updateRole(roleId, roleData, updatedBy);
+            } catch (error) {
+                console.error('Error updating role:', error);
+                throw error;
+            }
+        });
+
+        ipcMain.handle('roles-delete', async (event, roleId, deletedBy) => {
+            try {
+                return await this.databaseManager.deleteRole(roleId, deletedBy);
+            } catch (error) {
+                console.error('Error deleting role:', error);
+                throw error;
+            }
+        });
+
+        ipcMain.handle('roles-get-permissions', async () => {
+            try {
+                return await this.databaseManager.getPermissionsList();
+            } catch (error) {
+                console.error('Error getting permissions:', error);
+                throw error;
+            }
+        });
+
         // Window management
         ipcMain.handle('window-open-main-app', async () => {
             try {

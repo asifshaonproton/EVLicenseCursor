@@ -50,6 +50,8 @@ class EVLicenseApp {
             role: '',
             status: ''
         };
+        this.permissions = {};
+        this.currentEditingRole = null;
         
         this.initializeApp();
     }
@@ -1826,7 +1828,8 @@ class EVLicenseApp {
 
         // Initialize role form components
         document.querySelectorAll('#role-dialog .mdc-text-field').forEach(textField => {
-            mdc.textField.MDCTextField.attachTo(textField);
+            const mdcTextField = mdc.textField.MDCTextField.attachTo(textField);
+            this.userFormComponents.textFields.push(mdcTextField);
         });
 
         // User search components
@@ -2219,41 +2222,57 @@ class EVLicenseApp {
 
     async handleSaveUser() {
         try {
+            console.log('🔄 Starting user save process...');
             const formData = this.collectUserFormData();
+            console.log('📝 Form data collected:', formData);
             
             if (!this.validateUserData(formData)) {
+                console.log('❌ Form validation failed');
                 return;
             }
 
             if (window.electronAPI) {
                 if (this.currentEditingUser) {
                     // Update existing user
-                    await window.electronAPI.users.update(
+                    console.log('📝 Updating existing user:', this.currentEditingUser.id);
+                    const result = await window.electronAPI.users.update(
                         this.currentEditingUser.id, 
                         formData, 
                         this.currentUser.id
                     );
+                    console.log('✅ User update result:', result);
                     this.showSuccessMessage('User updated successfully');
                 } else {
                     // Create new user
+                    console.log('➕ Creating new user...');
                     const result = await window.electronAPI.users.create(formData, this.currentUser.id);
-                    if (result.success) {
+                    console.log('✅ User creation result:', result);
+                    
+                    if (result && result.success) {
                         this.showSuccessMessage('User created successfully');
                     } else {
-                        this.showErrorMessage('Create Failed', result.message);
+                        const errorMessage = result?.message || 'Failed to create user';
+                        console.error('❌ User creation failed:', errorMessage);
+                        this.showErrorMessage('Create Failed', errorMessage);
                         return;
                     }
                 }
+            } else {
+                console.error('❌ electronAPI not available');
+                this.showErrorMessage('Error', 'Application API not available');
+                return;
             }
 
             // Reload users
+            console.log('🔄 Reloading users...');
             await this.loadUsers();
             this.updateUserStats();
             this.applyUserFilters();
+            console.log('✅ User save process completed');
 
         } catch (error) {
             console.error('❌ Error saving user:', error);
-            this.showErrorMessage('Save Failed', error.message);
+            this.showErrorMessage('Save Failed', error.message || 'An unexpected error occurred');
         }
     }
 
@@ -2262,11 +2281,22 @@ class EVLicenseApp {
             s.root.querySelector('#user-role-list')
         );
 
+        let roleId = null;
+        if (roleSelect && roleSelect.value) {
+            roleId = parseInt(roleSelect.value);
+        } else {
+            // Fallback: try to get the selected role from the DOM
+            const selectedRoleItem = document.querySelector('#user-role-list .mdc-deprecated-list-item--selected');
+            if (selectedRoleItem) {
+                roleId = parseInt(selectedRoleItem.getAttribute('data-value'));
+            }
+        }
+
         const formData = {
             full_name: document.getElementById('user_full_name').value.trim(),
             email: document.getElementById('user_email').value.trim(),
             username: document.getElementById('user_username').value.trim(),
-            role_id: roleSelect ? parseInt(roleSelect.value) : null,
+            role_id: roleId,
             is_active: document.getElementById('user_is_active').checked ? 1 : 0
         };
 
@@ -2275,6 +2305,7 @@ class EVLicenseApp {
             formData.password = document.getElementById('user_password').value;
         }
 
+        console.log('📋 Collected form data:', { ...formData, password: formData.password ? '[HIDDEN]' : undefined });
         return formData;
     }
 
@@ -2393,15 +2424,399 @@ class EVLicenseApp {
         }
     }
 
-    showRoleManagementDialog() {
-        this.loadRoleManagementData();
+    async showRoleManagementDialog() {
+        await this.loadRoleManagementData();
         this.roleDialog.open();
     }
 
-    loadRoleManagementData() {
-        // This would load and display role management interface
-        // For now, show a placeholder
-        this.showSuccessMessage('Role Management', 'Role management interface will be implemented in the next update');
+    async loadRoleManagementData() {
+        try {
+            // Load roles and permissions
+            await Promise.all([
+                this.loadRoles(),
+                this.loadPermissions()
+            ]);
+
+            this.renderRolesList();
+            this.setupRoleManagementListeners();
+
+        } catch (error) {
+            console.error('❌ Error loading role management data:', error);
+            this.showErrorMessage('Load Error', error.message);
+        }
+    }
+
+    async loadPermissions() {
+        try {
+            if (window.electronAPI) {
+                this.permissions = await window.electronAPI.roles.getPermissions();
+            } else {
+                // Fallback permissions structure
+                this.permissions = {
+                    licenses: {
+                        name: 'License Management',
+                        permissions: ['view', 'create', 'edit', 'delete', 'import', 'export']
+                    },
+                    users: {
+                        name: 'User Management',
+                        permissions: ['view', 'create', 'edit', 'delete', 'manage_roles']
+                    },
+                    settings: {
+                        name: 'System Settings',
+                        permissions: ['view', 'edit', 'backup', 'restore']
+                    }
+                };
+            }
+            console.log('✅ Loaded permissions structure');
+        } catch (error) {
+            console.error('❌ Error loading permissions:', error);
+        }
+    }
+
+    renderRolesList() {
+        const container = document.getElementById('roles-list-container');
+        if (!container) return;
+
+        container.innerHTML = '';
+
+        this.roles.forEach(role => {
+            const roleItem = document.createElement('div');
+            roleItem.className = 'role-item';
+            roleItem.setAttribute('data-role-id', role.id);
+            
+            const permissions = JSON.parse(role.permissions || '{}');
+            const permissionCount = Object.values(permissions).flat().length;
+            
+            roleItem.innerHTML = `
+                <div class="role-info">
+                    <h4>${role.display_name}</h4>
+                    <p>${role.description}</p>
+                    <small>${permissionCount} permissions assigned</small>
+                </div>
+                <div class="role-actions">
+                    <button class="mdc-icon-button edit-role-btn" data-role-id="${role.id}" title="Edit Role">
+                        <span class="material-icons">edit</span>
+                    </button>
+                    ${!['super_admin', 'admin', 'operator', 'viewer'].includes(role.name) ? `
+                    <button class="mdc-icon-button delete-role-btn" data-role-id="${role.id}" title="Delete Role">
+                        <span class="material-icons">delete</span>
+                    </button>
+                    ` : ''}
+                </div>
+            `;
+
+            // Add click event to select role
+            roleItem.addEventListener('click', (e) => {
+                if (!e.target.closest('.role-actions')) {
+                    this.selectRole(role.id);
+                }
+            });
+
+            container.appendChild(roleItem);
+        });
+
+        // Initialize ripples for buttons
+        container.querySelectorAll('.mdc-icon-button').forEach(button => {
+            mdc.ripple.MDCRipple.attachTo(button).unbounded = true;
+        });
+    }
+
+    setupRoleManagementListeners() {
+        // New role button
+        const newRoleBtn = document.getElementById('new-role-btn');
+        if (newRoleBtn) {
+            newRoleBtn.onclick = () => this.showNewRoleForm();
+        }
+
+        // Role action buttons
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('.edit-role-btn')) {
+                const roleId = parseInt(e.target.closest('.edit-role-btn').getAttribute('data-role-id'));
+                this.editRole(roleId);
+            } else if (e.target.closest('.delete-role-btn')) {
+                const roleId = parseInt(e.target.closest('.delete-role-btn').getAttribute('data-role-id'));
+                this.deleteRole(roleId);
+            }
+        });
+
+        // Save role button
+        const saveRoleBtn = document.getElementById('save-role-btn');
+        if (saveRoleBtn) {
+            saveRoleBtn.onclick = () => this.handleSaveRole();
+        }
+    }
+
+    selectRole(roleId) {
+        // Remove previous selection
+        document.querySelectorAll('.role-item.selected').forEach(item => {
+            item.classList.remove('selected');
+        });
+
+        // Select current role
+        const roleItem = document.querySelector(`[data-role-id="${roleId}"]`);
+        if (roleItem) {
+            roleItem.classList.add('selected');
+        }
+
+        // Load role details
+        this.loadRoleDetails(roleId);
+    }
+
+    loadRoleDetails(roleId) {
+        const role = this.roles.find(r => r.id === roleId);
+        if (!role) return;
+
+        this.currentEditingRole = role;
+        
+        // Show role details panel
+        const roleDetails = document.getElementById('role-details');
+        if (roleDetails) {
+            roleDetails.style.display = 'block';
+        }
+
+        // Populate form
+        document.getElementById('role_name').value = role.name;
+        document.getElementById('role_display_name').value = role.display_name;
+        document.getElementById('role_description').value = role.description;
+
+        // Load permissions
+        this.populatePermissionsForm(JSON.parse(role.permissions || '{}'));
+
+        // Show save button
+        const saveBtn = document.getElementById('save-role-btn');
+        if (saveBtn) {
+            saveBtn.style.display = 'inline-flex';
+        }
+
+        // Disable name field for default roles
+        const nameField = document.getElementById('role_name');
+        if (['super_admin', 'admin', 'operator', 'viewer'].includes(role.name)) {
+            nameField.disabled = true;
+        } else {
+            nameField.disabled = false;
+        }
+    }
+
+    showNewRoleForm() {
+        this.currentEditingRole = null;
+        
+        // Clear selection
+        document.querySelectorAll('.role-item.selected').forEach(item => {
+            item.classList.remove('selected');
+        });
+
+        // Show role details panel
+        const roleDetails = document.getElementById('role-details');
+        if (roleDetails) {
+            roleDetails.style.display = 'block';
+        }
+
+        // Clear form
+        document.getElementById('role_name').value = '';
+        document.getElementById('role_display_name').value = '';
+        document.getElementById('role_description').value = '';
+        document.getElementById('role_name').disabled = false;
+
+        // Clear permissions
+        this.populatePermissionsForm({});
+
+        // Show save button
+        const saveBtn = document.getElementById('save-role-btn');
+        if (saveBtn) {
+            saveBtn.style.display = 'inline-flex';
+        }
+    }
+
+    populatePermissionsForm(rolePermissions) {
+        const container = document.getElementById('permissions-container');
+        if (!container) return;
+
+        container.innerHTML = '';
+
+        Object.entries(this.permissions).forEach(([category, categoryData]) => {
+            const permissionGroup = document.createElement('div');
+            permissionGroup.className = 'permission-group';
+            
+            permissionGroup.innerHTML = `
+                <div class="permission-group-title">${categoryData.name}</div>
+                <div class="permission-checkboxes" id="permissions-${category}">
+                    ${categoryData.permissions.map(permission => {
+                        const isChecked = rolePermissions[category] && rolePermissions[category].includes(permission);
+                        return `
+                            <div class="permission-item">
+                                <div class="mdc-form-field">
+                                    <div class="mdc-checkbox">
+                                        <input type="checkbox" 
+                                               class="mdc-checkbox__native-control permission-checkbox"
+                                               id="perm_${category}_${permission}"
+                                               data-category="${category}"
+                                               data-permission="${permission}"
+                                               ${isChecked ? 'checked' : ''}>
+                                        <div class="mdc-checkbox__background">
+                                            <svg class="mdc-checkbox__checkmark" viewBox="0 0 24 24">
+                                                <path class="mdc-checkbox__checkmark-path" fill="none" d="M1.73,12.91 8.1,19.28 22.79,4.59"></path>
+                                            </svg>
+                                            <div class="mdc-checkbox__mixedmark"></div>
+                                        </div>
+                                        <div class="mdc-checkbox__ripple"></div>
+                                    </div>
+                                    <label for="perm_${category}_${permission}">${permission}</label>
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            `;
+            
+            container.appendChild(permissionGroup);
+        });
+
+        // Initialize checkboxes
+        container.querySelectorAll('.mdc-checkbox').forEach(checkbox => {
+            mdc.checkbox.MDCCheckbox.attachTo(checkbox);
+        });
+
+        container.querySelectorAll('.mdc-form-field').forEach(formField => {
+            mdc.formField.MDCFormField.attachTo(formField);
+        });
+    }
+
+    async handleSaveRole() {
+        try {
+            const roleData = this.collectRoleFormData();
+            
+            if (!this.validateRoleData(roleData)) {
+                return;
+            }
+
+            if (window.electronAPI) {
+                if (this.currentEditingRole) {
+                    // Update existing role
+                    const result = await window.electronAPI.roles.update(
+                        this.currentEditingRole.id, 
+                        roleData, 
+                        this.currentUser.id
+                    );
+                    
+                    if (result && result.success) {
+                        this.showSuccessMessage('Role updated successfully');
+                    } else {
+                        this.showErrorMessage('Update Failed', result?.message || 'Failed to update role');
+                        return;
+                    }
+                } else {
+                    // Create new role
+                    const result = await window.electronAPI.roles.create(roleData, this.currentUser.id);
+                    
+                    if (result && result.success) {
+                        this.showSuccessMessage('Role created successfully');
+                    } else {
+                        this.showErrorMessage('Create Failed', result?.message || 'Failed to create role');
+                        return;
+                    }
+                }
+            }
+
+            // Reload roles
+            await this.loadRoles();
+            this.renderRolesList();
+            
+            // Hide role details
+            const roleDetails = document.getElementById('role-details');
+            if (roleDetails) {
+                roleDetails.style.display = 'none';
+            }
+
+        } catch (error) {
+            console.error('❌ Error saving role:', error);
+            this.showErrorMessage('Save Failed', error.message);
+        }
+    }
+
+    collectRoleFormData() {
+        const roleData = {
+            name: document.getElementById('role_name').value.trim().toLowerCase().replace(/\s+/g, '_'),
+            display_name: document.getElementById('role_display_name').value.trim(),
+            description: document.getElementById('role_description').value.trim(),
+            permissions: {}
+        };
+
+        // Collect permissions
+        const checkboxes = document.querySelectorAll('.permission-checkbox:checked');
+        checkboxes.forEach(checkbox => {
+            const category = checkbox.getAttribute('data-category');
+            const permission = checkbox.getAttribute('data-permission');
+            
+            if (!roleData.permissions[category]) {
+                roleData.permissions[category] = [];
+            }
+            roleData.permissions[category].push(permission);
+        });
+
+        return roleData;
+    }
+
+    validateRoleData(data) {
+        if (!data.name) {
+            this.showErrorMessage('Validation Error', 'Role name is required');
+            return false;
+        }
+
+        if (!data.display_name) {
+            this.showErrorMessage('Validation Error', 'Display name is required');
+            return false;
+        }
+
+        // Check for duplicate role name (only for new roles)
+        if (!this.currentEditingRole) {
+            const existingRole = this.roles.find(r => r.name === data.name);
+            if (existingRole) {
+                this.showErrorMessage('Validation Error', 'Role name already exists');
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    async deleteRole(roleId) {
+        try {
+            const role = this.roles.find(r => r.id === roleId);
+            if (!role) return;
+
+            const confirmed = confirm(`Are you sure you want to delete the role "${role.display_name}"?\n\nThis action cannot be undone.`);
+            if (!confirmed) return;
+
+            if (window.electronAPI) {
+                const result = await window.electronAPI.roles.delete(roleId, this.currentUser.id);
+                
+                if (result && result.success) {
+                    this.showSuccessMessage('Role deleted successfully');
+                    
+                    // Reload roles
+                    await this.loadRoles();
+                    this.renderRolesList();
+                    
+                    // Hide role details if deleted role was selected
+                    if (this.currentEditingRole && this.currentEditingRole.id === roleId) {
+                        const roleDetails = document.getElementById('role-details');
+                        if (roleDetails) {
+                            roleDetails.style.display = 'none';
+                        }
+                    }
+                } else {
+                    this.showErrorMessage('Delete Failed', result?.message || 'Failed to delete role');
+                }
+            }
+
+        } catch (error) {
+            console.error('❌ Error deleting role:', error);
+            this.showErrorMessage('Delete Failed', error.message);
+        }
+    }
+
+    editRole(roleId) {
+        this.selectRole(roleId);
     }
 
     formatDateTime(dateString) {
