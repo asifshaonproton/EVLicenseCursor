@@ -61,119 +61,92 @@ class NdefUtils {
     }
     
     /**
-     * Create a complete NDEF message with proper headers for Android compatibility
+     * Create NDEF message exactly like Android's NdefRecord.createTextRecord()
      * @param {string} text - The text to encode
-     * @returns {Buffer} - Complete NDEF message with TLV structure
+     * @returns {Buffer} - Complete NDEF message matching Android format
      */
     static createNdefMessage(text) {
-        const textRecord = this.createTextRecord(text);
+        // Create text record payload exactly like Android's createTextRecord
+        const languageCode = 'en';
+        const textData = Buffer.from(text, 'utf8');
+        const langBytes = Buffer.from(languageCode, 'utf8');
         
-        // NDEF Record Header
-        // MB=1, ME=1, CF=0, SR=1, IL=0, TNF=001 (Well-known type)
-        const flags = 0xD1; // 11010001
-        const type = Buffer.from('T'); // Text record type
-        const payloadLength = textRecord.length;
+        // Status byte: UTF-8 encoding (0x00) + language code length
+        const statusByte = langBytes.length;
         
-        // Build complete NDEF record with proper header
-        const recordSize = 1 + 1 + 1 + type.length + payloadLength;
-        const record = Buffer.alloc(recordSize);
+        // Create payload: [status byte][language code][text]
+        const payload = Buffer.alloc(1 + langBytes.length + textData.length);
         let offset = 0;
         
-        // Header flags
+        payload[offset] = statusByte;
+        offset += 1;
+        
+        langBytes.copy(payload, offset);
+        offset += langBytes.length;
+        
+        textData.copy(payload, offset);
+        
+        // Create NDEF record exactly like Android
+        // Header: MB=1, ME=1, CF=0, SR=1, IL=0, TNF=001 (Well-known type)
+        const flags = 0xD1; // 11010001
+        const typeLength = 1; // 'T' is 1 byte
+        const payloadLength = payload.length;
+        const type = Buffer.from('T');
+        
+        // Build complete NDEF record
+        const record = Buffer.alloc(3 + typeLength + payloadLength);
+        offset = 0;
+        
+        // Header
         record[offset] = flags;
         offset += 1;
         
         // Type length
-        record[offset] = type.length;
+        record[offset] = typeLength;
         offset += 1;
         
-        // Payload length (short record)
+        // Payload length
         record[offset] = payloadLength;
         offset += 1;
         
-        // Type field
+        // Type
         type.copy(record, offset);
-        offset += type.length;
+        offset += typeLength;
         
         // Payload
-        textRecord.copy(record, offset);
+        payload.copy(record, offset);
         
-        // Wrap in TLV (Type-Length-Value) format for Android compatibility
-        const tlvLength = record.length;
-        if (tlvLength <= 254) {
-            // Short form TLV
-            const tlvRecord = Buffer.alloc(2 + tlvLength + 1);
-            let tlvOffset = 0;
-            
-            // TLV Type (NDEF Message TLV)
-            tlvRecord[tlvOffset] = 0x03;
-            tlvOffset += 1;
-            
-            // TLV Length
-            tlvRecord[tlvOffset] = tlvLength;
-            tlvOffset += 1;
-            
-            // TLV Value (NDEF Record)
-            record.copy(tlvRecord, tlvOffset);
-            tlvOffset += tlvLength;
-            
-            // Terminator TLV
-            tlvRecord[tlvOffset] = 0xFE;
-            
-            return tlvRecord;
-        } else {
-            // Long form TLV (for larger records)
-            const tlvRecord = Buffer.alloc(4 + tlvLength + 1);
-            let tlvOffset = 0;
-            
-            // TLV Type (NDEF Message TLV)
-            tlvRecord[tlvOffset] = 0x03;
-            tlvOffset += 1;
-            
-            // TLV Length (3-byte format: FF + 2 bytes length)
-            tlvRecord[tlvOffset] = 0xFF;
-            tlvOffset += 1;
-            tlvRecord[tlvOffset] = (tlvLength >> 8) & 0xFF;
-            tlvOffset += 1;
-            tlvRecord[tlvOffset] = tlvLength & 0xFF;
-            tlvOffset += 1;
-            
-            // TLV Value (NDEF Record)
-            record.copy(tlvRecord, tlvOffset);
-            tlvOffset += tlvLength;
-            
-            // Terminator TLV
-            tlvRecord[tlvOffset] = 0xFE;
-            
-            return tlvRecord;
-        }
+        console.log(`📋 Created Android-compatible NDEF record: ${record.length} bytes`);
+        console.log(`📋 Record hex: ${record.toString('hex')}`);
+        
+        return record;
     }
     
     /**
-     * Extract text from a complete NDEF message (with TLV parsing)
+     * Parse NDEF message exactly like Android's readNdefMessage
      * @param {Buffer} ndefMessage - The complete NDEF message
      * @returns {string|null} - Extracted text or null
      */
     static parseNdefMessage(ndefMessage) {
         try {
-            if (!ndefMessage || ndefMessage.length < 3) {
+            if (!ndefMessage || ndefMessage.length < 4) {
                 return null;
             }
             
-            // First try TLV parsing (Android format)
-            const tlvParsed = this.parseTlvFormat(ndefMessage);
-            if (tlvParsed) {
-                return tlvParsed;
-            }
+            console.log(`📋 Parsing NDEF message: ${ndefMessage.length} bytes`);
+            console.log(`📋 Hex data: ${ndefMessage.toString('hex')}`);
             
-            // Fallback to direct NDEF parsing
+            // Parse NDEF record header
             const flags = ndefMessage[0];
             const typeLength = ndefMessage[1];
             const payloadLength = ndefMessage[2];
             
+            console.log(`📋 Flags: 0x${flags.toString(16)}, TypeLen: ${typeLength}, PayloadLen: ${payloadLength}`);
+            
             // Check if it's a text record
             const tnf = flags & 0x07;
             if (tnf !== 0x01) { // Not well-known type
+                console.log(`⚠️ Not a well-known type record, TNF: ${tnf}`);
                 return null;
             }
             
@@ -181,14 +154,37 @@ class NdefUtils {
             const payloadStart = 3 + typeLength;
             
             if (ndefMessage.length < payloadStart + payloadLength) {
+                console.log(`⚠️ Message too short for declared payload length`);
                 return null;
             }
             
             // Extract payload
             const payload = ndefMessage.slice(payloadStart, payloadStart + payloadLength);
+            console.log(`📋 Payload: ${payload.toString('hex')}`);
             
-            // Parse text record payload
-            return this.parseTextRecord(payload);
+            // Parse text record payload exactly like Android
+            if (payload.length < 1) {
+                return null;
+            }
+            
+            const statusByte = payload[0];
+            const languageCodeLength = statusByte & 0x3F; // Lower 6 bits
+            
+            console.log(`📋 Status byte: 0x${statusByte.toString(16)}, Lang code length: ${languageCodeLength}`);
+            
+            if (payload.length < 1 + languageCodeLength) {
+                console.log(`⚠️ Payload too short for language code`);
+                return null;
+            }
+            
+            // Skip status byte and language code, extract text
+            const textStart = 1 + languageCodeLength;
+            const textData = payload.slice(textStart);
+            
+            const extractedText = textData.toString('utf8');
+            console.log(`✅ Extracted text: "${extractedText}"`);
+            
+            return extractedText;
         } catch (error) {
             console.error('❌ Error parsing NDEF message:', error);
             return null;
