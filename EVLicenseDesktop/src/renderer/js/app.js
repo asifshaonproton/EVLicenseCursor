@@ -74,6 +74,9 @@ class EVLicenseApp {
             // Load initial data
             await this.loadInitialData();
             
+            // Update NFC status
+            await this.updateNfcStatus();
+            
             // Update UI with user info
             this.updateUserInterface();
             
@@ -190,6 +193,9 @@ class EVLicenseApp {
         // NFC event listeners
         this.setupNFCEventListeners();
 
+        // Scanner event listeners
+        this.setupScannerEventListeners();
+
         console.log('✅ Event listeners set up');
     }
 
@@ -250,6 +256,36 @@ class EVLicenseApp {
         console.log('✅ NFC event listeners set up');
     }
 
+    setupScannerEventListeners() {
+        console.log('🔗 Setting up scanner event listeners...');
+
+        // Manual scan button
+        const manualScanBtn = document.getElementById('manual-scan-btn');
+        if (manualScanBtn) {
+            manualScanBtn.addEventListener('click', () => {
+                this.performManualScan();
+            });
+        }
+
+        // Clear scan button
+        const clearScanBtn = document.getElementById('clear-scan-btn');
+        if (clearScanBtn) {
+            clearScanBtn.addEventListener('click', () => {
+                this.clearScanData();
+            });
+        }
+
+        // Copy card data button
+        const copyCardDataBtn = document.getElementById('copy-card-data-btn');
+        if (copyCardDataBtn) {
+            copyCardDataBtn.addEventListener('click', () => {
+                this.copyCardDataToClipboard();
+            });
+        }
+
+        console.log('✅ Scanner event listeners set up');
+    }
+
     handleCardDetected(cardData) {
         console.log('🏷️ Handling card detection:', cardData);
         
@@ -258,6 +294,11 @@ class EVLicenseApp {
         
         // Update the NFC status to show the new card
         this.updateNfcStatus();
+        
+        // If we're on the dashboard page, show scan data in scanner
+        if (this.currentPage === 'dashboard') {
+            this.showScanSuccess(cardData);
+        }
         
         // If we're on the settings page, show detailed card info
         if (this.currentPage === 'settings') {
@@ -283,6 +324,15 @@ class EVLicenseApp {
             if (cardDisplay) {
                 cardDisplay.innerHTML = '<p class="no-card-message">No card present</p>';
             }
+        }
+        
+        // Reset scanner if we're on dashboard
+        if (this.currentPage === 'dashboard') {
+            const scanArea = document.getElementById('scan-area');
+            if (scanArea) {
+                scanArea.classList.remove('success');
+            }
+            this.updateScannerStatus('ready', 'Ready to scan');
         }
     }
 
@@ -374,6 +424,170 @@ class EVLicenseApp {
         } catch (error) {
             console.error('❌ Error reading card details:', error);
             this.showErrorMessage('Read Error', error.message);
+        }
+    }
+
+    async performManualScan() {
+        console.log('🔄 Performing manual scan...');
+        
+        const scanArea = document.getElementById('scan-area');
+        const scannerStatus = document.getElementById('scanner-status');
+        const manualScanBtn = document.getElementById('manual-scan-btn');
+        
+        try {
+            // Update UI to show scanning state
+            this.updateScannerStatus('scanning', 'Scanning for cards...');
+            if (scanArea) scanArea.classList.add('scanning');
+            if (manualScanBtn) manualScanBtn.disabled = true;
+            
+            // Try to read a card
+            const cardData = await window.electronAPI.nfc.readCard();
+            
+            if (cardData) {
+                this.showScanSuccess(cardData);
+            } else {
+                this.updateScannerStatus('error', 'No card found');
+                this.showWarningMessage('No NFC card detected. Please place a card on the reader and try again.');
+                setTimeout(() => {
+                    this.updateScannerStatus('ready', 'Ready to scan');
+                }, 3000);
+            }
+            
+        } catch (error) {
+            console.error('❌ Manual scan error:', error);
+            this.updateScannerStatus('error', 'Scan failed');
+            this.showErrorMessage('Scan Error', error.message);
+            
+            setTimeout(() => {
+                this.updateScannerStatus('ready', 'Ready to scan');
+            }, 3000);
+        } finally {
+            if (scanArea) scanArea.classList.remove('scanning');
+            if (manualScanBtn) manualScanBtn.disabled = false;
+        }
+    }
+
+    showScanSuccess(cardData) {
+        console.log('✅ Showing scan success:', cardData);
+        
+        const scanArea = document.getElementById('scan-area');
+        const scannedDataContainer = document.getElementById('scanned-data-container');
+        const scannedDataContent = document.getElementById('scanned-data-content');
+        const clearScanBtn = document.getElementById('clear-scan-btn');
+        
+        // Update scanner status
+        this.updateScannerStatus('success', 'Card scanned successfully');
+        
+        // Update scan area
+        if (scanArea) {
+            scanArea.classList.remove('scanning');
+            scanArea.classList.add('success');
+        }
+        
+        // Show scanned data
+        if (scannedDataContainer) scannedDataContainer.style.display = 'block';
+        if (clearScanBtn) clearScanBtn.style.display = 'inline-flex';
+        
+        if (scannedDataContent) {
+            const cardDataString = this.formatCardDataAsString(cardData);
+            scannedDataContent.innerHTML = `
+                <div class="card-data-display">${cardDataString}</div>
+            `;
+        }
+        
+        // Store for clipboard functionality
+        this.lastScannedCardData = cardData;
+    }
+
+    formatCardDataAsString(cardData) {
+        let dataString = '';
+        
+        // Basic card information
+        dataString += `Card Type: ${cardData.type}\n`;
+        dataString += `UID: ${cardData.uid}\n`;
+        dataString += `Reader: ${cardData.reader}\n`;
+        dataString += `Standard: ${cardData.standard}\n`;
+        dataString += `Detected: ${new Date(cardData.detectedAt).toLocaleString()}\n`;
+        
+        if (cardData.atr) {
+            dataString += `ATR: ${cardData.atr.toString('hex')}\n`;
+        }
+        
+        dataString += '\n--- Raw Card Data ---\n';
+        
+        // Add raw data if available
+        if (cardData.data && cardData.data.blocks && cardData.data.blocks.length > 0) {
+            dataString += 'Block Data:\n';
+            cardData.data.blocks.forEach(block => {
+                dataString += `Block ${block.block}: ${block.data}\n`;
+            });
+        } else {
+            dataString += 'No additional block data available\n';
+        }
+        
+        // Add JSON representation
+        dataString += '\n--- Full JSON Data ---\n';
+        dataString += JSON.stringify(cardData, null, 2);
+        
+        return dataString;
+    }
+
+    updateScannerStatus(state, text) {
+        const scannerStatus = document.getElementById('scanner-status');
+        const scannerText = scannerStatus?.querySelector('.scanner-text');
+        
+        if (scannerStatus && scannerText) {
+            // Remove all status classes
+            scannerStatus.className = 'scanner-status';
+            
+            // Add new status class
+            scannerStatus.classList.add(state);
+            
+            // Update text
+            scannerText.textContent = text;
+        }
+    }
+
+    clearScanData() {
+        console.log('🧹 Clearing scan data...');
+        
+        const scanArea = document.getElementById('scan-area');
+        const scannedDataContainer = document.getElementById('scanned-data-container');
+        const clearScanBtn = document.getElementById('clear-scan-btn');
+        
+        // Reset scanner status
+        this.updateScannerStatus('ready', 'Ready to scan');
+        
+        // Reset scan area
+        if (scanArea) {
+            scanArea.classList.remove('scanning', 'success');
+        }
+        
+        // Hide scanned data
+        if (scannedDataContainer) scannedDataContainer.style.display = 'none';
+        if (clearScanBtn) clearScanBtn.style.display = 'none';
+        
+        // Clear stored data
+        this.lastScannedCardData = null;
+        
+        this.showInfoMessage('Scan data cleared');
+    }
+
+    async copyCardDataToClipboard() {
+        try {
+            if (!this.lastScannedCardData) {
+                this.showWarningMessage('No card data to copy');
+                return;
+            }
+            
+            const cardDataString = this.formatCardDataAsString(this.lastScannedCardData);
+            await navigator.clipboard.writeText(cardDataString);
+            
+            this.showSuccessMessage('Card data copied to clipboard');
+            
+        } catch (error) {
+            console.error('❌ Error copying to clipboard:', error);
+            this.showErrorMessage('Copy Error', 'Failed to copy data to clipboard');
         }
     }
 
@@ -1526,12 +1740,13 @@ class EVLicenseApp {
         try {
             const statusIndicator = document.getElementById('nfc-status-indicator');
             const deviceDetails = document.getElementById('device-details');
+            const topNavStatus = document.getElementById('nfcStatus');
             
             // Get NFC status from the manager
             const status = await window.electronAPI.nfc.getStatus();
             const detailedReaders = await window.electronAPI.nfc.getDetailedReaders();
             
-            // Update status indicator
+            // Update main status indicator (in settings)
             if (statusIndicator) {
                 if (status.initialized && status.readersCount > 0) {
                     statusIndicator.textContent = `${status.readersCount} Reader(s) Connected`;
@@ -1545,6 +1760,34 @@ class EVLicenseApp {
                 }
             }
             
+            // Update top navigation NFC status
+            if (topNavStatus) {
+                const statusText = topNavStatus.querySelector('.status-text');
+                if (statusText) {
+                    if (status.initialized && status.readersCount > 0) {
+                        const primaryReader = detailedReaders[0];
+                        if (primaryReader) {
+                            // Show the primary reader's model name
+                            statusText.textContent = primaryReader.model.replace('NFC Reader', '').trim();
+                            topNavStatus.className = 'nfc-status-indicator connected';
+                            topNavStatus.title = `Connected: ${primaryReader.name}`;
+                        } else {
+                            statusText.textContent = `${status.readersCount} Reader(s)`;
+                            topNavStatus.className = 'nfc-status-indicator connected';
+                            topNavStatus.title = `${status.readersCount} NFC reader(s) connected`;
+                        }
+                    } else if (status.initialized) {
+                        statusText.textContent = 'No Device';
+                        topNavStatus.className = 'nfc-status-indicator disconnected';
+                        topNavStatus.title = 'No NFC readers connected';
+                    } else {
+                        statusText.textContent = 'Initializing...';
+                        topNavStatus.className = 'nfc-status-indicator connecting';
+                        topNavStatus.title = 'NFC service initializing...';
+                    }
+                }
+            }
+            
             // Update detailed device information
             if (deviceDetails) {
                 this.updateDeviceDetails(detailedReaders, status);
@@ -1553,9 +1796,20 @@ class EVLicenseApp {
         } catch (error) {
             console.error('❌ Error updating NFC status:', error);
             const statusIndicator = document.getElementById('nfc-status-indicator');
+            const topNavStatus = document.getElementById('nfcStatus');
+            
             if (statusIndicator) {
                 statusIndicator.textContent = 'Error';
                 statusIndicator.className = 'status-indicator error';
+            }
+            
+            if (topNavStatus) {
+                const statusText = topNavStatus.querySelector('.status-text');
+                if (statusText) {
+                    statusText.textContent = 'Error';
+                    topNavStatus.className = 'nfc-status-indicator error';
+                    topNavStatus.title = 'NFC service error';
+                }
             }
         }
     }

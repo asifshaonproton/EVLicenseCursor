@@ -120,6 +120,60 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- NFC Card Scanner Section -->
+                <div class="scanner-section">
+                    <div class="mdc-card scanner-card">
+                        <div class="scanner-header">
+                            <h2 class="mdc-typography--headline6">NFC Card Scanner</h2>
+                            <div class="scanner-status" id="scanner-status">
+                                <span class="material-icons scanner-icon">nfc</span>
+                                <span class="scanner-text">Ready to scan</span>
+                            </div>
+                        </div>
+                        
+                        <div class="scanner-content">
+                            <div class="scan-area" id="scan-area">
+                                <div class="scan-animation">
+                                    <div class="scan-wave"></div>
+                                    <div class="scan-wave"></div>
+                                    <div class="scan-wave"></div>
+                                </div>
+                                <div class="scan-instructions">
+                                    <span class="material-icons scan-nfc-icon">contactless</span>
+                                    <p>Place your NFC card on the reader</p>
+                                    <p class="scan-subtitle">Card data will appear here automatically</p>
+                                </div>
+                            </div>
+                            
+                            <div class="scan-controls">
+                                <button class="mdc-button mdc-button--outlined" id="manual-scan-btn">
+                                    <span class="mdc-button__ripple"></span>
+                                    <i class="material-icons mdc-button__icon">refresh</i>
+                                    <span class="mdc-button__label">Manual Scan</span>
+                                </button>
+                                <button class="mdc-button mdc-button--outlined" id="clear-scan-btn" style="display: none;">
+                                    <span class="mdc-button__ripple"></span>
+                                    <i class="material-icons mdc-button__icon">clear</i>
+                                    <span class="mdc-button__label">Clear</span>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Scanned Card Data Display -->
+                        <div class="scanned-data-container" id="scanned-data-container" style="display: none;">
+                            <div class="scanned-data-header">
+                                <h3>Scanned Card Data</h3>
+                                <button class="mdc-icon-button" id="copy-card-data-btn" title="Copy to clipboard">
+                                    <span class="material-icons">content_copy</span>
+                                </button>
+                            </div>
+                            <div class="scanned-data-content" id="scanned-data-content">
+                                <!-- Card data will be populated here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Licenses Page -->
