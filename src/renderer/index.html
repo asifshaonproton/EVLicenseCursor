@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EV License Desktop</title>
+    
+    <!-- Material Design 3 CSS -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://unpkg.com/material-components-web@latest/dist/material-components-web.min.css" rel="stylesheet">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="styles/main.css">
+    
+    <!-- Material Design 3 Color Theme -->
+    <style>
+        :root {
+            --md-sys-color-primary: #0072CE;
+            --md-sys-color-on-primary: #FFFFFF;
+            --md-sys-color-primary-container: #C8E6FF;
+            --md-sys-color-on-primary-container: #001F33;
+            --md-sys-color-secondary: #E2231A;
+            --md-sys-color-on-secondary: #FFFFFF;
+            --md-sys-color-secondary-container: #FFDAD6;
+            --md-sys-color-on-secondary-container: #410002;
+            --md-sys-color-surface: #FAFAFA;
+            --md-sys-color-on-surface: #1A1A1A;
+            --md-sys-color-surface-variant: #E3E3E3;
+            --md-sys-color-on-surface-variant: #49454F;
+        }
+    </style>
+</head>
+<body class="mdc-typography">
+    <!-- App Bar -->
+    <header class="mdc-top-app-bar mdc-top-app-bar--fixed">
+        <div class="mdc-top-app-bar__row">
+            <section class="mdc-top-app-bar__section mdc-top-app-bar__section--align-start">
+                <button class="material-icons mdc-top-app-bar__navigation-icon mdc-icon-button" id="menu-btn">menu</button>
+                <span class="mdc-top-app-bar__title">EV License Desktop</span>
+            </section>
+            <section class="mdc-top-app-bar__section mdc-top-app-bar__section--align-end">
+                <div class="nfc-status-indicator" id="nfcStatus">
+                    <span class="material-icons">nfc</span>
+                    <span class="status-text">No Device</span>
+                </div>
+                <button class="material-icons mdc-top-app-bar__action-item mdc-icon-button" id="refresh-btn" title="Refresh">refresh</button>
+                <button class="material-icons mdc-top-app-bar__action-item mdc-icon-button" id="settings-btn" title="Settings">settings</button>
+            </section>
+        </div>
+    </header>
+
+    <!-- Navigation Drawer -->
+    <aside class="mdc-drawer mdc-drawer--modal" id="drawer">
+        <div class="mdc-drawer__header">
+            <h3 class="mdc-drawer__title">Navigation</h3>
+            <h6 class="mdc-drawer__subtitle">EV License Management</h6>
+        </div>
+        <div class="mdc-drawer__content">
+            <nav class="mdc-deprecated-list">
+                <a class="mdc-deprecated-list-item mdc-deprecated-list-item--activated" href="#" data-page="dashboard">
+                    <span class="mdc-deprecated-list-item__ripple"></span>
+                    <i class="material-icons mdc-deprecated-list-item__graphic">dashboard</i>
+                    <span class="mdc-deprecated-list-item__text">Dashboard</span>
+                </a>
+                <a class="mdc-deprecated-list-item" href="#" data-page="licenses">
+                    <span class="mdc-deprecated-list-item__ripple"></span>
+                    <i class="material-icons mdc-deprecated-list-item__graphic">card_membership</i>
+                    <span class="mdc-deprecated-list-item__text">Licenses</span>
+                </a>
+                <a class="mdc-deprecated-list-item" href="#" data-page="nfc">
+                    <span class="mdc-deprecated-list-item__ripple"></span>
+                    <i class="material-icons mdc-deprecated-list-item__graphic">nfc</i>
+                    <span class="mdc-deprecated-list-item__text">NFC Management</span>
+                </a>
+                <a class="mdc-deprecated-list-item" href="#" data-page="activity">
+                    <span class="mdc-deprecated-list-item__ripple"></span>
+                    <i class="material-icons mdc-deprecated-list-item__graphic">history</i>
+                    <span class="mdc-deprecated-list-item__text">Activity Log</span>
+                </a>
+                <hr class="mdc-deprecated-list-divider">
+                <a class="mdc-deprecated-list-item" href="#" data-page="settings">
+                    <span class="mdc-deprecated-list-item__ripple"></span>
+                    <i class="material-icons mdc-deprecated-list-item__graphic">settings</i>
+                    <span class="mdc-deprecated-list-item__text">Settings</span>
+                </a>
+                <a class="mdc-deprecated-list-item" href="#" data-page="about">
+                    <span class="mdc-deprecated-list-item__ripple"></span>
+                    <i class="material-icons mdc-deprecated-list-item__graphic">info</i>
+                    <span class="mdc-deprecated-list-item__text">About</span>
+                </a>
+            </nav>
+        </div>
+    </aside>
+
+    <!-- Drawer Scrim -->
+    <div class="mdc-drawer-scrim"></div>
+
+    <!-- Main Content -->
+    <div class="mdc-drawer-app-content mdc-top-app-bar--fixed-adjust">
+        <main class="main-content" id="main-content">
+            <!-- Dashboard Page -->
+            <div class="page" id="dashboard-page" style="display: block;">
+                <div class="page-header">
+                    <h1 class="mdc-typography--headline4">Dashboard</h1>
+                    <p class="mdc-typography--body1">Overview of your EV License management system</p>
+                </div>
+
+                <!-- Stats Cards -->
+                <div class="stats-grid">
+                    <div class="mdc-card stat-card">
+                        <div class="mdc-card__primary-action">
+                            <div class="stat-content">
+                                <div class="stat-icon">
+                                    <span class="material-icons">card_membership</span>
+                                </div>
+                                <div class="stat-info">
+                                    <div class="stat-number" id="totalLicenses">-</div>
+                                    <div class="stat-label">Total Licenses</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mdc-card stat-card">
+                        <div class="mdc-card__primary-action">
+                            <div class="stat-content">
+                                <div class="stat-icon active">
+                                    <span class="material-icons">check_circle</span>
+                                </div>
+                                <div class="stat-info">
+                                    <div class="stat-number" id="activeLicenses">-</div>
+                                    <div class="stat-label">Active Licenses</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mdc-card stat-card">
+                        <div class="mdc-card__primary-action">
+                            <div class="stat-content">
+                                <div class="stat-icon warning">
+                                    <span class="material-icons">schedule</span>
+                                </div>
+                                <div class="stat-info">
+                                    <div class="stat-number" id="expiringLicenses">-</div>
+                                    <div class="stat-label">Expiring Soon</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mdc-card stat-card">
+                        <div class="mdc-card__primary-action">
+                            <div class="stat-content">
+                                <div class="stat-icon">
+                                    <span class="material-icons">nfc</span>
+                                </div>
+                                <div class="stat-info">
+                                    <div class="stat-number" id="associatedCards">-</div>
+                                    <div class="stat-label">NFC Cards</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Activity -->
+                <div class="mdc-card dashboard-section">
+                    <div class="mdc-card__content">
+                        <h2 class="mdc-typography--headline6">Recent Activity</h2>
+                        <div class="activity-list" id="recentActivity">
+                            <div class="activity-item">
+                                <span class="material-icons activity-icon">info</span>
+                                <div class="activity-content">
+                                    <div class="activity-description">Loading activity...</div>
+                                    <div class="activity-time">Just now</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Licenses Page -->
+            <div class="page" id="licenses-page" style="display: none;">
+                <div class="page-header">
+                    <h1 class="mdc-typography--headline4">License Management</h1>
+                    <div class="page-actions">
+                        <button class="mdc-button mdc-button--raised" id="new-license-btn">
+                            <span class="mdc-button__ripple"></span>
+                            <i class="material-icons mdc-button__icon">add</i>
+                            <span class="mdc-button__label">New License</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Search Bar -->
+                <div class="mdc-text-field mdc-text-field--outlined search-field">
+                    <input type="text" id="search-input" class="mdc-text-field__input" placeholder="Search licenses...">
+                    <div class="mdc-notched-outline">
+                        <div class="mdc-notched-outline__leading"></div>
+                        <div class="mdc-notched-outline__notch">
+                            <label for="search-input" class="mdc-floating-label">Search licenses</label>
+                        </div>
+                        <div class="mdc-notched-outline__trailing"></div>
+                    </div>
+                    <i class="material-icons mdc-text-field__icon mdc-text-field__icon--trailing">search</i>
+                </div>
+
+                <!-- Licenses Table -->
+                <div class="mdc-card table-container">
+                    <div class="mdc-data-table">
+                        <div class="mdc-data-table__table-container">
+                            <table class="mdc-data-table__table">
+                                <thead>
+                                    <tr class="mdc-data-table__header-row">
+                                        <th class="mdc-data-table__header-cell">License Number</th>
+                                        <th class="mdc-data-table__header-cell">Owner</th>
+                                        <th class="mdc-data-table__header-cell">Vehicle</th>
+                                        <th class="mdc-data-table__header-cell">Status</th>
+                                        <th class="mdc-data-table__header-cell">Expiry Date</th>
+                                        <th class="mdc-data-table__header-cell">NFC Card</th>
+                                        <th class="mdc-data-table__header-cell">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="mdc-data-table__content" id="licenses-table-body">
+                                    <!-- License rows will be populated here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- NFC Management Page -->
+            <div class="page" id="nfc-page" style="display: none;">
+                <div class="page-header">
+                    <h1 class="mdc-typography--headline4">NFC Management</h1>
+                    <p class="mdc-typography--body1">Manage NFC card operations and device status</p>
+                </div>
+
+                <!-- NFC Device Status -->
+                <div class="mdc-card nfc-section">
+                    <div class="mdc-card__content">
+                        <h2 class="mdc-typography--headline6">Device Status</h2>
+                        <div class="nfc-device-info" id="nfcDeviceInfo">
+                            <div class="device-status">
+                                <span class="status-indicator offline"></span>
+                                <span class="status-text">No ACR122U device detected</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- NFC Operations -->
+                <div class="mdc-card nfc-section">
+                    <div class="mdc-card__content">
+                        <h2 class="mdc-typography--headline6">Card Operations</h2>
+                        <div class="nfc-operations">
+                            <button class="mdc-button mdc-button--outlined" id="read-card-btn">
+                                <span class="mdc-button__ripple"></span>
+                                <i class="material-icons mdc-button__icon">credit_card</i>
+                                <span class="mdc-button__label">Read Card</span>
+                            </button>
+                            <button class="mdc-button mdc-button--outlined" id="write-card-btn">
+                                <span class="mdc-button__ripple"></span>
+                                <i class="material-icons mdc-button__icon">edit</i>
+                                <span class="mdc-button__label">Write Card</span>
+                            </button>
+                        </div>
+                        
+                        <!-- Card Data Display -->
+                        <div class="card-data-section" id="cardDataSection" style="display: none;">
+                            <h3 class="mdc-typography--subtitle1">Card Information</h3>
+                            <div class="card-data" id="cardData">
+                                <!-- Card data will be displayed here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Activity Log Page -->
+            <div class="page" id="activity-page" style="display: none;">
+                <div class="page-header">
+                    <h1 class="mdc-typography--headline4">Activity Log</h1>
+                    <p class="mdc-typography--body1">System activity and audit trail</p>
+                </div>
+
+                <div class="mdc-card">
+                    <div class="mdc-card__content">
+                        <div class="activity-log" id="activityLog">
+                            <!-- Activity log items will be populated here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settings Page -->
+            <div class="page" id="settings-page" style="display: none;">
+                <div class="page-header">
+                    <h1 class="mdc-typography--headline4">Settings</h1>
+                    <p class="mdc-typography--body1">Configure application preferences</p>
+                </div>
+
+                <div class="mdc-card">
+                    <div class="mdc-card__content">
+                        <h2 class="mdc-typography--headline6">Application Settings</h2>
+                        
+                        <!-- Settings will be implemented here -->
+                        <p class="mdc-typography--body2">Settings configuration will be implemented in the next phase.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- About Page -->
+            <div class="page" id="about-page" style="display: none;">
+                <div class="page-header">
+                    <h1 class="mdc-typography--headline4">About</h1>
+                    <p class="mdc-typography--body1">EV License Desktop Application</p>
+                </div>
+
+                <div class="mdc-card">
+                    <div class="mdc-card__content">
+                        <h2 class="mdc-typography--headline6">Application Information</h2>
+                        <div class="about-info">
+                            <p><strong>Version:</strong> <span id="appVersion">1.0.0</span></p>
+                            <p><strong>Developer:</strong> Talukdar & Son's, Software Eng. Asif Hossain</p>
+                            <p><strong>Technology:</strong> Electron.js, Material Design 3, SQLite3, node-hid</p>
+                            <p><strong>Purpose:</strong> Cross-platform EV License management with ACR122U NFC Reader support</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay" style="display: none;">
+        <div class="loading-content">
+            <div class="mdc-circular-progress mdc-circular-progress--indeterminate" role="progressbar">
+                <div class="mdc-circular-progress__determinate-container">
+                    <svg class="mdc-circular-progress__determinate-circle-graphic" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+                        <circle class="mdc-circular-progress__determinate-track" cx="24" cy="24" r="18" stroke-width="4"/>
+                        <circle class="mdc-circular-progress__determinate-circle" cx="24" cy="24" r="18" stroke-dasharray="113.097" stroke-dashoffset="113.097" stroke-width="4"/>
+                    </svg>
+                </div>
+                <div class="mdc-circular-progress__indeterminate-container">
+                    <div class="mdc-circular-progress__spinner-layer">
+                        <div class="mdc-circular-progress__circle-clipper mdc-circular-progress__circle-left">
+                            <svg class="mdc-circular-progress__indeterminate-circle-graphic" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+                                <circle cx="24" cy="24" r="18" stroke-dasharray="113.097" stroke-dashoffset="56.549" stroke-width="4"/>
+                            </svg>
+                        </div>
+                        <div class="mdc-circular-progress__gap-patch">
+                            <svg class="mdc-circular-progress__indeterminate-circle-graphic" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+                                <circle cx="24" cy="24" r="18" stroke-dasharray="113.097" stroke-dashoffset="56.549" stroke-width="3.2"/>
+                            </svg>
+                        </div>
+                        <div class="mdc-circular-progress__circle-clipper mdc-circular-progress__circle-right">
+                            <svg class="mdc-circular-progress__indeterminate-circle-graphic" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+                                <circle cx="24" cy="24" r="18" stroke-dasharray="113.097" stroke-dashoffset="56.549" stroke-width="4"/>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <p class="loading-text">Loading...</p>
+        </div>
+    </div>
+
+    <!-- Material Design 3 JavaScript -->
+    <script src="https://unpkg.com/material-components-web@latest/dist/material-components-web.min.js"></script>
+    
+    <!-- Application JavaScript -->
+    <script src="js/app.js"></script>
+</body>
+</html>

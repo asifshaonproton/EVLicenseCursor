@@ -1,0 +1,590 @@
+/* EV License Desktop - Main Styles */
+
+/* Global Styles */
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Roboto', sans-serif;
+    background-color: var(--md-sys-color-surface);
+    color: var(--md-sys-color-on-surface);
+    overflow-x: hidden;
+}
+
+/* App Bar Customizations */
+.mdc-top-app-bar {
+    background-color: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary);
+}
+
+.mdc-top-app-bar__title {
+    font-weight: 500;
+    letter-spacing: 0.5px;
+}
+
+/* NFC Status Indicator */
+.nfc-status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 20px;
+    background-color: rgba(255, 255, 255, 0.1);
+    margin-right: 16px;
+    font-size: 14px;
+}
+
+.nfc-status-indicator .material-icons {
+    font-size: 18px;
+}
+
+.nfc-status-indicator.connected {
+    background-color: rgba(76, 175, 80, 0.2);
+    color: #4CAF50;
+}
+
+.nfc-status-indicator.error {
+    background-color: rgba(244, 67, 54, 0.2);
+    color: #F44336;
+}
+
+/* Drawer Customizations */
+.mdc-drawer {
+    background-color: var(--md-sys-color-surface);
+    border-right: 1px solid var(--md-sys-color-surface-variant);
+}
+
+.mdc-drawer__header {
+    background-color: var(--md-sys-color-primary-container);
+    color: var(--md-sys-color-on-primary-container);
+    padding: 24px 16px;
+}
+
+.mdc-drawer__title {
+    margin: 0;
+    font-weight: 500;
+}
+
+.mdc-drawer__subtitle {
+    margin: 4px 0 0 0;
+    opacity: 0.7;
+    font-weight: 400;
+}
+
+/* Main Content */
+.main-content {
+    padding: 24px;
+    max-width: 1200px;
+    margin: 0 auto;
+    min-height: calc(100vh - 64px);
+}
+
+/* Page Styles */
+.page {
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.page-header {
+    margin-bottom: 32px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.page-header h1 {
+    margin: 0;
+    color: var(--md-sys-color-on-surface);
+}
+
+.page-header p {
+    margin: 8px 0 0 0;
+    color: var(--md-sys-color-on-surface-variant);
+}
+
+.page-actions {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+/* Dashboard Stats Grid */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 24px;
+    margin-bottom: 32px;
+}
+
+.stat-card {
+    background-color: var(--md-sys-color-surface);
+    border: 1px solid var(--md-sys-color-surface-variant);
+    border-radius: 12px;
+    transition: all 0.2s ease-in-out;
+}
+
+.stat-card:hover {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+}
+
+.stat-content {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 24px;
+}
+
+.stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--md-sys-color-primary-container);
+    color: var(--md-sys-color-on-primary-container);
+}
+
+.stat-icon.active {
+    background-color: #E8F5E8;
+    color: #2E7D32;
+}
+
+.stat-icon.warning {
+    background-color: #FFF8E1;
+    color: #F57C00;
+}
+
+.stat-icon .material-icons {
+    font-size: 24px;
+}
+
+.stat-info {
+    flex: 1;
+}
+
+.stat-number {
+    font-size: 32px;
+    font-weight: 500;
+    line-height: 1;
+    color: var(--md-sys-color-on-surface);
+}
+
+.stat-label {
+    font-size: 14px;
+    color: var(--md-sys-color-on-surface-variant);
+    margin-top: 4px;
+}
+
+/* Dashboard Sections */
+.dashboard-section {
+    margin-bottom: 24px;
+    border: 1px solid var(--md-sys-color-surface-variant);
+    border-radius: 12px;
+}
+
+/* Activity List */
+.activity-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-top: 16px;
+}
+
+.activity-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 8px;
+    background-color: var(--md-sys-color-surface-variant);
+}
+
+.activity-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background-color: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.activity-content {
+    flex: 1;
+}
+
+.activity-description {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--md-sys-color-on-surface);
+    margin-bottom: 4px;
+}
+
+.activity-time {
+    font-size: 12px;
+    color: var(--md-sys-color-on-surface-variant);
+}
+
+/* Search Field */
+.search-field {
+    width: 100%;
+    max-width: 400px;
+    margin-bottom: 24px;
+}
+
+/* Table Container */
+.table-container {
+    border: 1px solid var(--md-sys-color-surface-variant);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.mdc-data-table {
+    width: 100%;
+}
+
+.mdc-data-table__table {
+    width: 100%;
+}
+
+.mdc-data-table__header-cell,
+.mdc-data-table__cell {
+    border-bottom: 1px solid var(--md-sys-color-surface-variant);
+    padding: 16px;
+    text-align: left;
+}
+
+.mdc-data-table__header-cell {
+    background-color: var(--md-sys-color-surface-variant);
+    font-weight: 500;
+    color: var(--md-sys-color-on-surface-variant);
+}
+
+/* Status Badges */
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 12px;
+    border-radius: 16px;
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.status-badge.active {
+    background-color: #E8F5E8;
+    color: #2E7D32;
+}
+
+.status-badge.expired {
+    background-color: #FFEBEE;
+    color: #C62828;
+}
+
+.status-badge.pending {
+    background-color: #FFF8E1;
+    color: #F57C00;
+}
+
+/* Action Buttons */
+.action-buttons {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.action-button {
+    padding: 8px;
+    border-radius: 8px;
+    border: none;
+    background: none;
+    color: var(--md-sys-color-on-surface-variant);
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+}
+
+.action-button:hover {
+    background-color: var(--md-sys-color-surface-variant);
+    color: var(--md-sys-color-on-surface);
+}
+
+.action-button .material-icons {
+    font-size: 18px;
+}
+
+/* NFC Sections */
+.nfc-section {
+    margin-bottom: 24px;
+    border: 1px solid var(--md-sys-color-surface-variant);
+    border-radius: 12px;
+}
+
+.nfc-device-info {
+    margin-top: 16px;
+}
+
+.device-status {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    border-radius: 8px;
+    background-color: var(--md-sys-color-surface-variant);
+}
+
+.status-indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background-color: #9E9E9E;
+}
+
+.status-indicator.online {
+    background-color: #4CAF50;
+    box-shadow: 0 0 8px rgba(76, 175, 80, 0.4);
+}
+
+.status-indicator.offline {
+    background-color: #F44336;
+}
+
+.nfc-operations {
+    display: flex;
+    gap: 16px;
+    margin: 16px 0;
+    flex-wrap: wrap;
+}
+
+.card-data-section {
+    margin-top: 24px;
+    padding: 16px;
+    border-radius: 8px;
+    background-color: var(--md-sys-color-surface-variant);
+}
+
+.card-data {
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.6;
+    background-color: var(--md-sys-color-surface);
+    padding: 16px;
+    border-radius: 8px;
+    border: 1px solid var(--md-sys-color-surface-variant);
+    margin-top: 8px;
+}
+
+/* Activity Log */
+.activity-log {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.activity-log-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    border-radius: 8px;
+    background-color: var(--md-sys-color-surface-variant);
+}
+
+.activity-log-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background-color: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.activity-log-content {
+    flex: 1;
+}
+
+.activity-log-description {
+    font-weight: 500;
+    margin-bottom: 4px;
+}
+
+.activity-log-time {
+    font-size: 12px;
+    color: var(--md-sys-color-on-surface-variant);
+}
+
+/* About Page */
+.about-info {
+    margin-top: 16px;
+}
+
+.about-info p {
+    margin: 12px 0;
+    line-height: 1.6;
+}
+
+/* Loading Overlay */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
+
+.loading-content {
+    text-align: center;
+    color: white;
+}
+
+.loading-text {
+    margin-top: 16px;
+    font-size: 16px;
+}
+
+/* Material Design Component Overrides */
+.mdc-button {
+    --mdc-theme-primary: var(--md-sys-color-primary);
+    --mdc-theme-on-primary: var(--md-sys-color-on-primary);
+}
+
+.mdc-card {
+    --mdc-theme-surface: var(--md-sys-color-surface);
+    --mdc-theme-on-surface: var(--md-sys-color-on-surface);
+    border-radius: 12px;
+}
+
+.mdc-text-field {
+    --mdc-theme-primary: var(--md-sys-color-primary);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .main-content {
+        padding: 16px;
+    }
+    
+    .stats-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+    
+    .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .nfc-operations {
+        flex-direction: column;
+    }
+    
+    .action-buttons {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}
+
+@media (max-width: 480px) {
+    .mdc-top-app-bar__title {
+        font-size: 18px;
+    }
+    
+    .nfc-status-indicator {
+        display: none;
+    }
+    
+    .stat-content {
+        padding: 16px;
+    }
+    
+    .stat-icon {
+        width: 40px;
+        height: 40px;
+    }
+    
+    .stat-number {
+        font-size: 24px;
+    }
+}
+
+/* Scrollbar Styles */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--md-sys-color-surface-variant);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--md-sys-color-on-surface-variant);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--md-sys-color-on-surface);
+}
+
+/* Utility Classes */
+.text-center {
+    text-align: center;
+}
+
+.mt-16 {
+    margin-top: 16px;
+}
+
+.mb-16 {
+    margin-bottom: 16px;
+}
+
+.hidden {
+    display: none !important;
+}
+
+.flex {
+    display: flex;
+}
+
+.flex-1 {
+    flex: 1;
+}
+
+.items-center {
+    align-items: center;
+}
+
+.justify-between {
+    justify-content: space-between;
+}
+
+.gap-8 {
+    gap: 8px;
+}
+
+.gap-16 {
+    gap: 16px;
+}
