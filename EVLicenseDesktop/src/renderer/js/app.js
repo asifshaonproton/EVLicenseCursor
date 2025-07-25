@@ -548,6 +548,15 @@ class EVLicenseApp {
         // Update scanner status
         this.updateScannerStatus('success', 'Card scanned successfully');
         
+        // Check if this is license data and show the license card
+        if (cardData.data && cardData.data.licenseData) {
+            console.log('📄 License data found, showing license details card');
+            this.showLicenseDetailsCard(cardData.data.licenseData);
+        } else {
+            console.log('📄 No license data found, hiding license details card');
+            this.hideLicenseDetailsCard();
+        }
+        
         // Update scan area
         if (scanArea) {
             scanArea.classList.remove('scanning');
@@ -610,14 +619,15 @@ class EVLicenseApp {
             dataString += `✅ Format: Encrypted (Android Compatible)\n`;
         }
         
-        // Priority 1: Use server-extracted and decrypted text
+        // Priority 1: Use server-extracted text and show license card if available
         console.log('🔍 Checking for extracted text:', cardData.data?.extractedText);
         if (cardData.data && cardData.data.extractedText) {
             dataString += '\n=== 📝 READABLE TEXT DATA ===\n';
             dataString += `${cardData.data.extractedText}\n`;
             
-            // If it contains license data, show structured info
+            // If it contains license data, show structured license card
             if (cardData.data.licenseData) {
+                this.showLicenseDetailsCard(cardData.data.licenseData);
                 dataString += '\n=== 📋 STRUCTURED LICENSE DATA ===\n';
                 const license = cardData.data.licenseData;
                 dataString += `Holder Name: ${license.holderName}\n`;
@@ -627,11 +637,15 @@ class EVLicenseApp {
                 dataString += `License Number: ${license.licenseNumber}\n`;
                 dataString += `NFC Card Number: ${license.nfcCardNumber}\n`;
                 dataString += `Validity Date: ${license.validityDate}\n`;
+            } else {
+                this.hideLicenseDetailsCard();
             }
             
             console.log('✅ Found extracted text:', cardData.data.extractedText);
         } else {
             console.log('⚠️ No extracted text from server, trying fallback extraction');
+            
+            this.hideLicenseDetailsCard();
             
             // Priority 2: Fallback extraction from raw blocks
             let fallbackText = this.extractTextFromRawBlocks(cardData);
@@ -641,7 +655,7 @@ class EVLicenseApp {
                 console.log('✅ Fallback extraction successful:', fallbackText);
             } else {
                 dataString += '\n=== ⚠️ NO READABLE TEXT DATA ===\n';
-                dataString += `No decryptable text found on this card.\n`;
+                dataString += `No readable text found on this card.\n`;
                 console.log('❌ No readable text could be extracted');
             }
         }
@@ -663,6 +677,47 @@ class EVLicenseApp {
         dataString += JSON.stringify(cardData, null, 2);
         
         return dataString;
+    }
+    
+    showLicenseDetailsCard(licenseData) {
+        console.log('📄 Showing license details card:', licenseData);
+        
+        const licenseCard = document.getElementById('license-details-card');
+        if (!licenseCard) {
+            console.error('❌ License details card element not found');
+            return;
+        }
+        
+        // Populate license data
+        this.setElementText('license-holder-name', licenseData.holderName || 'N/A');
+        this.setElementText('license-mobile', licenseData.mobile || 'N/A');
+        this.setElementText('license-city', licenseData.city || 'N/A');
+        this.setElementText('license-type', licenseData.licenseType || 'N/A');
+        this.setElementText('license-number', licenseData.licenseNumber || 'N/A');
+        this.setElementText('license-card-number', licenseData.nfcCardNumber || 'N/A');
+        this.setElementText('license-expiry-date', licenseData.validityDate || 'N/A');
+        
+        // Show the card
+        licenseCard.style.display = 'block';
+        
+        console.log('✅ License details card displayed');
+    }
+    
+    hideLicenseDetailsCard() {
+        const licenseCard = document.getElementById('license-details-card');
+        if (licenseCard) {
+            licenseCard.style.display = 'none';
+            console.log('🔒 License details card hidden');
+        }
+    }
+    
+    setElementText(elementId, text) {
+        const element = document.getElementById(elementId);
+        if (element) {
+            element.textContent = text;
+        } else {
+            console.warn(`⚠️ Element with ID '${elementId}' not found`);
+        }
     }
     
     extractTextFromRawBlocks(cardData) {
