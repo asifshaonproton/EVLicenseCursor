@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="16dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Card Details"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:textColor="#222244"
+            android:paddingBottom="8dp" />
+
+        <!-- Card Number -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Card Number:"
+            android:textSize="14sp"
+            android:textColor="#666666"
+            android:layout_marginTop="8dp"/>
+        <TextView
+            android:id="@+id/textCardNumber"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="-"
+            android:textSize="20sp"
+            android:textColor="#000000"
+            android:paddingStart="4dp"
+            android:paddingEnd="4dp"
+            android:textStyle="bold"/>
+
+        <!-- License Number -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="License Number:"
+            android:textSize="14sp"
+            android:textColor="#666666"
+            android:layout_marginTop="12dp"/>
+        <TextView
+            android:id="@+id/textLicenseNumber"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="-"
+            android:textSize="20sp"
+            android:textColor="#000000"
+            android:paddingStart="4dp"
+            android:paddingEnd="4dp"
+            android:textStyle="bold"/>
+
+        <!-- Holder Name -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Holder Name:"
+            android:textSize="14sp"
+            android:textColor="#666666"
+            android:layout_marginTop="12dp"/>
+        <TextView
+            android:id="@+id/textHolderName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="-"
+            android:textSize="20sp"
+            android:textColor="#000000"
+            android:paddingStart="4dp"
+            android:paddingEnd="4dp"
+            android:textStyle="bold"/>
+
+        <!-- Mobile -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Mobile:"
+            android:textSize="14sp"
+            android:textColor="#666666"
+            android:layout_marginTop="12dp"/>
+        <TextView
+            android:id="@+id/textMobile"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="-"
+            android:textSize="20sp"
+            android:textColor="#000000"
+            android:paddingStart="4dp"
+            android:paddingEnd="4dp"
+            android:textStyle="bold"/>
+
+        <!-- City -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="City:"
+            android:textSize="14sp"
+            android:textColor="#666666"
+            android:layout_marginTop="12dp"/>
+        <TextView
+            android:id="@+id/textCity"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="-"
+            android:textSize="20sp"
+            android:textColor="#000000"
+            android:paddingStart="4dp"
+            android:paddingEnd="4dp"
+            android:textStyle="bold"/>
+
+        <!-- License Type -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="License Type:"
+            android:textSize="14sp"
+            android:textColor="#666666"
+            android:layout_marginTop="12dp"/>
+        <TextView
+            android:id="@+id/textLicenseType"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="-"
+            android:textSize="20sp"
+            android:textColor="#000000"
+            android:paddingStart="4dp"
+            android:paddingEnd="4dp"
+            android:textStyle="bold"/>
+
+        <!-- Validity Date -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Validity Date:"
+            android:textSize="14sp"
+            android:textColor="#666666"
+            android:layout_marginTop="12dp"/>
+        <TextView
+            android:id="@+id/textValidityDate"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="-"
+            android:textSize="20sp"
+            android:textColor="#000000"
+            android:paddingStart="4dp"
+            android:paddingEnd="4dp"
+            android:textStyle="bold"/>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="?android:attr/listDivider"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="16dp"/>
+
+        <!-- Other Info Header -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Other Info"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:textColor="#222244"
+            android:paddingBottom="8dp" />
+
+        <TableLayout
+            android:id="@+id/tableOtherInfo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:stretchColumns="1"
+            android:background="#F5F5F5"
+            android:padding="12dp"
+            android:layout_marginBottom="16dp"/>
+
+    </LinearLayout>
+</ScrollView> 

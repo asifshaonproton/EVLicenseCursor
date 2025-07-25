@@ -1,0 +1,286 @@
+[
+    {
+        "merged": "com.ektai.evlicense.app-debug-51:/layout_fragment_license_edit.xml.flat",
+        "source": "com.ektai.evlicense.app-main-53:/layout/fragment_license_edit.xml"
+    },
+    {
+        "merged": "com.ektai.evlicense.app-debug-51:/mipmap-xxxhdpi_ic_launcher_foreground.webp.flat",
+        "source": "com.ektai.evlicense.app-main-53:/mipmap-xxxhdpi/ic_launcher_foreground.webp"
+    },
+    {
+        "merged": "com.ektai.evlicense.app-debug-51:/layout_nav_header_main.xml.flat",
+        "source": "com.ektai.evlicense.app-main-53:/layout/nav_header_main.xml"
+    },
+    {
+        "merged": "com.ektai.evlicense.app-debug-51:/mipmap-xxxhdpi_ic_reader.webp.flat",
+        "source": "com.ektai.evlicense.app-main-53:/mipmap-xxxhdpi/ic_reader.webp"
+    },
+    {
+        "merged": "com.ektai.evlicense.app-debug-51:/layout_fragment_dashboard.xml.flat",
+        "source": "com.ektai.evlicense.app-main-53:/layout/fragment_dashboard.xml"
+    },
+    {
+        "merged": "com.ektai.evlicense.app-debug-51:/layout_fragment_license_detail.xml.flat",
+        "source": "com.ektai.evlicense.app-main-53:/layout/fragment_license_detail.xml"
+    },
+    {
+        "merged": "com.ektai.evlicense.app-debug-51:/mipmap-xxhdpi_ic_dev_by_foreground.webp.flat",
+        "source": "com.ektai.evlicense.app-main-53:/mipmap-xxhdpi/ic_dev_by_foreground.webp"
+    },
+    {
+        "merged": "com.ektai.evlicense.app-debug-51:/mipmap-xhdpi_ic_reader_foreground.webp.flat",
+        "source": "com.ektai.evlicense.app-main-53:/mipmap-xhdpi/ic_reader_foreground.webp"
+    },
+    {
+        "merged": "com.ektai.evlicense.app-debug-51:/mipmap-xxhdpi_ic_launcher.webp.flat",
+        "source": "com.ektai.evlicense.app-main-53:/mipmap-xxhdpi/ic_launcher.webp"
+    },
+    {
+        "merged": "com.ektai.evlicense.app-debug-51:/mipmap-mdpi_ic_dev_by_foreground.webp.flat",
+        "source": "com.ektai.evlicense.app-main-53:/mipmap-mdpi/ic_dev_by_foreground.webp"
+    },
+    {
+        "merged": "com.ektai.evlicense.app-debug-51:/mipmap-hdpi_ic_reader.webp.flat",
+        "source": "com.ektai.evlicense.app-main-53:/mipmap-hdpi/ic_reader.webp"
+    },
+    {
+        "merged": "com.ektai.evlicense.app-debug-51:/mipmap-xhdpi_ic_launcher.webp.flat",
+        "source": "com.ektai.evlicense.app-main-53:/mipmap-xhdpi/ic_launcher.webp"
+    },
+    {
+        "merged": "com.ektai.evlicense.app-debug-51:/mipmap-xxxhdpi_ic_dev_by.webp.flat",
+        "source": "com.ektai.evlicense.app-main-53:/mipmap-xxxhdpi/ic_dev_by.webp"
+    },
+    {
+        "merged": "com.ektai.evlicense.app-debug-51:/mipmap-anydpi-v26_ic_launcher.xml.flat",
+        "source": "com.ektai.evlicense.app-main-53:/mipmap-anydpi-v26/ic_launcher.xml"
+    },
+    {
+        "merged": "com.ektai.evlicense.app-debug-51:/mipmap-mdpi_ic_launcher.webp.flat",
+        "source": "com.ektai.evlicense.app-main-53:/mipmap-mdpi/ic_launcher.webp"
+    },
+    {
+        "merged": "com.ektai.evlicense.app-debug-51:/mipmap-xxhdpi_ic_dev_by_round.webp.flat",
+        "source": "com.ektai.evlicense.app-main-53:/mipmap-xxhdpi/ic_dev_by_round.webp"
+    },
+    {
+        "merged": "com.ektai.evlicense.app-debug-51:/layout_fragment_license_list.xml.flat",
+        "source": "com.ektai.evlicense.app-main-53:/layout/fragment_license_list.xml"
+    },
+    {
+        "merged": "com.ektai.evlicense.app-debug-51:/mipmap-hdpi_ic_dev_by.webp.flat",
+        "source": "com.ektai.evlicense.app-main-53:/mipmap-hdpi/ic_dev_by.webp"
+    },
+    {
+        "merged": "com.ektai.evlicense.app-debug-51:/mipmap-anydpi-v26_ic_reader.xml.flat",
+        "source": "com.ektai.evlicense.app-main-53:/mipmap-anydpi-v26/ic_reader.xml"
+    },
+    {
+        "merged": "com.ektai.evlicense.app-debug-51:/mipmap-xxhdpi_ic_reader_round.webp.flat",
+        "source": "com.ektai.evlicense.app-main-53:/mipmap-xxhdpi/ic_reader_round.webp"
+    },
+    {
+        "merged": "com.ektai.evlicense.app-debug-51:/drawable__3whatsapp_image_2025_07_19_at_10_18_08.xml.flat",
+        "source": "com.ektai.evlicense.app-main-53:/drawable/_3whatsapp_image_2025_07_19_at_10_18_08.xml"
+    },
+    {
+        "merged": "com.ektai.evlicense.app-debug-51:/mipmap-anydpi-v26_ic_reader_round.xml.flat",
+        "source": "com.ektai.evlicense.app-main-53:/mipmap-anydpi-v26/ic_reader_round.xml"
+    },
+    {
+        "merged": "com.ektai.evlicense.app-debug-51:/mipmap-xxhdpi_ic_reader.webp.flat",
+        "source": "com.ektai.evlicense.app-main-53:/mipmap-xxhdpi/ic_reader.webp"
+    },
+    {
+        "merged": "com.ektai.evlicense.app-debug-51:/drawable_ic_ev_logo.xml.flat",
+        "source": "com.ektai.evlicense.app-main-53:/drawable/ic_ev_logo.xml"
+    },
+    {
+        "merged": "com.ektai.evlicense.app-debug-51:/raw_logo.jpeg.flat",
+        "source": "com.ektai.evlicense.app-main-53:/raw/logo.jpeg"
+    },
+    {
+        "merged": "com.ektai.evlicense.app-debug-51:/mipmap-hdpi_ic_dev_by_foreground.webp.flat",
+        "source": "com.ektai.evlicense.app-main-53:/mipmap-hdpi/ic_dev_by_foreground.webp"
+    },
+    {
+        "merged": "com.ektai.evlicense.app-debug-51:/mipmap-xhdpi_ic_dev_by_round.webp.flat",
+        "source": "com.ektai.evlicense.app-main-53:/mipmap-xhdpi/ic_dev_by_round.webp"
+    },
+    {
+        "merged": "com.ektai.evlicense.app-debug-51:/mipmap-xxhdpi_ic_launcher_foreground.webp.flat",
+        "source": "com.ektai.evlicense.app-main-53:/mipmap-xxhdpi/ic_launcher_foreground.webp"
+    },
+    {
+        "merged": "com.ektai.evlicense.app-debug-51:/raw_logo2.jpeg.flat",
+        "source": "com.ektai.evlicense.app-main-53:/raw/logo2.jpeg"
+    },
+    {
+        "merged": "com.ektai.evlicense.app-debug-51:/mipmap-xxxhdpi_ic_dev_by_round.webp.flat",
+        "source": "com.ektai.evlicense.app-main-53:/mipmap-xxxhdpi/ic_dev_by_round.webp"
+    },
+    {
+        "merged": "com.ektai.evlicense.app-debug-51:/mipmap-mdpi_ic_dev_by_round.webp.flat",
+        "source": "com.ektai.evlicense.app-main-53:/mipmap-mdpi/ic_dev_by_round.webp"
+    },
+    {
+        "merged": "com.ektai.evlicense.app-debug-51:/mipmap-xxxhdpi_ic_dev_by_foreground.webp.flat",
+        "source": "com.ektai.evlicense.app-main-53:/mipmap-xxxhdpi/ic_dev_by_foreground.webp"
+    },
+    {
+        "merged": "com.ektai.evlicense.app-debug-51:/mipmap-xxhdpi_ic_dev_by.webp.flat",
+        "source": "com.ektai.evlicense.app-main-53:/mipmap-xxhdpi/ic_dev_by.webp"
+    },
+    {
+        "merged": "com.ektai.evlicense.app-debug-51:/mipmap-anydpi-v26_ic_launcher_round.xml.flat",
+        "source": "com.ektai.evlicense.app-main-53:/mipmap-anydpi-v26/ic_launcher_round.xml"
+    },
+    {
+        "merged": "com.ektai.evlicense.app-debug-51:/mipmap-xhdpi_ic_launcher_foreground.webp.flat",
+        "source": "com.ektai.evlicense.app-main-53:/mipmap-xhdpi/ic_launcher_foreground.webp"
+    },
+    {
+        "merged": "com.ektai.evlicense.app-debug-51:/mipmap-xxhdpi_ic_reader_foreground.webp.flat",
+        "source": "com.ektai.evlicense.app-main-53:/mipmap-xxhdpi/ic_reader_foreground.webp"
+    },
+    {
+        "merged": "com.ektai.evlicense.app-debug-51:/mipmap-anydpi-v26_ic_dev_by_round.xml.flat",
+        "source": "com.ektai.evlicense.app-main-53:/mipmap-anydpi-v26/ic_dev_by_round.xml"
+    },
+    {
+        "merged": "com.ektai.evlicense.app-debug-51:/mipmap-hdpi_ic_launcher.webp.flat",
+        "source": "com.ektai.evlicense.app-main-53:/mipmap-hdpi/ic_launcher.webp"
+    },
+    {
+        "merged": "com.ektai.evlicense.app-debug-51:/mipmap-xxhdpi_ic_launcher_round.webp.flat",
+        "source": "com.ektai.evlicense.app-main-53:/mipmap-xxhdpi/ic_launcher_round.webp"
+    },
+    {
+        "merged": "com.ektai.evlicense.app-debug-51:/layout_item_license_type_card.xml.flat",
+        "source": "com.ektai.evlicense.app-main-53:/layout/item_license_type_card.xml"
+    },
+    {
+        "merged": "com.ektai.evlicense.app-debug-51:/mipmap-mdpi_ic_launcher_foreground.webp.flat",
+        "source": "com.ektai.evlicense.app-main-53:/mipmap-mdpi/ic_launcher_foreground.webp"
+    },
+    {
+        "merged": "com.ektai.evlicense.app-debug-51:/layout_item_recent_license.xml.flat",
+        "source": "com.ektai.evlicense.app-main-53:/layout/item_recent_license.xml"
+    },
+    {
+        "merged": "com.ektai.evlicense.app-debug-51:/layout_activity_login.xml.flat",
+        "source": "com.ektai.evlicense.app-main-53:/layout/activity_login.xml"
+    },
+    {
+        "merged": "com.ektai.evlicense.app-debug-51:/layout_activity_splash.xml.flat",
+        "source": "com.ektai.evlicense.app-main-53:/layout/activity_splash.xml"
+    },
+    {
+        "merged": "com.ektai.evlicense.app-debug-51:/mipmap-xxxhdpi_ic_launcher_round.webp.flat",
+        "source": "com.ektai.evlicense.app-main-53:/mipmap-xxxhdpi/ic_launcher_round.webp"
+    },
+    {
+        "merged": "com.ektai.evlicense.app-debug-51:/mipmap-mdpi_ic_reader_foreground.webp.flat",
+        "source": "com.ektai.evlicense.app-main-53:/mipmap-mdpi/ic_reader_foreground.webp"
+    },
+    {
+        "merged": "com.ektai.evlicense.app-debug-51:/mipmap-mdpi_ic_dev_by.webp.flat",
+        "source": "com.ektai.evlicense.app-main-53:/mipmap-mdpi/ic_dev_by.webp"
+    },
+    {
+        "merged": "com.ektai.evlicense.app-debug-51:/mipmap-hdpi_ic_launcher_foreground.webp.flat",
+        "source": "com.ektai.evlicense.app-main-53:/mipmap-hdpi/ic_launcher_foreground.webp"
+    },
+    {
+        "merged": "com.ektai.evlicense.app-debug-51:/mipmap-hdpi_ic_launcher_round.webp.flat",
+        "source": "com.ektai.evlicense.app-main-53:/mipmap-hdpi/ic_launcher_round.webp"
+    },
+    {
+        "merged": "com.ektai.evlicense.app-debug-51:/mipmap-mdpi_ic_reader_round.webp.flat",
+        "source": "com.ektai.evlicense.app-main-53:/mipmap-mdpi/ic_reader_round.webp"
+    },
+    {
+        "merged": "com.ektai.evlicense.app-debug-51:/mipmap-xxxhdpi_ic_launcher.webp.flat",
+        "source": "com.ektai.evlicense.app-main-53:/mipmap-xxxhdpi/ic_launcher.webp"
+    },
+    {
+        "merged": "com.ektai.evlicense.app-debug-51:/mipmap-hdpi_ic_dev_by_round.webp.flat",
+        "source": "com.ektai.evlicense.app-main-53:/mipmap-hdpi/ic_dev_by_round.webp"
+    },
+    {
+        "merged": "com.ektai.evlicense.app-debug-51:/layout_drawer_content.xml.flat",
+        "source": "com.ektai.evlicense.app-main-53:/layout/drawer_content.xml"
+    },
+    {
+        "merged": "com.ektai.evlicense.app-debug-51:/mipmap-xxxhdpi_ic_reader_round.webp.flat",
+        "source": "com.ektai.evlicense.app-main-53:/mipmap-xxxhdpi/ic_reader_round.webp"
+    },
+    {
+        "merged": "com.ektai.evlicense.app-debug-51:/menu_navigation_drawer_menu.xml.flat",
+        "source": "com.ektai.evlicense.app-main-53:/menu/navigation_drawer_menu.xml"
+    },
+    {
+        "merged": "com.ektai.evlicense.app-debug-51:/mipmap-xhdpi_ic_dev_by_foreground.webp.flat",
+        "source": "com.ektai.evlicense.app-main-53:/mipmap-xhdpi/ic_dev_by_foreground.webp"
+    },
+    {
+        "merged": "com.ektai.evlicense.app-debug-51:/mipmap-anydpi-v26_ic_dev_by.xml.flat",
+        "source": "com.ektai.evlicense.app-main-53:/mipmap-anydpi-v26/ic_dev_by.xml"
+    },
+    {
+        "merged": "com.ektai.evlicense.app-debug-51:/mipmap-mdpi_ic_reader.webp.flat",
+        "source": "com.ektai.evlicense.app-main-53:/mipmap-mdpi/ic_reader.webp"
+    },
+    {
+        "merged": "com.ektai.evlicense.app-debug-51:/mipmap-xhdpi_ic_reader_round.webp.flat",
+        "source": "com.ektai.evlicense.app-main-53:/mipmap-xhdpi/ic_reader_round.webp"
+    },
+    {
+        "merged": "com.ektai.evlicense.app-debug-51:/raw_dev_by.jpeg.flat",
+        "source": "com.ektai.evlicense.app-main-53:/raw/dev_by.jpeg"
+    },
+    {
+        "merged": "com.ektai.evlicense.app-debug-51:/mipmap-mdpi_ic_launcher_round.webp.flat",
+        "source": "com.ektai.evlicense.app-main-53:/mipmap-mdpi/ic_launcher_round.webp"
+    },
+    {
+        "merged": "com.ektai.evlicense.app-debug-51:/mipmap-hdpi_ic_reader_foreground.webp.flat",
+        "source": "com.ektai.evlicense.app-main-53:/mipmap-hdpi/ic_reader_foreground.webp"
+    },
+    {
+        "merged": "com.ektai.evlicense.app-debug-51:/mipmap-xhdpi_ic_launcher_round.webp.flat",
+        "source": "com.ektai.evlicense.app-main-53:/mipmap-xhdpi/ic_launcher_round.webp"
+    },
+    {
+        "merged": "com.ektai.evlicense.app-debug-51:/mipmap-xxxhdpi_ic_reader_foreground.webp.flat",
+        "source": "com.ektai.evlicense.app-main-53:/mipmap-xxxhdpi/ic_reader_foreground.webp"
+    },
+    {
+        "merged": "com.ektai.evlicense.app-debug-51:/layout_nav_footer_main.xml.flat",
+        "source": "com.ektai.evlicense.app-main-53:/layout/nav_footer_main.xml"
+    },
+    {
+        "merged": "com.ektai.evlicense.app-debug-51:/layout_item_license.xml.flat",
+        "source": "com.ektai.evlicense.app-main-53:/layout/item_license.xml"
+    },
+    {
+        "merged": "com.ektai.evlicense.app-debug-51:/mipmap-xhdpi_ic_reader.webp.flat",
+        "source": "com.ektai.evlicense.app-main-53:/mipmap-xhdpi/ic_reader.webp"
+    },
+    {
+        "merged": "com.ektai.evlicense.app-debug-51:/mipmap-xhdpi_ic_dev_by.webp.flat",
+        "source": "com.ektai.evlicense.app-main-53:/mipmap-xhdpi/ic_dev_by.webp"
+    },
+    {
+        "merged": "com.ektai.evlicense.app-debug-51:/mipmap-hdpi_ic_reader_round.webp.flat",
+        "source": "com.ektai.evlicense.app-main-53:/mipmap-hdpi/ic_reader_round.webp"
+    },
+    {
+        "merged": "com.ektai.evlicense.app-debug-51:/layout_fragment_license_nfc_detail.xml.flat",
+        "source": "com.ektai.evlicense.app-main-53:/layout/fragment_license_nfc_detail.xml"
+    },
+    {
+        "merged": "com.ektai.evlicense.app-debug-51:/layout_activity_main.xml.flat",
+        "source": "com.ektai.evlicense.app-main-53:/layout/activity_main.xml"
+    }
+]

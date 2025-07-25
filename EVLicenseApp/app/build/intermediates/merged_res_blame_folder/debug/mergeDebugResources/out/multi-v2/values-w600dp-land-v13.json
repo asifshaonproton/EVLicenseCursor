@@ -1,0 +1,19 @@
+{
+    "logs": [
+        {
+            "outputFile": "com.ektai.evlicense.app-mergeDebugResources-49:/values-w600dp-land-v13/values-w600dp-land-v13.xml",
+            "map": [
+                {
+                    "source": "/Users/a/.gradle/caches/transforms-4/2c4565c65d16d52392ef37cc9e96b7a3/transformed/material-1.12.0/res/values-w600dp-land-v13/values-w600dp-land-v13.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "54",
+                        "endOffsets": "105"
+                    }
+                }
+            ]
+        }
+    ]
+}

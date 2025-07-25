@@ -1,0 +1,20 @@
+<resources>
+    <color name="ev_blue">#0072CE</color>
+    <color name="ev_red">#E2231A</color>
+    <color name="ev_green">#2BA84A</color>
+    <color name="ev_black">#222222</color>
+    <color name="ev_gray">#888888</color>
+    <!-- Material 3 basics -->
+    <color name="colorPrimary">@color/ev_blue</color>
+    <color name="colorPrimaryVariant">#005A9E</color>
+    <color name="colorOnPrimary">#FFFFFF</color>
+    <color name="colorSecondary">@color/ev_green</color>
+    <color name="colorSecondaryVariant">#1B7A34</color>
+    <color name="colorOnSecondary">#FFFFFF</color>
+    <color name="colorError">@color/ev_red</color>
+    <color name="colorOnError">#FFFFFF</color>
+    <color name="colorBackground">#FFFFFF</color>
+    <color name="colorOnBackground">#222222</color>
+    <color name="colorSurface">#FFFFFF</color>
+    <color name="colorOnSurface">#222222</color>
+</resources> 

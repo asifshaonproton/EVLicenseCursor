@@ -1,0 +1,16 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <style name="Theme.EVLicenseApp" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/ev_blue</item>
+        <item name="colorOnPrimary">@color/colorOnPrimary</item>
+        <item name="colorSecondary">@color/ev_green</item>
+        <item name="colorOnSecondary">@color/colorOnSecondary</item>
+        <item name="colorError">@color/ev_red</item>
+        <item name="colorOnError">@color/colorOnError</item>
+        <item name="android:statusBarColor" tools:targetApi="l">@color/ev_blue</item>
+        <item name="android:navigationBarColor">@color/ev_blue</item>
+        <item name="colorSurface">@color/colorSurface</item>
+        <item name="colorOnSurface">@color/colorOnSurface</item>
+        <item name="colorBackground">@color/colorBackground</item>
+        <item name="colorOnBackground">@color/colorOnBackground</item>
+    </style>
+</resources> 

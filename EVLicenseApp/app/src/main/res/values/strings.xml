@@ -1,0 +1,25 @@
+<resources>
+    <string name="app_name">EV Licenses</string>
+    <string name="login">Login</string>
+    <string name="email">Email</string>
+    <string name="password">Password</string>
+    <string name="dashboard">Dashboard</string>
+    <string name="add_license">Add License</string>
+    <string name="edit_license">Edit License</string>
+    <string name="delete_license">Delete License</string>
+    <string name="search_license">Search License</string>
+    <string name="nfc_read">Read NFC</string>
+    <string name="nfc_write">Write NFC</string>
+    <string name="logout">Logout</string>
+    <string name="error_invalid_credentials">Invalid email or password.</string>
+    <string name="success_login">Login successful!</string>
+    <string name="license_list">License List</string>
+    <string name="license_details">License Details</string>
+    <string name="export">Export</string>
+    <string name="offline_mode">Offline Mode</string>
+    <string name="navigation_drawer_open">Open navigation drawer</string>
+    <string name="navigation_drawer_close">Close navigation drawer</string>
+    <string name="profile_image">Profile image</string>
+    <string name="prompt_city">City</string>
+    <string name="prompt_license_type">License Type</string>
+</resources> 

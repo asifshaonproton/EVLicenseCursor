@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="180dp"
+    android:background="@color/colorPrimary">
+
+    <ImageView
+        android:id="@+id/imageUserIcon"
+        android:layout_width="100dp"
+        android:layout_height="100dp"
+        android:layout_alignParentBottom="true"
+        android:layout_marginStart="16dp"
+        android:layout_marginBottom="2dp"
+        android:background="@android:drawable/ic_menu_camera"
+        android:contentDescription="@string/profile_image"
+        android:scaleType="centerCrop"
+        android:src="@android:drawable/ic_menu_gallery" />
+
+    <TextView
+        android:id="@+id/textProfileName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignBottom="@id/imageUserIcon"
+        android:layout_marginStart="13dp"
+        android:layout_marginBottom="36dp"
+        android:layout_toEndOf="@id/imageUserIcon"
+        android:text="Prodip Talukdar"
+        android:textColor="@android:color/white"
+        android:textSize="18sp"
+        android:textStyle="bold" />
+</RelativeLayout> 
