@@ -87,6 +87,7 @@ body {
     display: flex;
     gap: 12px;
     align-items: center;
+    flex-wrap: wrap;
 }
 
 /* Dashboard Stats Grid */
@@ -740,8 +741,7 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin: 0 0 24px 0;
-    padding: 0 24px;
+    margin-bottom: 32px;
     flex-wrap: wrap;
     gap: 16px;
 }
@@ -760,8 +760,7 @@ body {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: 20px;
-    margin: 0 24px 24px 24px;
-    padding: 0;
+    margin-bottom: 32px;
 }
 
 .user-search-container {
@@ -769,7 +768,7 @@ body {
     border-radius: 12px;
     padding: 20px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    margin: 0 24px 24px 24px;
+    margin-bottom: 24px;
 }
 
 .user-search-container .search-bar {
@@ -784,18 +783,16 @@ body {
     flex-shrink: 0;
 }
 
+/* Table Containers */
 .table-container {
-    margin: 0 24px;
-}
-
-#users-page .mdc-card.table-container {
-    margin: 0 24px;
-    border-radius: 12px;
+    margin-bottom: 24px;
 }
 
 /* User Dialog Styles */
 .user-form {
     padding: 16px 0;
+    max-width: 100%;
+    overflow-x: auto;
 }
 
 .user-form .form-section {
@@ -821,6 +818,7 @@ body {
 .user-form .form-field {
     flex: 1;
     min-width: 200px;
+    margin-bottom: 8px;
 }
 
 .user-form .form-field.full-width {
@@ -1056,6 +1054,8 @@ body {
     display: flex;
     gap: 4px;
     align-items: center;
+    position: relative;
+    z-index: 1;
 }
 
 .user-actions .mdc-icon-button {
@@ -1086,7 +1086,8 @@ body {
         padding: 16px;
     }
     
-    .stats-grid {
+    .stats-grid,
+    .user-stats-grid {
         grid-template-columns: 1fr;
         gap: 16px;
     }
@@ -1094,19 +1095,22 @@ body {
     .page-header {
         flex-direction: column;
         align-items: flex-start;
+        margin-bottom: 24px;
     }
     
-    .form-row {
+    .user-form .form-row {
         flex-direction: column;
         gap: 16px;
     }
     
-    .search-bar {
+    .user-search-container .search-bar {
         flex-direction: column;
         align-items: stretch;
+        gap: 12px;
     }
     
-    .search-field {
+    .search-field,
+    .filter-select {
         min-width: auto;
         width: 100%;
     }
@@ -1114,5 +1118,22 @@ body {
     .mdc-dialog .mdc-dialog__surface {
         max-width: 95vw;
         margin: 16px;
+    }
+    
+    .roles-container {
+        grid-template-columns: 1fr;
+        gap: 24px;
+    }
+    
+    .roles-list {
+        border-right: none;
+        border-bottom: 1px solid #E0E0E0;
+        padding-right: 0;
+        padding-bottom: 24px;
+    }
+    
+    .role-details {
+        padding-left: 0;
+        padding-top: 24px;
     }
 }
