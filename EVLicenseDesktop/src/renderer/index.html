@@ -220,82 +220,40 @@
                                     </div>
                                     
                                     <div class="form-field">
-                                        <div class="mdc-select mdc-select--outlined">
-                                            <div class="mdc-select__anchor">
-                                                <span class="mdc-notched-outline">
-                                                    <span class="mdc-notched-outline__leading"></span>
-                                                    <span class="mdc-notched-outline__notch">
-                                                        <span class="mdc-floating-label">City</span>
-                                                    </span>
-                                                    <span class="mdc-notched-outline__trailing"></span>
-                                                </span>
-                                                <span class="mdc-select__selected-text-container">
-                                                    <span class="mdc-select__selected-text" id="city-selected"></span>
-                                                </span>
-                                                <span class="mdc-select__dropdown-icon">
-                                                    <svg class="mdc-select__dropdown-icon-graphic" viewBox="7 10 10 5">
-                                                        <polygon class="mdc-select__dropdown-icon-inactive" points="7 10 12 15 17 10"></polygon>
-                                                        <polygon class="mdc-select__dropdown-icon-active" points="7 15 12 10 17 15"></polygon>
-                                                    </svg>
-                                                </span>
-                                            </div>
-                                            <div class="mdc-select__menu mdc-menu mdc-menu-surface">
-                                                <ul class="mdc-deprecated-list" id="city-list">
-                                                    <li class="mdc-deprecated-list-item" data-value="Dhaka">
-                                                        <span class="mdc-deprecated-list-item__text">Dhaka</span>
-                                                    </li>
-                                                    <li class="mdc-deprecated-list-item" data-value="Chittagong">
-                                                        <span class="mdc-deprecated-list-item__text">Chittagong</span>
-                                                    </li>
-                                                    <li class="mdc-deprecated-list-item" data-value="Sylhet">
-                                                        <span class="mdc-deprecated-list-item__text">Sylhet</span>
-                                                    </li>
-                                                    <li class="mdc-deprecated-list-item" data-value="Rajshahi">
-                                                        <span class="mdc-deprecated-list-item__text">Rajshahi</span>
-                                                    </li>
-                                                    <li class="mdc-deprecated-list-item" data-value="Khulna">
-                                                        <span class="mdc-deprecated-list-item__text">Khulna</span>
-                                                    </li>
-                                                </ul>
+                                        <div class="mdc-text-field mdc-text-field--outlined">
+                                            <select id="city-select" class="mdc-text-field__input">
+                                                <option value="">Select City</option>
+                                                <option value="Dhaka">Dhaka</option>
+                                                <option value="Chittagong">Chittagong</option>
+                                                <option value="Sylhet">Sylhet</option>
+                                                <option value="Rajshahi">Rajshahi</option>
+                                                <option value="Khulna">Khulna</option>
+                                            </select>
+                                            <div class="mdc-notched-outline">
+                                                <div class="mdc-notched-outline__leading"></div>
+                                                <div class="mdc-notched-outline__notch">
+                                                    <label for="city-select" class="mdc-floating-label">City</label>
+                                                </div>
+                                                <div class="mdc-notched-outline__trailing"></div>
                                             </div>
                                         </div>
                                     </div>
                                     
                                     <div class="form-field">
-                                        <div class="mdc-select mdc-select--outlined">
-                                            <div class="mdc-select__anchor">
-                                                <span class="mdc-notched-outline">
-                                                    <span class="mdc-notched-outline__leading"></span>
-                                                    <span class="mdc-notched-outline__notch">
-                                                        <span class="mdc-floating-label">License Type</span>
-                                                    </span>
-                                                    <span class="mdc-notched-outline__trailing"></span>
-                                                </span>
-                                                <span class="mdc-select__selected-text-container">
-                                                    <span class="mdc-select__selected-text" id="license-type-selected"></span>
-                                                </span>
-                                                <span class="mdc-select__dropdown-icon">
-                                                    <svg class="mdc-select__dropdown-icon-graphic" viewBox="7 10 10 5">
-                                                        <polygon class="mdc-select__dropdown-icon-inactive" points="7 10 12 15 17 10"></polygon>
-                                                        <polygon class="mdc-select__dropdown-icon-active" points="7 15 12 10 17 15"></polygon>
-                                                    </svg>
-                                                </span>
-                                            </div>
-                                            <div class="mdc-select__menu mdc-menu mdc-menu-surface">
-                                                <ul class="mdc-deprecated-list" id="license-type-list">
-                                                    <li class="mdc-deprecated-list-item" data-value="Driving License">
-                                                        <span class="mdc-deprecated-list-item__text">Driving License</span>
-                                                    </li>
-                                                    <li class="mdc-deprecated-list-item" data-value="Motorcycle License">
-                                                        <span class="mdc-deprecated-list-item__text">Motorcycle License</span>
-                                                    </li>
-                                                    <li class="mdc-deprecated-list-item" data-value="Professional License">
-                                                        <span class="mdc-deprecated-list-item__text">Professional License</span>
-                                                    </li>
-                                                    <li class="mdc-deprecated-list-item" data-value="Commercial License">
-                                                        <span class="mdc-deprecated-list-item__text">Commercial License</span>
-                                                    </li>
-                                                </ul>
+                                        <div class="mdc-text-field mdc-text-field--outlined">
+                                            <select id="license-type-select" class="mdc-text-field__input">
+                                                <option value="">Select License Type</option>
+                                                <option value="Driving License">Driving License</option>
+                                                <option value="Motorcycle License">Motorcycle License</option>
+                                                <option value="Professional License">Professional License</option>
+                                                <option value="Commercial License">Commercial License</option>
+                                            </select>
+                                            <div class="mdc-notched-outline">
+                                                <div class="mdc-notched-outline__leading"></div>
+                                                <div class="mdc-notched-outline__notch">
+                                                    <label for="license-type-select" class="mdc-floating-label">License Type</label>
+                                                </div>
+                                                <div class="mdc-notched-outline__trailing"></div>
                                             </div>
                                         </div>
                                     </div>
