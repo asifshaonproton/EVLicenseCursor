@@ -1,0 +1,49 @@
+{
+  "name": "evlicense-desktop",
+  "version": "1.0.0",
+  "description": "Cross-platform desktop application for EV License Management with ACR122U NFC Reader support",
+  "main": "src/main/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "build": "electron-builder",
+    "build-win": "electron-builder --win",
+    "build-mac": "electron-builder --mac",
+    "build-linux": "electron-builder --linux",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": ["electron", "nfc", "acr122u", "license", "desktop", "crossplatform"],
+  "author": "Talukdar & Son's, Software Eng. Asif Hossain",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8"
+  },
+  "dependencies": {
+    "node-hid": "^3.1.0",
+    "sqlite3": "^5.1.7",
+    "express": "^4.21.2",
+    "socket.io": "^4.8.1"
+  },
+  "build": {
+    "appId": "com.ektai.evlicense-desktop",
+    "productName": "EV License Desktop",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "assets/**/*",
+      "node_modules/**/*"
+    ],
+    "mac": {
+      "category": "public.app-category.business"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
+  }
+}
