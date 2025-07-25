@@ -319,6 +319,14 @@ class EVLicenseApp {
             });
         }
 
+        // Test display button
+        const testDisplayBtn = document.getElementById('test-display-btn');
+        if (testDisplayBtn) {
+            testDisplayBtn.addEventListener('click', () => {
+                this.testDisplay();
+            });
+        }
+
         console.log('✅ Scanner event listeners set up');
     }
 
@@ -895,6 +903,29 @@ class EVLicenseApp {
         setTimeout(() => {
             this.updateWriterStatus('ready', 'Ready to write');
         }, 3000);
+    }
+
+    testDisplay() {
+        console.log('🧪 Testing display functionality...');
+        
+        // Create fake card data with text
+        const fakeCardData = {
+            uid: 'TEST123',
+            type: 'Test Card',
+            reader: 'Test Reader',
+            standard: 'TEST',
+            detectedAt: new Date(),
+            atr: Buffer.from('test'),
+            data: {
+                extractedText: 'hello',
+                blocks: [
+                    { block: 4, data: '68656c6c6f20202020202020202020202020' }
+                ]
+            }
+        };
+        
+        console.log('🧪 Calling showScanSuccess with fake data...');
+        this.showScanSuccess(fakeCardData);
     }
 
     initializeSearchAndFilters() {
