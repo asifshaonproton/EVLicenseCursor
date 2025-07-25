@@ -1,0 +1,241 @@
+/* EV License Desktop - Main Styles */
+
+/* Global Styles */
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Roboto', sans-serif;
+    background-color: var(--md-sys-color-surface);
+    color: var(--md-sys-color-on-surface);
+    overflow-x: hidden;
+}
+
+/* App Bar Customizations */
+.mdc-top-app-bar {
+    background-color: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary);
+}
+
+.mdc-top-app-bar__title {
+    font-weight: 500;
+    letter-spacing: 0.5px;
+}
+
+/* NFC Status Indicator */
+.nfc-status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 20px;
+    background-color: rgba(255, 255, 255, 0.1);
+    margin-right: 16px;
+    font-size: 14px;
+}
+
+.nfc-status-indicator .material-icons {
+    font-size: 18px;
+}
+
+.nfc-status-indicator.connected {
+    background-color: rgba(76, 175, 80, 0.2);
+    color: #4CAF50;
+}
+
+/* Main Content */
+.main-content {
+    padding: 24px;
+    max-width: 1200px;
+    margin: 0 auto;
+    min-height: calc(100vh - 64px);
+}
+
+/* Page Styles */
+.page {
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.page-header {
+    margin-bottom: 32px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.page-header h1 {
+    margin: 0;
+    color: var(--md-sys-color-on-surface);
+}
+
+.page-header p {
+    margin: 8px 0 0 0;
+    color: var(--md-sys-color-on-surface-variant, #666);
+}
+
+.page-actions {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+/* Dashboard Stats Grid */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 24px;
+    margin-bottom: 32px;
+}
+
+.stat-card {
+    background-color: var(--md-sys-color-surface);
+    border: 1px solid #E0E0E0;
+    border-radius: 12px;
+    transition: all 0.2s ease-in-out;
+}
+
+.stat-card:hover {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+}
+
+.stat-content {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 24px;
+}
+
+.stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #E3F2FD;
+    color: var(--md-sys-color-primary);
+}
+
+.stat-icon.active {
+    background-color: #E8F5E8;
+    color: #2E7D32;
+}
+
+.stat-icon .material-icons {
+    font-size: 24px;
+}
+
+.stat-info {
+    flex: 1;
+}
+
+.stat-number {
+    font-size: 32px;
+    font-weight: 500;
+    line-height: 1;
+    color: var(--md-sys-color-on-surface);
+}
+
+.stat-label {
+    font-size: 14px;
+    color: #666;
+    margin-top: 4px;
+}
+
+/* Table Container */
+.table-container {
+    border: 1px solid #E0E0E0;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.mdc-data-table {
+    width: 100%;
+}
+
+.mdc-data-table__table {
+    width: 100%;
+}
+
+.mdc-data-table__header-cell,
+.mdc-data-table__cell {
+    border-bottom: 1px solid #E0E0E0;
+    padding: 16px;
+    text-align: left;
+}
+
+.mdc-data-table__header-cell {
+    background-color: #F5F5F5;
+    font-weight: 500;
+    color: #666;
+}
+
+/* Status Badges */
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 12px;
+    border-radius: 16px;
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.status-badge.active {
+    background-color: #E8F5E8;
+    color: #2E7D32;
+}
+
+.status-badge.expired {
+    background-color: #FFEBEE;
+    color: #C62828;
+}
+
+/* About Page */
+.about-info {
+    margin-top: 16px;
+}
+
+.about-info p {
+    margin: 12px 0;
+    line-height: 1.6;
+}
+
+/* Material Design Component Overrides */
+.mdc-button {
+    --mdc-theme-primary: var(--md-sys-color-primary);
+    --mdc-theme-on-primary: var(--md-sys-color-on-primary);
+}
+
+.mdc-card {
+    border-radius: 12px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .main-content {
+        padding: 16px;
+    }
+    
+    .stats-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+    
+    .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
