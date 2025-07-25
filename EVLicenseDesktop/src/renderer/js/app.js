@@ -1505,6 +1505,18 @@ class EVLicenseApp {
         alert(`${title}: ${message}`);
     }
 
+    showInfoMessage(message) {
+        console.log('ℹ️ Info:', message);
+        // For now, use alert as fallback
+        alert(message);
+    }
+
+    showWarningMessage(message) {
+        console.warn('⚠️ Warning:', message);
+        // For now, use alert as fallback
+        alert(message);
+    }
+
     formatDate(dateString) {
         try {
             return new Date(dateString).toLocaleDateString();
