@@ -3,11 +3,14 @@ const path = require('path');
 
 // Import our custom modules
 const DatabaseManager = require('./database-manager');
+const NFCManager = require('./nfc-manager');
 
 class EVLicenseDesktop {
     constructor() {
         this.mainWindow = null;
+        this.loginWindow = null;
         this.databaseManager = null;
+        this.nfcManager = null;
         this.isDev = process.argv.includes('--dev');
         this.initializeApp();
     }
@@ -44,12 +47,55 @@ class EVLicenseDesktop {
             this.databaseManager = new DatabaseManager();
             await this.databaseManager.initialize();
             
+            // Initialize NFC Manager
+            this.nfcManager = new NFCManager();
+            await this.nfcManager.initialize();
+            
+            // Setup NFC event handlers
+            this.setupNFCEventHandlers();
+            
             console.log('✅ Services initialized successfully');
         } catch (error) {
             console.error('❌ Failed to initialize services:', error);
             this.showErrorDialog('Initialization Error', 
                 'Failed to initialize application services. Some features may not work correctly.');
         }
+    }
+
+    setupNFCEventHandlers() {
+        if (!this.nfcManager) return;
+
+        this.nfcManager.on('device-connected', (deviceInfo) => {
+            console.log('📱 NFC Device connected:', deviceInfo);
+            this.broadcastToRenderers('nfc-device-connected', deviceInfo);
+        });
+
+        this.nfcManager.on('device-disconnected', () => {
+            console.log('📱 NFC Device disconnected');
+            this.broadcastToRenderers('nfc-device-disconnected');
+        });
+
+        this.nfcManager.on('card-detected', (cardData) => {
+            console.log('💳 NFC Card detected:', cardData);
+            this.broadcastToRenderers('nfc-card-detected', cardData);
+        });
+
+        this.nfcManager.on('card-removed', () => {
+            console.log('💳 NFC Card removed');
+            this.broadcastToRenderers('nfc-card-removed');
+        });
+
+        this.nfcManager.on('error', (error) => {
+            console.error('❌ NFC Error:', error);
+            this.broadcastToRenderers('nfc-error', error);
+        });
+    }
+
+    broadcastToRenderers(channel, data) {
+        BrowserWindow.getAllWindows().forEach(window => {
+            window.webContents.send(channel, data);
+        });
+    }
     }
 
     setupIpcHandlers() {
@@ -243,6 +289,73 @@ class EVLicenseDesktop {
             }
         });
 
+        // NFC operations
+        ipcMain.handle('nfc-get-status', async () => {
+            try {
+                if (!this.nfcManager) {
+                    return { connected: false, error: 'NFC Manager not initialized' };
+                }
+                return {
+                    connected: this.nfcManager.isConnected,
+                    polling: this.nfcManager.isPolling,
+                    deviceInfo: this.nfcManager.deviceInfo || null
+                };
+            } catch (error) {
+                console.error('Error getting NFC status:', error);
+                return { connected: false, error: error.message };
+            }
+        });
+
+        ipcMain.handle('nfc-start-polling', async () => {
+            try {
+                if (!this.nfcManager) {
+                    throw new Error('NFC Manager not initialized');
+                }
+                await this.nfcManager.startPolling();
+                return { success: true };
+            } catch (error) {
+                console.error('Error starting NFC polling:', error);
+                throw error;
+            }
+        });
+
+        ipcMain.handle('nfc-stop-polling', async () => {
+            try {
+                if (!this.nfcManager) {
+                    throw new Error('NFC Manager not initialized');
+                }
+                await this.nfcManager.stopPolling();
+                return { success: true };
+            } catch (error) {
+                console.error('Error stopping NFC polling:', error);
+                throw error;
+            }
+        });
+
+        ipcMain.handle('nfc-read-card', async () => {
+            try {
+                if (!this.nfcManager) {
+                    throw new Error('NFC Manager not initialized');
+                }
+                return await this.nfcManager.readCard();
+            } catch (error) {
+                console.error('Error reading NFC card:', error);
+                throw error;
+            }
+        });
+
+        ipcMain.handle('nfc-write-card', async (event, data) => {
+            try {
+                if (!this.nfcManager) {
+                    throw new Error('NFC Manager not initialized');
+                }
+                return await this.nfcManager.writeCard(data);
+            } catch (error) {
+                console.error('Error writing NFC card:', error);
+                throw error;
+            }
+        });
+
         // Window management
         ipcMain.handle('window-open-main-app', async () => {
             try {
@@ -396,6 +509,11 @@ class EVLicenseDesktop {
     cleanup() {
         try {
             console.log('🧹 Cleaning up application...');
+            
+            if (this.nfcManager) {
+                this.nfcManager.disconnect();
+                this.nfcManager = null;
+            }
             
             if (this.databaseManager) {
                 this.databaseManager.cleanup();

@@ -52,6 +52,11 @@ class EVLicenseApp {
         };
         this.permissions = {};
         this.currentEditingRole = null;
+        this.nfcStatus = {
+            connected: false,
+            polling: false,
+            deviceInfo: null
+        };
         
         this.initializeApp();
     }
@@ -78,6 +83,9 @@ class EVLicenseApp {
             
             // Update UI with user info
             this.updateUserInterface();
+            
+            // Initialize NFC functionality
+            this.initializeNFC();
             
             console.log('✅ App initialized successfully');
         } catch (error) {
@@ -2817,6 +2825,186 @@ class EVLicenseApp {
 
     editRole(roleId) {
         this.selectRole(roleId);
+    }
+
+    // NFC Management Methods
+    async initializeNFC() {
+        try {
+            console.log('🔄 Initializing NFC...');
+            
+            // Get initial NFC status
+            await this.updateNFCStatus();
+            
+            // Setup NFC event listeners
+            this.setupNFCEventListeners();
+            
+            // Start polling if device is connected
+            if (this.nfcStatus.connected && !this.nfcStatus.polling) {
+                await this.startNFCPolling();
+            }
+            
+            console.log('✅ NFC initialized successfully');
+        } catch (error) {
+            console.error('❌ Error initializing NFC:', error);
+        }
+    }
+
+    setupNFCEventListeners() {
+        if (!window.electronAPI?.nfc) return;
+
+        // Device connection events
+        window.electronAPI.nfc.onDeviceConnected((deviceInfo) => {
+            console.log('📱 NFC Device connected:', deviceInfo);
+            this.nfcStatus.connected = true;
+            this.nfcStatus.deviceInfo = deviceInfo;
+            this.updateNFCStatusDisplay();
+            this.showSuccessMessage('NFC Reader Connected', `${deviceInfo.name} connected successfully`);
+            this.startNFCPolling();
+        });
+
+        window.electronAPI.nfc.onDeviceDisconnected(() => {
+            console.log('📱 NFC Device disconnected');
+            this.nfcStatus.connected = false;
+            this.nfcStatus.polling = false;
+            this.nfcStatus.deviceInfo = null;
+            this.updateNFCStatusDisplay();
+            this.showErrorMessage('NFC Reader Disconnected', 'Please reconnect your NFC reader');
+        });
+
+        // Card detection events
+        window.electronAPI.nfc.onCardDetected((cardData) => {
+            console.log('💳 NFC Card detected:', cardData);
+            this.handleCardDetected(cardData);
+        });
+
+        window.electronAPI.nfc.onCardRemoved(() => {
+            console.log('💳 NFC Card removed');
+            this.handleCardRemoved();
+        });
+
+        // Error events
+        window.electronAPI.nfc.onError((error) => {
+            console.error('❌ NFC Error:', error);
+            this.showErrorMessage('NFC Error', error.message || 'An NFC error occurred');
+        });
+    }
+
+    async updateNFCStatus() {
+        try {
+            const status = await window.electronAPI.nfc.getStatus();
+            this.nfcStatus = { ...this.nfcStatus, ...status };
+            this.updateNFCStatusDisplay();
+            return status;
+        } catch (error) {
+            console.error('❌ Error getting NFC status:', error);
+            this.nfcStatus.connected = false;
+            this.updateNFCStatusDisplay();
+        }
+    }
+
+    updateNFCStatusDisplay() {
+        const statusIndicator = document.querySelector('.nfc-status-indicator');
+        if (!statusIndicator) return;
+
+        statusIndicator.className = 'nfc-status-indicator';
+        
+        if (this.nfcStatus.connected) {
+            statusIndicator.classList.add('connected');
+            statusIndicator.innerHTML = `
+                <span class="material-icons">nfc</span>
+                <span>NFC Connected</span>
+            `;
+            
+            if (this.nfcStatus.polling) {
+                statusIndicator.innerHTML = `
+                    <span class="material-icons">nfc</span>
+                    <span>NFC Scanning...</span>
+                `;
+            }
+        } else {
+            statusIndicator.innerHTML = `
+                <span class="material-icons">portable_wifi_off</span>
+                <span>NFC Disconnected</span>
+            `;
+        }
+    }
+
+    async startNFCPolling() {
+        try {
+            if (!this.nfcStatus.connected) return;
+            
+            await window.electronAPI.nfc.startPolling();
+            this.nfcStatus.polling = true;
+            this.updateNFCStatusDisplay();
+            console.log('✅ NFC polling started');
+        } catch (error) {
+            console.error('❌ Error starting NFC polling:', error);
+        }
+    }
+
+    async stopNFCPolling() {
+        try {
+            await window.electronAPI.nfc.stopPolling();
+            this.nfcStatus.polling = false;
+            this.updateNFCStatusDisplay();
+            console.log('⏹️ NFC polling stopped');
+        } catch (error) {
+            console.error('❌ Error stopping NFC polling:', error);
+        }
+    }
+
+    handleCardDetected(cardData) {
+        // Show notification
+        this.showSuccessMessage('NFC Card Detected', `Card UID: ${cardData.uid}`);
+        
+        // Find license associated with this card
+        this.findLicenseByCard(cardData.uid);
+        
+        // Auto-open license if found
+        // This could navigate to license details or show in a popup
+    }
+
+    handleCardRemoved() {
+        console.log('💳 Card removed from reader');
+    }
+
+    async findLicenseByCard(cardUid) {
+        try {
+            // This would search for license associated with the card UID
+            // For now, just log it
+            console.log(`🔍 Searching for license with card UID: ${cardUid}`);
+            
+            // In a real implementation, you'd search the database:
+            // const license = await window.electronAPI.db.findLicenseByCard(cardUid);
+            // if (license) {
+            //     this.showLicenseDetails(license);
+            // }
+            
+        } catch (error) {
+            console.error('❌ Error finding license by card:', error);
+        }
+    }
+
+    async testNfcConnection() {
+        try {
+            this.showSuccessMessage('Testing NFC Connection...');
+            
+            const status = await this.updateNFCStatus();
+            
+            if (status.connected) {
+                if (!status.polling) {
+                    await this.startNFCPolling();
+                }
+                this.showSuccessMessage('NFC Test Successful', 
+                    `Device: ${status.deviceInfo?.name || 'ACR122U'}\nStatus: Connected and scanning`);
+            } else {
+                this.showErrorMessage('NFC Test Failed', 
+                    'No NFC reader detected. Please check your ACR122U connection.');
+            }
+        } catch (error) {
+            console.error('❌ NFC test failed:', error);
+            this.showErrorMessage('NFC Test Failed', error.message);
+        }
     }
 
     formatDateTime(dateString) {
