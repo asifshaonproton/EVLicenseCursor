@@ -474,34 +474,34 @@ class NFCPCSCManager extends EventEmitter {
                 }
             }
 
-            console.log(`✅ Android-compatible writing completed. Total: ${totalBytesWritten} bytes across ${blocks.length} blocks`);
+            console.log(`✅ Plain text writing completed. Total: ${totalBytesWritten} bytes across ${blocks.length} blocks`);
             
             // Emit write success event
             this.emit('card-written', {
                 uid: this.currentCard.uid,
                 originalData: data,
-                encryptedData: finalData,
-                ndefMessage: ndefMessage.toString('hex'),
+                plainTextData: finalData,
+                dataBuffer: dataBuffer.toString('hex'),
                 blocks: blocks,
                 totalBytesWritten: totalBytesWritten,
-                isAndroidCompatible: true,
+                isPlainTextFormat: true,
                 timestamp: new Date()
             });
 
             return {
                 success: true,
-                message: `Successfully wrote ${totalBytesWritten} bytes to ${blocks.length} blocks (Android compatible)`,
+                message: `Successfully wrote ${totalBytesWritten} bytes to ${blocks.length} blocks (Plain Text)`,
                 originalData: data,
-                encryptedData: finalData,
+                plainTextData: finalData,
                 blocks: blocks,
                 totalBytesWritten: totalBytesWritten,
                 startBlock: 4,
                 endBlock: 4 + blocks.length - 1,
-                isAndroidCompatible: true
+                isPlainTextFormat: true
             };
 
         } catch (error) {
-            console.error('❌ Error writing Android-compatible data to card:', error);
+            console.error('❌ Error writing plain text data to card:', error);
             this.emit('card-write-error', {
                 error: error.message,
                 uid: this.currentCard ? this.currentCard.uid : null,
