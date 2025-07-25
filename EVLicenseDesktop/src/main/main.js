@@ -3,7 +3,7 @@ const path = require('path');
 
 // Import our custom modules
 const DatabaseManager = require('./database-manager');
-const EnhancedNFCManager = require('./enhanced-nfc-manager');
+const NFCPCSCManager = require('./nfc-pcsc-manager');
 
 class EVLicenseDesktop {
     constructor() {
@@ -47,7 +47,7 @@ class EVLicenseDesktop {
             await this.databaseManager.initialize();
             
             // Initialize enhanced NFC manager
-            this.nfcManager = new EnhancedNFCManager();
+            this.nfcManager = new NFCPCSCManager();
             await this.nfcManager.initialize();
             
             // Set up NFC event handlers
@@ -64,43 +64,65 @@ class EVLicenseDesktop {
     setupNFCEventHandlers() {
         if (!this.nfcManager) return;
         
-        console.log('🔗 Setting up Enhanced NFC event handlers...');
+        console.log('🔗 Setting up NFC-PCSC event handlers...');
         
-        // Device connection events
-        this.nfcManager.on('device-connected', (deviceInfo) => {
-            console.log('📱 Enhanced NFC device connected:', deviceInfo.device.product);
+        // Reader connection events
+        this.nfcManager.on('reader-connected', (readerInfo) => {
+            console.log('📱 NFC reader connected:', readerInfo.name);
             if (this.mainWindow) {
-                this.mainWindow.webContents.send('nfc-device-connected', deviceInfo);
+                this.mainWindow.webContents.send('nfc-reader-connected', readerInfo);
             }
         });
         
-        this.nfcManager.on('device-disconnected', (info) => {
-            console.log('📱 Enhanced NFC device disconnected');
+        this.nfcManager.on('reader-disconnected', (info) => {
+            console.log('📱 NFC reader disconnected:', info.name);
             if (this.mainWindow) {
-                this.mainWindow.webContents.send('nfc-device-disconnected', info);
+                this.mainWindow.webContents.send('nfc-reader-disconnected', info);
             }
         });
         
         // Card events
         this.nfcManager.on('card-detected', (cardData) => {
-            console.log('💳 Enhanced card detected:', cardData.uid);
+            console.log('💳 NFC card detected:', cardData.uid);
             if (this.mainWindow) {
                 this.mainWindow.webContents.send('nfc-card-detected', cardData);
             }
         });
         
         this.nfcManager.on('card-removed', (info) => {
-            console.log('📤 Enhanced card removed');
+            console.log('📤 NFC card removed');
             if (this.mainWindow) {
                 this.mainWindow.webContents.send('nfc-card-removed', info);
             }
         });
         
+        // Initialization and status events
+        this.nfcManager.on('initialized', () => {
+            console.log('✅ NFC-PCSC Manager initialized');
+            if (this.mainWindow) {
+                this.mainWindow.webContents.send('nfc-initialized');
+            }
+        });
+        
+        this.nfcManager.on('readers-refreshed', (status) => {
+            console.log('🔄 NFC readers refreshed');
+            if (this.mainWindow) {
+                this.mainWindow.webContents.send('nfc-readers-refreshed', status);
+            }
+        });
+        
         // Error events
         this.nfcManager.on('error', (error) => {
-            console.error('❌ Enhanced NFC error:', error);
+            console.error('❌ NFC-PCSC error:', error);
             if (this.mainWindow) {
                 this.mainWindow.webContents.send('nfc-error', error);
+            }
+        });
+        
+        this.nfcManager.on('reader-error', (error) => {
+            console.error('❌ NFC reader error:', error);
+            if (this.mainWindow) {
+                this.mainWindow.webContents.send('nfc-reader-error', error);
             }
         });
         
@@ -329,13 +351,26 @@ class EVLicenseDesktop {
         ipcMain.handle('nfc-refresh-devices', async () => {
             try {
                 if (this.nfcManager) {
-                    const success = await this.nfcManager.refreshDevices();
-                    return { success: success };
+                    const status = await this.nfcManager.refreshReaders();
+                    return status;
                 } else {
                     throw new Error('NFC Manager not initialized');
                 }
             } catch (error) {
-                console.error('Error refreshing NFC devices:', error);
+                console.error('Error refreshing NFC readers:', error);
+                throw error;
+            }
+        });
+
+        ipcMain.handle('nfc-get-detailed-readers', async () => {
+            try {
+                if (this.nfcManager) {
+                    return this.nfcManager.getDetailedReaderInfo();
+                } else {
+                    throw new Error('NFC Manager not initialized');
+                }
+            } catch (error) {
+                console.error('Error getting detailed reader info:', error);
                 throw error;
             }
         });

@@ -96,6 +96,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
         getStatus: async () => {
             return await ipcRenderer.invoke('nfc-get-status');
         },
+        getDetailedReaders: async () => {
+            return await ipcRenderer.invoke('nfc-get-detailed-readers');
+        },
         startPolling: async () => {
             return await ipcRenderer.invoke('nfc-start-polling');
         },
@@ -112,11 +115,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
             return await ipcRenderer.invoke('nfc-refresh-devices');
         },
         // Event listeners
-        onDeviceConnected: (callback) => {
-            ipcRenderer.on('nfc-device-connected', (event, data) => callback(data));
+        onReaderConnected: (callback) => {
+            ipcRenderer.on('nfc-reader-connected', (event, data) => callback(data));
         },
-        onDeviceDisconnected: (callback) => {
-            ipcRenderer.on('nfc-device-disconnected', (event, data) => callback(data));
+        onReaderDisconnected: (callback) => {
+            ipcRenderer.on('nfc-reader-disconnected', (event, data) => callback(data));
         },
         onCardDetected: (callback) => {
             ipcRenderer.on('nfc-card-detected', (event, data) => callback(data));
@@ -124,8 +127,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
         onCardRemoved: (callback) => {
             ipcRenderer.on('nfc-card-removed', (event, data) => callback(data));
         },
+        onInitialized: (callback) => {
+            ipcRenderer.on('nfc-initialized', (event, data) => callback(data));
+        },
+        onReadersRefreshed: (callback) => {
+            ipcRenderer.on('nfc-readers-refreshed', (event, data) => callback(data));
+        },
         onError: (callback) => {
             ipcRenderer.on('nfc-error', (event, data) => callback(data));
+        },
+        onReaderError: (callback) => {
+            ipcRenderer.on('nfc-reader-error', (event, data) => callback(data));
         }
     }
 });

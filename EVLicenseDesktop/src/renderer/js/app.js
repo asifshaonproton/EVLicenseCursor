@@ -187,7 +187,194 @@ class EVLicenseApp {
             });
         }
 
+        // NFC event listeners
+        this.setupNFCEventListeners();
+
         console.log('✅ Event listeners set up');
+    }
+
+    setupNFCEventListeners() {
+        if (!window.electronAPI || !window.electronAPI.nfc) {
+            console.warn('⚠️ NFC API not available');
+            return;
+        }
+
+        console.log('🔗 Setting up NFC event listeners...');
+
+        // Reader connection events
+        window.electronAPI.nfc.onReaderConnected((readerInfo) => {
+            console.log('📱 Reader connected:', readerInfo.name);
+            this.showSuccessMessage(`NFC Reader connected: ${readerInfo.name}`);
+            this.updateNfcStatus();
+        });
+
+        window.electronAPI.nfc.onReaderDisconnected((info) => {
+            console.log('📱 Reader disconnected:', info.name);
+            this.showWarningMessage(`NFC Reader disconnected: ${info.name}`);
+            this.updateNfcStatus();
+        });
+
+        // Card events
+        window.electronAPI.nfc.onCardDetected((cardData) => {
+            console.log('💳 Card detected:', cardData);
+            this.handleCardDetected(cardData);
+        });
+
+        window.electronAPI.nfc.onCardRemoved((info) => {
+            console.log('💳 Card removed:', info);
+            this.handleCardRemoved(info);
+        });
+
+        // Initialization events
+        window.electronAPI.nfc.onInitialized(() => {
+            console.log('✅ NFC system initialized');
+            this.updateNfcStatus();
+        });
+
+        window.electronAPI.nfc.onReadersRefreshed((status) => {
+            console.log('🔄 Readers refreshed:', status);
+            this.updateNfcStatus();
+        });
+
+        // Error events
+        window.electronAPI.nfc.onError((error) => {
+            console.error('❌ NFC error:', error);
+            this.showErrorMessage('NFC Error', error.message || error);
+        });
+
+        window.electronAPI.nfc.onReaderError((error) => {
+            console.error('❌ Reader error:', error);
+            this.showErrorMessage('Reader Error', `${error.name}: ${error.error}`);
+        });
+
+        console.log('✅ NFC event listeners set up');
+    }
+
+    handleCardDetected(cardData) {
+        console.log('🏷️ Handling card detection:', cardData);
+        
+        // Show card detected notification
+        this.showSuccessMessage(`NFC Card Detected: ${cardData.type} (UID: ${cardData.uid})`);
+        
+        // Update the NFC status to show the new card
+        this.updateNfcStatus();
+        
+        // If we're on the settings page, show detailed card info
+        if (this.currentPage === 'settings') {
+            this.displayCardData(cardData);
+        }
+        
+        // Store the last detected card for potential use
+        this.lastDetectedCard = cardData;
+    }
+
+    handleCardRemoved(info) {
+        console.log('📤 Handling card removal:', info);
+        
+        // Show card removed notification
+        this.showInfoMessage(`NFC Card Removed (UID: ${info.uid})`);
+        
+        // Update the NFC status
+        this.updateNfcStatus();
+        
+        // Clear the card display if we're on settings
+        if (this.currentPage === 'settings') {
+            const cardDisplay = document.getElementById('card-data-display');
+            if (cardDisplay) {
+                cardDisplay.innerHTML = '<p class="no-card-message">No card present</p>';
+            }
+        }
+    }
+
+    displayCardData(cardData) {
+        const cardDisplay = document.getElementById('card-data-display');
+        if (!cardDisplay) return;
+
+        const cardInfo = `
+            <div class="card-data-enhanced">
+                <div class="card-header">
+                    <div class="card-icon">
+                        <i class="material-icons">credit_card</i>
+                    </div>
+                    <div class="card-title">
+                        <h3>${cardData.type}</h3>
+                        <p class="card-uid">UID: ${cardData.uid}</p>
+                    </div>
+                    <div class="card-actions">
+                        <button class="mdc-button mdc-button--outlined" onclick="app.readCardDetails()">
+                            <span class="mdc-button__label">Re-read</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="card-details">
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <span class="detail-label">Card Type:</span>
+                            <span class="detail-value">${cardData.type}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">UID:</span>
+                            <span class="detail-value">
+                                ${cardData.uid}
+                                <button class="copy-btn" onclick="navigator.clipboard.writeText('${cardData.uid}')" title="Copy UID">
+                                    <i class="material-icons">content_copy</i>
+                                </button>
+                            </span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Reader:</span>
+                            <span class="detail-value">${cardData.reader}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Standard:</span>
+                            <span class="detail-value">${cardData.standard}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Detected:</span>
+                            <span class="detail-value">${new Date(cardData.detectedAt).toLocaleString()}</span>
+                        </div>
+                        ${cardData.atr ? `
+                            <div class="detail-item">
+                                <span class="detail-label">ATR:</span>
+                                <span class="detail-value mono">${cardData.atr.toString('hex')}</span>
+                            </div>
+                        ` : ''}
+                    </div>
+                    
+                    ${cardData.data && cardData.data.blocks && cardData.data.blocks.length > 0 ? `
+                        <div class="card-data-section">
+                            <h4>Block Data:</h4>
+                            <div class="blocks-grid">
+                                ${cardData.data.blocks.map(block => `
+                                    <div class="block-item">
+                                        <span class="block-number">Block ${block.block}:</span>
+                                        <span class="block-data mono">${block.data}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+        
+        cardDisplay.innerHTML = cardInfo;
+        
+        // Initialize any new MDC components
+        this.initializeMDCComponents(cardDisplay);
+    }
+
+    async readCardDetails() {
+        try {
+            console.log('🔄 Re-reading card details...');
+            const cardData = await window.electronAPI.nfc.readCard();
+            this.displayCardData(cardData);
+            this.showSuccessMessage('Card details refreshed');
+        } catch (error) {
+            console.error('❌ Error reading card details:', error);
+            this.showErrorMessage('Read Error', error.message);
+        }
     }
 
     initializeSearchAndFilters() {
@@ -1335,13 +1522,128 @@ class EVLicenseApp {
         }
     }
 
-    updateNfcStatus() {
-        const statusIndicator = document.getElementById('nfc-status-indicator');
-        if (statusIndicator) {
-            // This would get actual NFC status from the NFC manager
-            statusIndicator.textContent = 'Disconnected';
-            statusIndicator.className = 'status-indicator';
+    async updateNfcStatus() {
+        try {
+            const statusIndicator = document.getElementById('nfc-status-indicator');
+            const deviceDetails = document.getElementById('device-details');
+            
+            // Get NFC status from the manager
+            const status = await window.electronAPI.nfc.getStatus();
+            const detailedReaders = await window.electronAPI.nfc.getDetailedReaders();
+            
+            // Update status indicator
+            if (statusIndicator) {
+                if (status.initialized && status.readersCount > 0) {
+                    statusIndicator.textContent = `${status.readersCount} Reader(s) Connected`;
+                    statusIndicator.className = 'status-indicator connected';
+                } else if (status.initialized) {
+                    statusIndicator.textContent = 'No Readers';
+                    statusIndicator.className = 'status-indicator warning';
+                } else {
+                    statusIndicator.textContent = 'Initializing...';
+                    statusIndicator.className = 'status-indicator connecting';
+                }
+            }
+            
+            // Update detailed device information
+            if (deviceDetails) {
+                this.updateDeviceDetails(detailedReaders, status);
+            }
+            
+        } catch (error) {
+            console.error('❌ Error updating NFC status:', error);
+            const statusIndicator = document.getElementById('nfc-status-indicator');
+            if (statusIndicator) {
+                statusIndicator.textContent = 'Error';
+                statusIndicator.className = 'status-indicator error';
+            }
         }
+    }
+
+    updateDeviceDetails(readers, status) {
+        const deviceDetails = document.getElementById('device-details');
+        if (!deviceDetails) return;
+
+        if (readers.length === 0) {
+            deviceDetails.innerHTML = `
+                <div class="device-status-card">
+                    <div class="no-device-message">
+                        <i class="material-icons">nfc</i>
+                        <h3>No NFC Readers Connected</h3>
+                        <p>Please connect an NFC reader to begin scanning cards.</p>
+                        <button class="mdc-button mdc-button--raised" onclick="app.refreshNfcDevices()">
+                            <span class="mdc-button__label">Refresh Devices</span>
+                        </button>
+                    </div>
+                </div>
+            `;
+            return;
+        }
+
+        deviceDetails.innerHTML = readers.map((reader, index) => `
+            <div class="device-status-card ${reader.connected ? 'connected' : 'disconnected'}" id="reader-${index}">
+                <div class="device-header">
+                    <div class="device-icon">
+                        <i class="material-icons">${reader.connected ? 'nfc' : 'portable_wifi_off'}</i>
+                    </div>
+                    <div class="device-info">
+                        <h3 class="device-name">${reader.model}</h3>
+                        <p class="device-vendor">${reader.vendor}</p>
+                        <span class="device-status ${reader.connected ? 'connected' : 'disconnected'}">
+                            ${reader.connected ? 'Connected' : 'Disconnected'}
+                        </span>
+                    </div>
+                    <div class="device-actions">
+                        <button class="mdc-icon-button" onclick="app.refreshNfcDevices()" title="Refresh">
+                            <i class="material-icons">refresh</i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="device-details">
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <span class="detail-label">Reader Name:</span>
+                            <span class="detail-value">${reader.name}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Last Seen:</span>
+                            <span class="detail-value">${new Date(reader.lastSeen).toLocaleString()}</span>
+                        </div>
+                        ${reader.currentCard ? `
+                            <div class="detail-item current-card">
+                                <span class="detail-label">Current Card:</span>
+                                <span class="detail-value">
+                                    <strong>${reader.currentCard.type}</strong><br>
+                                    UID: ${reader.currentCard.uid}<br>
+                                    <small>Detected: ${new Date(reader.currentCard.detectedAt).toLocaleString()}</small>
+                                </span>
+                            </div>
+                        ` : `
+                            <div class="detail-item">
+                                <span class="detail-label">Current Card:</span>
+                                <span class="detail-value no-card">No card present</span>
+                            </div>
+                        `}
+                    </div>
+                    
+                    <div class="capabilities-section">
+                        <h4>Supported Technologies:</h4>
+                        <div class="capabilities-grid">
+                            ${Object.entries(reader.capabilities).map(([tech, supported]) => `
+                                <div class="capability-item ${supported ? 'supported' : 'not-supported'}">
+                                    <i class="material-icons">${supported ? 'check_circle' : 'cancel'}</i>
+                                    <span>${tech.toUpperCase()}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+        
+        // Initialize any MDC components in the generated content
+        this.initializeMDCComponents(deviceDetails);
     }
 
     async loadUserSettings() {
@@ -1437,18 +1739,27 @@ class EVLicenseApp {
             
             if (testBtn) testBtn.disabled = true;
 
-            // Simulate NFC connection test
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            
-            // This would actually test NFC connection
-            const connected = Math.random() > 0.5; // Random for demo
+            // Actually test NFC connection using the real manager
+            const status = await window.electronAPI.nfc.getStatus();
             
             if (statusIndicator) {
-                statusIndicator.textContent = connected ? 'Connected' : 'Disconnected';
-                statusIndicator.className = connected ? 'status-indicator connected' : 'status-indicator';
+                if (status.initialized && status.readersCount > 0) {
+                    statusIndicator.textContent = `${status.readersCount} Reader(s) Connected`;
+                    statusIndicator.className = 'status-indicator connected';
+                    this.showSuccessMessage(`NFC Connection Test: ${status.readersCount} reader(s) found!`);
+                } else if (status.initialized) {
+                    statusIndicator.textContent = 'No Readers';
+                    statusIndicator.className = 'status-indicator warning';
+                    this.showWarningMessage('NFC Connection Test: Service is running but no readers found.');
+                } else {
+                    statusIndicator.textContent = 'Not Initialized';
+                    statusIndicator.className = 'status-indicator error';
+                    this.showErrorMessage('NFC Connection Test', 'NFC service not initialized.');
+                }
             }
             
-            this.showSuccessMessage(connected ? 'NFC Reader connected successfully!' : 'NFC Reader not found');
+            // Update the detailed device information
+            await this.updateNfcStatus();
             
         } catch (error) {
             console.error('❌ Error testing NFC connection:', error);
@@ -1459,6 +1770,30 @@ class EVLicenseApp {
             this.showErrorMessage('Test Failed', error.message);
         } finally {
             if (testBtn) testBtn.disabled = false;
+        }
+    }
+
+    async refreshNfcDevices() {
+        try {
+            console.log('🔄 Refreshing NFC devices...');
+            
+            const refreshBtn = document.querySelector('.mdc-icon-button[title="Refresh"]');
+            if (refreshBtn) refreshBtn.disabled = true;
+            
+            // Refresh the devices using the NFC manager
+            const status = await window.electronAPI.nfc.refreshDevices();
+            
+            // Update the status display
+            await this.updateNfcStatus();
+            
+            this.showSuccessMessage('NFC devices refreshed successfully!');
+            
+        } catch (error) {
+            console.error('❌ Error refreshing NFC devices:', error);
+            this.showErrorMessage('Refresh Failed', error.message);
+        } finally {
+            const refreshBtn = document.querySelector('.mdc-icon-button[title="Refresh"]');
+            if (refreshBtn) refreshBtn.disabled = false;
         }
     }
 
