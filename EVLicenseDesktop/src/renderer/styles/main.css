@@ -1810,3 +1810,199 @@ body {
         min-height: 150px;
     }
 }
+
+/* ====================================================
+   NFC Card Writer Styles
+   ==================================================== */
+
+.writer-section {
+    margin-top: 24px;
+    padding-top: 24px;
+    border-top: 1px solid #e0e0e0;
+}
+
+.writer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.writer-header h3 {
+    margin: 0;
+    color: #1976d2;
+    font-size: 18px;
+    font-weight: 500;
+}
+
+.writer-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    background: #e8f5e8;
+    color: #2e7d32;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.writer-status.writing {
+    background: #fff3e0;
+    color: #f57c00;
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+.writer-status.success {
+    background: #e8f5e8;
+    color: #2e7d32;
+}
+
+.writer-status.error {
+    background: #ffebee;
+    color: #c62828;
+}
+
+.writer-icon {
+    font-size: 18px;
+}
+
+.writer-content {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.write-input-section {
+    position: relative;
+}
+
+.write-input-section .mdc-text-field {
+    width: 100%;
+}
+
+.character-count {
+    position: absolute;
+    bottom: -20px;
+    right: 0;
+    font-size: 12px;
+    color: #666;
+}
+
+.character-count.warning {
+    color: #f57c00;
+}
+
+.character-count.error {
+    color: #c62828;
+}
+
+.write-controls {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.write-instructions {
+    background: #f8f9fa;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 16px;
+    margin-top: 12px;
+}
+
+.write-instructions p {
+    margin: 0 0 8px 0;
+    color: #424242;
+    font-weight: 500;
+}
+
+.write-instructions ul {
+    margin: 0;
+    padding-left: 20px;
+    color: #666;
+}
+
+.write-instructions li {
+    margin: 4px 0;
+    font-size: 14px;
+}
+
+/* Write Progress Indicator */
+.write-progress {
+    display: none;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: #e3f2fd;
+    border: 1px solid #2196f3;
+    border-radius: 8px;
+    margin-top: 12px;
+}
+
+.write-progress.active {
+    display: flex;
+}
+
+.write-progress .material-icons {
+    color: #2196f3;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.write-progress-text {
+    color: #1976d2;
+    font-weight: 500;
+}
+
+/* Write Result Display */
+.write-result {
+    display: none;
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-top: 12px;
+    font-weight: 500;
+}
+
+.write-result.success {
+    display: block;
+    background: #e8f5e8;
+    border: 1px solid #4caf50;
+    color: #2e7d32;
+}
+
+.write-result.error {
+    display: block;
+    background: #ffebee;
+    border: 1px solid #f44336;
+    color: #c62828;
+}
+
+.write-result .material-icons {
+    vertical-align: middle;
+    margin-right: 8px;
+}
+
+/* Responsive design for writer */
+@media (max-width: 768px) {
+    .writer-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+    
+    .write-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .write-controls .mdc-button {
+        width: 100%;
+    }
+}

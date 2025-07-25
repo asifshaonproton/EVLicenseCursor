@@ -272,6 +272,8 @@ class NFCPCSCManager extends EventEmitter {
 
             const reader = readerInfo.reader;
             
+            console.log('📝 Writing data to card:', data);
+            
             // Convert data to buffer if needed
             let buffer;
             if (typeof data === 'string') {
@@ -284,22 +286,76 @@ class NFCPCSCManager extends EventEmitter {
                 buffer = data;
             }
 
-            // Try to write to block 4 (first writable block in many cards)
-            await reader.write(4, buffer.slice(0, 16)); // Limit to 16 bytes for standard block
+            console.log(`📊 Data length: ${buffer.length} bytes`);
+
+            // Split data into 16-byte blocks and write across multiple blocks
+            const maxBlockSize = 16;
+            const blocks = [];
+            let totalBytesWritten = 0;
             
-            console.log('✅ Data written to card successfully');
+            // Calculate how many blocks we need
+            const totalBlocks = Math.ceil(buffer.length / maxBlockSize);
+            console.log(`📦 Will write ${totalBlocks} blocks starting from block 4`);
+
+            // Write data across multiple blocks starting from block 4
+            for (let i = 0; i < totalBlocks; i++) {
+                const blockNumber = 4 + i; // Start from block 4
+                const start = i * maxBlockSize;
+                const end = Math.min(start + maxBlockSize, buffer.length);
+                
+                let blockData = buffer.slice(start, end);
+                
+                // Pad block to 16 bytes with zeros
+                if (blockData.length < maxBlockSize) {
+                    const padding = Buffer.alloc(maxBlockSize - blockData.length, 0);
+                    blockData = Buffer.concat([blockData, padding]);
+                }
+
+                try {
+                    await reader.write(blockNumber, blockData);
+                    totalBytesWritten += (end - start);
+                    blocks.push({
+                        block: blockNumber,
+                        hexData: blockData.toString('hex'),
+                        originalData: buffer.slice(start, end).toString('utf8'),
+                        bytesWritten: end - start
+                    });
+                    console.log(`✅ Block ${blockNumber} written successfully (${end - start} bytes)`);
+                } catch (blockError) {
+                    console.error(`❌ Error writing block ${blockNumber}:`, blockError);
+                    throw new Error(`Failed to write block ${blockNumber}: ${blockError.message}`);
+                }
+            }
+
+            console.log(`✅ Writing completed. Total: ${totalBytesWritten} bytes across ${blocks.length} blocks`);
             
             // Emit write success event
             this.emit('card-written', {
                 uid: this.currentCard.uid,
-                data: buffer.toString('hex'),
+                originalData: data,
+                buffer: buffer.toString('hex'),
+                blocks: blocks,
+                totalBytesWritten: totalBytesWritten,
                 timestamp: new Date()
             });
 
-            return true;
+            return {
+                success: true,
+                message: `Successfully wrote ${totalBytesWritten} bytes to ${blocks.length} blocks`,
+                originalData: data,
+                blocks: blocks,
+                totalBytesWritten: totalBytesWritten,
+                startBlock: 4,
+                endBlock: 4 + blocks.length - 1
+            };
+
         } catch (error) {
             console.error('❌ Error writing to card:', error);
-            this.emit('error', error);
+            this.emit('card-write-error', {
+                error: error.message,
+                uid: this.currentCard ? this.currentCard.uid : null,
+                timestamp: new Date()
+            });
             throw error;
         }
     }
