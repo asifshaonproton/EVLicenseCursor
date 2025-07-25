@@ -272,19 +272,23 @@ class NFCPCSCManager extends EventEmitter {
             
             if (allData.length === 0) return;
             
-            // Try to parse as NDEF message (plain JSON/text format)
-            console.log('🔍 Attempting to parse plain NDEF data...');
+            // Try to parse as plain text data (no NDEF)
+            console.log('🔍 Attempting to parse plain text data...');
             console.log(`🔍 Raw data (${allData.length} bytes): ${allData.toString('hex')}`);
             
             try {
-                // Parse standard NDEF message
-                const ndefText = NdefUtils.parseNdefMessage(allData);
-                if (ndefText) {
-                    console.log('📋 Found NDEF plain text:', ndefText.substring(0, 200) + '...');
-                    
-                    // Try to parse as license JSON (plain, no decryption)
+                // Convert raw data to string and clean it
+                let plainText = allData.toString('utf8');
+                
+                // Remove null bytes and control characters
+                plainText = plainText.replace(/\0/g, '').replace(/[\x00-\x1F\x7F-\x9F]/g, '').trim();
+                
+                console.log('📋 Cleaned plain text:', plainText.substring(0, 200) + '...');
+                
+                if (plainText && plainText.length > 0) {
+                    // Try to parse as license JSON
                     try {
-                        const licenseData = JSON.parse(ndefText);
+                        const licenseData = JSON.parse(plainText);
                         if (licenseData.holderName || licenseData.licenseNumber) {
                             // Format license data nicely
                             cardData.extractedText = `📄 LICENSE INFORMATION:\n\n• Holder Name: ${licenseData.holderName || 'N/A'}\n• Mobile: ${licenseData.mobile || 'N/A'}\n• City: ${licenseData.city || 'N/A'}\n• License Type: ${licenseData.licenseType || 'N/A'}\n• License Number: ${licenseData.licenseNumber || 'N/A'}\n• Card Number: ${licenseData.nfcCardNumber || 'N/A'}\n• Valid Until: ${licenseData.validityDate || 'N/A'}`;
@@ -298,15 +302,15 @@ class NFCPCSCManager extends EventEmitter {
                     }
                     
                     // Not license JSON, display as plain text
-                    cardData.extractedText = `📝 PLAIN TEXT DATA:\n\n"${ndefText}"`;
+                    cardData.extractedText = `📝 PLAIN TEXT DATA:\n\n"${plainText}"`;
                     cardData.isPlainTextFormat = true;
-                    console.log(`📝 Extracted plain text: "${ndefText.substring(0, 100)}..."`);
+                    console.log(`📝 Extracted plain text: "${plainText.substring(0, 100)}..."`);
                     return;
                 } else {
-                    console.log('⚠️ No text found in NDEF message');
+                    console.log('⚠️ No readable text found in data');
                 }
-            } catch (ndefError) {
-                console.warn('⚠️ NDEF parsing failed:', ndefError.message);
+            } catch (textError) {
+                console.warn('⚠️ Plain text parsing failed:', textError.message);
             }
             
             // Fallback: try simple text extraction (legacy format)
@@ -425,9 +429,10 @@ class NFCPCSCManager extends EventEmitter {
                 console.log('📝 Converted to string:', finalData);
             }
 
-            // Create NDEF message with plain text
-            const ndefMessage = NdefUtils.createNdefMessage(finalData);
-            console.log(`📋 NDEF message length: ${ndefMessage.length} bytes`);
+            // Write plain text directly to blocks (no NDEF wrapping)
+            const dataBuffer = Buffer.from(finalData, 'utf8');
+            console.log(`📋 Plain data buffer length: ${dataBuffer.length} bytes`);
+            console.log(`📋 Data: "${finalData}"`);
 
             // Write directly to blocks starting from block 4 (data blocks)
             const maxBlockSize = 16;
@@ -435,31 +440,31 @@ class NFCPCSCManager extends EventEmitter {
             let totalBytesWritten = 0;
             
             // Calculate how many blocks we need
-            const totalBlocks = Math.ceil(ndefMessage.length / maxBlockSize);
+            const totalBlocks = Math.ceil(dataBuffer.length / maxBlockSize);
             console.log(`📦 Will write ${totalBlocks} blocks starting from block 4`);
 
-            // Write NDEF message across multiple blocks starting from block 4
+            // Write plain data across multiple blocks starting from block 4
             for (let i = 0; i < totalBlocks; i++) {
                 const blockNumber = 4 + i; // Start from block 4 (first data block)
                 const start = i * maxBlockSize;
-                const end = Math.min(start + maxBlockSize, ndefMessage.length);
+                const end = Math.min(start + maxBlockSize, dataBuffer.length);
                 
-                let blockData = ndefMessage.slice(start, end);
+                let blockData = dataBuffer.slice(start, end);
                 
-                // Pad block to 16 bytes with zeros (standard for MIFARE)
+                // Pad block to 16 bytes with zeros
                 if (blockData.length < maxBlockSize) {
                     const padding = Buffer.alloc(maxBlockSize - blockData.length, 0x00);
                     blockData = Buffer.concat([blockData, padding]);
                 }
 
                 try {
-                    console.log(`📝 Writing block ${blockNumber}: ${blockData.toString('hex')}`);
+                    console.log(`📝 Writing block ${blockNumber}: "${blockData.slice(0, end-start).toString('utf8')}" (${blockData.toString('hex')})`);
                     await reader.write(blockNumber, blockData);
                     totalBytesWritten += (end - start);
                     blocks.push({
                         block: blockNumber,
                         hexData: blockData.toString('hex'),
-                        originalData: ndefMessage.slice(start, end),
+                        originalData: dataBuffer.slice(start, end),
                         bytesWritten: end - start
                     });
                     console.log(`✅ Block ${blockNumber} written successfully (${end - start} bytes)`);

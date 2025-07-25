@@ -165,10 +165,49 @@
                             </div>
                         </div>
                         
+                        <!-- License Details Card -->
+                        <div class="license-details-card" id="license-details-card" style="display: none;">
+                            <div class="license-card-header">
+                                <h3>📄 License Details</h3>
+                                <span class="license-status">✅ Valid License</span>
+                            </div>
+                            
+                            <div class="license-info-grid">
+                                <div class="license-field">
+                                    <label>Holder Name</label>
+                                    <span id="license-holder-name">-</span>
+                                </div>
+                                <div class="license-field">
+                                    <label>Mobile Number</label>
+                                    <span id="license-mobile">-</span>
+                                </div>
+                                <div class="license-field">
+                                    <label>City</label>
+                                    <span id="license-city">-</span>
+                                </div>
+                                <div class="license-field">
+                                    <label>License Type</label>
+                                    <span id="license-type">-</span>
+                                </div>
+                                <div class="license-field">
+                                    <label>License Number</label>
+                                    <span id="license-number">-</span>
+                                </div>
+                                <div class="license-field">
+                                    <label>Card Number</label>
+                                    <span id="license-card-number">-</span>
+                                </div>
+                                <div class="license-field">
+                                    <label>Expiry Date</label>
+                                    <span id="license-expiry-date">-</span>
+                                </div>
+                            </div>
+                        </div>
+                        
                         <!-- Scanned Card Data Display -->
                         <div class="scanned-data-container" id="scanned-data-container" style="display: none;">
                             <div class="scanned-data-header">
-                                <h3>Scanned Card Data</h3>
+                                <h3>Raw Card Data</h3>
                                 <button class="mdc-icon-button" id="copy-card-data-btn" title="Copy to clipboard">
                                     <span class="material-icons">content_copy</span>
                                 </button>
@@ -273,11 +312,11 @@
                                     
                                     <div class="form-field">
                                         <div class="mdc-text-field mdc-text-field--outlined">
-                                            <input type="date" id="validity-date-input" class="mdc-text-field__input">
+                                            <input type="date" id="validity-date-input" class="mdc-text-field__input" placeholder="YYYY-MM-DD">
                                             <div class="mdc-notched-outline">
                                                 <div class="mdc-notched-outline__leading"></div>
                                                 <div class="mdc-notched-outline__notch">
-                                                    <label for="validity-date-input" class="mdc-floating-label">Validity Date</label>
+                                                    <label for="validity-date-input" class="mdc-floating-label">Expiry Date</label>
                                                 </div>
                                                 <div class="mdc-notched-outline__trailing"></div>
                                             </div>
