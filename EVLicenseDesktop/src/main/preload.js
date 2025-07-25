@@ -138,6 +138,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
         },
         onReaderError: (callback) => {
             ipcRenderer.on('nfc-reader-error', (event, data) => callback(data));
+        },
+        onCardWritten: (callback) => {
+            ipcRenderer.on('nfc-card-written', (event, data) => callback(data));
+        },
+        onCardWriteError: (callback) => {
+            ipcRenderer.on('nfc-card-write-error', (event, data) => callback(data));
         }
     }
 });

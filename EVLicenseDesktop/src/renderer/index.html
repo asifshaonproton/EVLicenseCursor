@@ -172,6 +172,58 @@
                                 <!-- Card data will be populated here -->
                             </div>
                         </div>
+                        
+                        <!-- NFC Card Writer Section -->
+                        <div class="writer-section">
+                            <div class="writer-header">
+                                <h3>Write to NFC Card</h3>
+                                <div class="writer-status" id="writer-status">
+                                    <span class="material-icons writer-icon">edit</span>
+                                    <span class="writer-text">Ready to write</span>
+                                </div>
+                            </div>
+                            
+                            <div class="writer-content">
+                                <div class="write-input-section">
+                                    <div class="mdc-text-field mdc-text-field--outlined mdc-text-field--textarea">
+                                        <textarea class="mdc-text-field__input" id="write-data-input" rows="4" cols="40" maxlength="256" placeholder="Enter text to write to NFC card..."></textarea>
+                                        <div class="mdc-notched-outline">
+                                            <div class="mdc-notched-outline__leading"></div>
+                                            <div class="mdc-notched-outline__notch">
+                                                <label for="write-data-input" class="mdc-floating-label">Text Data</label>
+                                            </div>
+                                            <div class="mdc-notched-outline__trailing"></div>
+                                        </div>
+                                    </div>
+                                    <div class="character-count">
+                                        <span id="char-count">0</span> / 256 characters
+                                    </div>
+                                </div>
+                                
+                                <div class="write-controls">
+                                    <button class="mdc-button mdc-button--raised" id="write-card-btn">
+                                        <span class="mdc-button__ripple"></span>
+                                        <i class="material-icons mdc-button__icon">nfc</i>
+                                        <span class="mdc-button__label">Write to Card</span>
+                                    </button>
+                                    <button class="mdc-button mdc-button--outlined" id="clear-input-btn">
+                                        <span class="mdc-button__ripple"></span>
+                                        <i class="material-icons mdc-button__icon">clear</i>
+                                        <span class="mdc-button__label">Clear</span>
+                                    </button>
+                                </div>
+                                
+                                <div class="write-instructions">
+                                    <p><strong>Instructions:</strong></p>
+                                    <ul>
+                                        <li>Enter text data (up to 256 characters)</li>
+                                        <li>Place NFC card on the reader</li>
+                                        <li>Click "Write to Card" to save data</li>
+                                        <li>Data will be written to block 4 onwards</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

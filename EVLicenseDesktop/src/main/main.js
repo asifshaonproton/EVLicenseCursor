@@ -126,6 +126,21 @@ class EVLicenseDesktop {
             }
         });
         
+        // Card write events
+        this.nfcManager.on('card-written', (result) => {
+            console.log('✅ Card written successfully:', result);
+            if (this.mainWindow) {
+                this.mainWindow.webContents.send('nfc-card-written', result);
+            }
+        });
+        
+        this.nfcManager.on('card-write-error', (error) => {
+            console.error('❌ Card write error:', error);
+            if (this.mainWindow) {
+                this.mainWindow.webContents.send('nfc-card-write-error', error);
+            }
+        });
+        
         console.log('✅ Enhanced NFC event handlers set up successfully');
     }
 

@@ -253,6 +253,18 @@ class EVLicenseApp {
             this.showErrorMessage('Reader Error', `${error.name}: ${error.error}`);
         });
 
+        // Card written event
+        window.electronAPI.nfc.onCardWritten((result) => {
+            console.log('✅ Card written successfully:', result);
+            this.handleCardWritten(result);
+        });
+
+        // Card write error event
+        window.electronAPI.nfc.onCardWriteError((error) => {
+            console.error('❌ Card write error:', error);
+            this.handleCardWriteError(error);
+        });
+
         console.log('✅ NFC event listeners set up');
     }
 
@@ -280,6 +292,30 @@ class EVLicenseApp {
         if (copyCardDataBtn) {
             copyCardDataBtn.addEventListener('click', () => {
                 this.copyCardDataToClipboard();
+            });
+        }
+
+        // Write card button
+        const writeCardBtn = document.getElementById('write-card-btn');
+        if (writeCardBtn) {
+            writeCardBtn.addEventListener('click', () => {
+                this.writeToCard();
+            });
+        }
+
+        // Clear input button
+        const clearInputBtn = document.getElementById('clear-input-btn');
+        if (clearInputBtn) {
+            clearInputBtn.addEventListener('click', () => {
+                this.clearWriteInput();
+            });
+        }
+
+        // Write data input character counter
+        const writeDataInput = document.getElementById('write-data-input');
+        if (writeDataInput) {
+            writeDataInput.addEventListener('input', () => {
+                this.updateCharacterCount();
             });
         }
 
@@ -513,11 +549,38 @@ class EVLicenseApp {
             dataString += `ATR: ${cardData.atr.toString('hex')}\n`;
         }
         
-        dataString += '\n--- Raw Card Data ---\n';
+        // Try to extract readable text data from blocks
+        let readableText = '';
+        if (cardData.data && cardData.data.blocks && cardData.data.blocks.length > 0) {
+            // Look for text data starting from block 4 (typical write location)
+            const textBlocks = cardData.data.blocks.filter(block => block.block >= 4);
+            if (textBlocks.length > 0) {
+                for (const block of textBlocks) {
+                    try {
+                        // Convert hex to buffer and then to text
+                        const buffer = Buffer.from(block.data, 'hex');
+                        // Remove null bytes and get readable text
+                        const text = buffer.toString('utf8').replace(/\0/g, '').trim();
+                        if (text && text.length > 0) {
+                            readableText += text;
+                        }
+                    } catch (e) {
+                        // Skip blocks that can't be converted to text
+                    }
+                }
+            }
+        }
+        
+        if (readableText) {
+            dataString += '\n--- Readable Text Data ---\n';
+            dataString += `"${readableText}"\n`;
+        }
+        
+        dataString += '\n--- Raw Block Data ---\n';
         
         // Add raw data if available
         if (cardData.data && cardData.data.blocks && cardData.data.blocks.length > 0) {
-            dataString += 'Block Data:\n';
+            dataString += 'Block Data (Hex):\n';
             cardData.data.blocks.forEach(block => {
                 dataString += `Block ${block.block}: ${block.data}\n`;
             });
@@ -589,6 +652,152 @@ class EVLicenseApp {
             console.error('❌ Error copying to clipboard:', error);
             this.showErrorMessage('Copy Error', 'Failed to copy data to clipboard');
         }
+    }
+
+    async writeToCard() {
+        console.log('✍️ Writing to NFC card...');
+        
+        const writeDataInput = document.getElementById('write-data-input');
+        const writeCardBtn = document.getElementById('write-card-btn');
+        
+        if (!writeDataInput) {
+            this.showErrorMessage('Write Error', 'Write input field not found');
+            return;
+        }
+        
+        const data = writeDataInput.value.trim();
+        
+        if (!data) {
+            this.showWarningMessage('Please enter some text to write to the card');
+            return;
+        }
+        
+        if (data.length > 256) {
+            this.showWarningMessage('Text is too long. Maximum 256 characters allowed.');
+            return;
+        }
+        
+        try {
+            // Update UI to show writing state
+            this.updateWriterStatus('writing', 'Writing to card...');
+            if (writeCardBtn) writeCardBtn.disabled = true;
+            
+            // Check if a card is present
+            const status = await window.electronAPI.nfc.getStatus();
+            if (!status.hasActiveCard) {
+                throw new Error('No NFC card detected. Please place a card on the reader and try again.');
+            }
+            
+            // Write data to card
+            const result = await window.electronAPI.nfc.writeCard(data);
+            
+            if (result.success) {
+                this.showWriteSuccess(result);
+            } else {
+                throw new Error(result.message || 'Write operation failed');
+            }
+            
+        } catch (error) {
+            console.error('❌ Write error:', error);
+            this.updateWriterStatus('error', 'Write failed');
+            this.showErrorMessage('Write Error', error.message);
+            
+            setTimeout(() => {
+                this.updateWriterStatus('ready', 'Ready to write');
+            }, 3000);
+        } finally {
+            if (writeCardBtn) writeCardBtn.disabled = false;
+        }
+    }
+
+    showWriteSuccess(result) {
+        console.log('✅ Write operation successful:', result);
+        
+        // Update writer status
+        this.updateWriterStatus('success', 'Write successful');
+        
+        // Show success message with details
+        const message = `Successfully wrote ${result.totalBytesWritten} bytes to ${result.blocks.length} blocks (${result.startBlock}-${result.endBlock})`;
+        this.showSuccessMessage(message);
+        
+        // Clear the input after successful write
+        setTimeout(() => {
+            this.clearWriteInput();
+            this.updateWriterStatus('ready', 'Ready to write');
+        }, 3000);
+    }
+
+    updateWriterStatus(state, text) {
+        const writerStatus = document.getElementById('writer-status');
+        const writerText = writerStatus?.querySelector('.writer-text');
+        
+        if (writerStatus && writerText) {
+            // Remove all status classes
+            writerStatus.className = 'writer-status';
+            
+            // Add new status class
+            writerStatus.classList.add(state);
+            
+            // Update text
+            writerText.textContent = text;
+        }
+    }
+
+    clearWriteInput() {
+        console.log('🧹 Clearing write input...');
+        
+        const writeDataInput = document.getElementById('write-data-input');
+        
+        if (writeDataInput) {
+            writeDataInput.value = '';
+            this.updateCharacterCount();
+        }
+        
+        this.updateWriterStatus('ready', 'Ready to write');
+        this.showInfoMessage('Input cleared');
+    }
+
+    updateCharacterCount() {
+        const writeDataInput = document.getElementById('write-data-input');
+        const charCount = document.getElementById('char-count');
+        
+        if (writeDataInput && charCount) {
+            const currentLength = writeDataInput.value.length;
+            charCount.textContent = currentLength;
+            
+            // Update styling based on length
+            const charCountContainer = charCount.parentElement;
+            if (charCountContainer) {
+                charCountContainer.className = 'character-count';
+                
+                if (currentLength > 256) {
+                    charCountContainer.classList.add('error');
+                } else if (currentLength > 200) {
+                    charCountContainer.classList.add('warning');
+                }
+            }
+        }
+    }
+
+    handleCardWritten(result) {
+        console.log('🎉 Handling card written event:', result);
+        
+        // The showWriteSuccess method handles the UI updates
+        // This is mainly for additional event handling if needed
+        
+        // Update NFC status in case it changed
+        this.updateNfcStatus();
+    }
+
+    handleCardWriteError(error) {
+        console.error('💥 Handling card write error:', error);
+        
+        this.updateWriterStatus('error', 'Write failed');
+        this.showErrorMessage('Write Error', error.error || error.message || 'Unknown write error');
+        
+        setTimeout(() => {
+            this.updateWriterStatus('ready', 'Ready to write');
+        }, 3000);
     }
 
     initializeSearchAndFilters() {
