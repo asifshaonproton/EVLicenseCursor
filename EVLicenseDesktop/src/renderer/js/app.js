@@ -31,6 +31,26 @@ class EVLicenseApp {
         this.csvImportData = null;
         this.currentUser = null;
         this.sessionToken = null;
+        
+        // User Management properties
+        this.userDialog = null;
+        this.roleDialog = null;
+        this.users = [];
+        this.roles = [];
+        this.currentEditingUser = null;
+        this.currentEditingRole = null;
+        this.userFormComponents = {
+            textFields: [],
+            selects: [],
+            checkboxes: []
+        };
+        this.filteredUsers = [];
+        this.userFilters = {
+            search: '',
+            role: '',
+            status: ''
+        };
+        
         this.initializeApp();
     }
 
@@ -98,6 +118,8 @@ class EVLicenseApp {
         // Initialize Dialogs
         this.dialog = mdc.dialog.MDCDialog.attachTo(document.querySelector('#license-dialog'));
         this.importDialog = mdc.dialog.MDCDialog.attachTo(document.querySelector('#import-dialog'));
+        this.userDialog = mdc.dialog.MDCDialog.attachTo(document.querySelector('#user-dialog'));
+        this.roleDialog = mdc.dialog.MDCDialog.attachTo(document.querySelector('#role-dialog'));
         
         // Initialize Form Components
         this.initializeFormComponents();
@@ -110,6 +132,9 @@ class EVLicenseApp {
 
         // Initialize Import Components
         this.initializeImportComponents();
+
+        // Initialize User Management Components
+        this.initializeUserManagementComponents();
 
         console.log('✅ Material Design Components initialized');
     }
@@ -472,6 +497,9 @@ class EVLicenseApp {
                 break;
             case 'settings':
                 await this.loadSettingsPage();
+                break;
+            case 'users':
+                await this.loadUsersPage();
                 break;
         }
     }
@@ -1776,6 +1804,613 @@ class EVLicenseApp {
         }
 
         return true;
+    }
+
+    // User Management Methods
+    initializeUserManagementComponents() {
+        // Initialize user form components
+        document.querySelectorAll('#user-dialog .mdc-text-field').forEach(textField => {
+            const mdcTextField = mdc.textField.MDCTextField.attachTo(textField);
+            this.userFormComponents.textFields.push(mdcTextField);
+        });
+
+        document.querySelectorAll('#user-dialog .mdc-select').forEach(select => {
+            const mdcSelect = mdc.select.MDCSelect.attachTo(select);
+            this.userFormComponents.selects.push(mdcSelect);
+        });
+
+        document.querySelectorAll('#user-dialog .mdc-checkbox').forEach(checkbox => {
+            const mdcCheckbox = mdc.checkbox.MDCCheckbox.attachTo(checkbox);
+            this.userFormComponents.checkboxes.push(mdcCheckbox);
+        });
+
+        // Initialize role form components
+        document.querySelectorAll('#role-dialog .mdc-text-field').forEach(textField => {
+            mdc.textField.MDCTextField.attachTo(textField);
+        });
+
+        // User search components
+        const userSearchField = document.querySelector('#user-search')?.closest('.mdc-text-field');
+        if (userSearchField) {
+            mdc.textField.MDCTextField.attachTo(userSearchField);
+        }
+
+        document.querySelectorAll('.user-search-container .mdc-select').forEach(select => {
+            mdc.select.MDCSelect.attachTo(select);
+        });
+
+        this.setupUserManagementListeners();
+    }
+
+    setupUserManagementListeners() {
+        // New user button
+        const newUserBtn = document.getElementById('new-user-btn');
+        if (newUserBtn) {
+            newUserBtn.addEventListener('click', () => {
+                this.showNewUserDialog();
+            });
+        }
+
+        // Role management button
+        const rolesBtn = document.getElementById('roles-management-btn');
+        if (rolesBtn) {
+            rolesBtn.addEventListener('click', () => {
+                this.showRoleManagementDialog();
+            });
+        }
+
+        // User search
+        const userSearchInput = document.getElementById('user-search');
+        if (userSearchInput) {
+            let searchTimeout;
+            userSearchInput.addEventListener('input', (e) => {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(() => {
+                    this.userFilters.search = e.target.value;
+                    this.applyUserFilters();
+                }, 300);
+            });
+        }
+
+        // User dialog events
+        this.userDialog.listen('MDCDialog:closed', (event) => {
+            if (event.detail.action === 'save') {
+                this.handleSaveUser();
+            }
+            this.resetUserForm();
+        });
+
+        // Role dialog events
+        this.roleDialog.listen('MDCDialog:closed', (event) => {
+            if (event.detail.action === 'save') {
+                this.handleSaveRole();
+            }
+        });
+    }
+
+    async loadUsersPage() {
+        try {
+            // Load users and roles
+            await Promise.all([
+                this.loadUsers(),
+                this.loadRoles()
+            ]);
+
+            // Update UI
+            this.updateUserStats();
+            this.populateRoleFilters();
+            this.applyUserFilters();
+
+        } catch (error) {
+            console.error('❌ Error loading users page:', error);
+        }
+    }
+
+    async loadUsers() {
+        try {
+            if (window.electronAPI) {
+                this.users = await window.electronAPI.users.getAll();
+            } else {
+                // Fallback data
+                this.users = [
+                    {
+                        id: 1,
+                        username: 'superadmin',
+                        email: 'superadmin@evlicense.local',
+                        full_name: 'Super Administrator',
+                        role_name: 'Super Administrator',
+                        role_code: 'super_admin',
+                        is_active: 1,
+                        last_login: new Date().toISOString(),
+                        created_at: new Date().toISOString(),
+                        created_by_name: null
+                    }
+                ];
+            }
+
+            console.log(`✅ Loaded ${this.users.length} users`);
+        } catch (error) {
+            console.error('❌ Error loading users:', error);
+            this.showErrorMessage('Load Error', error.message);
+        }
+    }
+
+    async loadRoles() {
+        try {
+            if (window.electronAPI) {
+                this.roles = await window.electronAPI.roles.getAll();
+            } else {
+                // Fallback data
+                this.roles = [
+                    { id: 1, name: 'super_admin', display_name: 'Super Administrator', description: 'Full system access' },
+                    { id: 2, name: 'admin', display_name: 'Administrator', description: 'Administrative access' },
+                    { id: 3, name: 'operator', display_name: 'Operator', description: 'Standard user access' },
+                    { id: 4, name: 'viewer', display_name: 'Viewer', description: 'Read-only access' }
+                ];
+            }
+
+            console.log(`✅ Loaded ${this.roles.length} roles`);
+        } catch (error) {
+            console.error('❌ Error loading roles:', error);
+        }
+    }
+
+    updateUserStats() {
+        const totalUsers = this.users.length;
+        const activeUsers = this.users.filter(u => u.is_active).length;
+        const recentLogins = this.users.filter(u => {
+            if (!u.last_login) return false;
+            const lastLogin = new Date(u.last_login);
+            const weekAgo = new Date();
+            weekAgo.setDate(weekAgo.getDate() - 7);
+            return lastLogin > weekAgo;
+        }).length;
+
+        const totalUsersEl = document.getElementById('totalUsers');
+        const activeUsersEl = document.getElementById('activeUsers');
+        const recentLoginsEl = document.getElementById('recentLogins');
+
+        if (totalUsersEl) totalUsersEl.textContent = totalUsers;
+        if (activeUsersEl) activeUsersEl.textContent = activeUsers;
+        if (recentLoginsEl) recentLoginsEl.textContent = recentLogins;
+    }
+
+    populateRoleFilters() {
+        const roleFilterList = document.getElementById('role-filter-list');
+        if (!roleFilterList) return;
+
+        // Clear existing options (except "All Roles")
+        const existingItems = roleFilterList.querySelectorAll('li:not(:first-child)');
+        existingItems.forEach(item => item.remove());
+
+        // Add role options
+        this.roles.forEach(role => {
+            const listItem = document.createElement('li');
+            listItem.className = 'mdc-deprecated-list-item';
+            listItem.setAttribute('data-value', role.name);
+            listItem.innerHTML = `
+                <span class="mdc-deprecated-list-item__ripple"></span>
+                <span class="mdc-deprecated-list-item__text">${role.display_name}</span>
+            `;
+            roleFilterList.appendChild(listItem);
+        });
+    }
+
+    applyUserFilters() {
+        let filtered = [...this.users];
+
+        // Apply search filter
+        if (this.userFilters.search) {
+            const search = this.userFilters.search.toLowerCase();
+            filtered = filtered.filter(user => 
+                user.full_name.toLowerCase().includes(search) ||
+                user.username.toLowerCase().includes(search) ||
+                user.email.toLowerCase().includes(search)
+            );
+        }
+
+        // Apply role filter
+        if (this.userFilters.role) {
+            filtered = filtered.filter(user => user.role_code === this.userFilters.role);
+        }
+
+        // Apply status filter
+        if (this.userFilters.status !== '') {
+            const isActive = this.userFilters.status === '1';
+            filtered = filtered.filter(user => Boolean(user.is_active) === isActive);
+        }
+
+        this.filteredUsers = filtered;
+        this.renderUsersTable();
+    }
+
+    renderUsersTable() {
+        const tbody = document.getElementById('users-table-body');
+        if (!tbody) return;
+
+        tbody.innerHTML = '';
+
+        const usersToRender = this.filteredUsers.length > 0 || this.hasActiveUserFilters() 
+            ? this.filteredUsers 
+            : this.users;
+
+        if (usersToRender.length === 0) {
+            const message = this.hasActiveUserFilters() 
+                ? 'No users match your search criteria' 
+                : 'No users found';
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7" style="text-align: center; padding: 40px;">${message}</td>
+                </tr>
+            `;
+            return;
+        }
+
+        usersToRender.forEach(user => {
+            const row = document.createElement('tr');
+            row.className = 'mdc-data-table__row';
+            
+            const avatar = this.generateUserAvatar(user.full_name);
+            const statusClass = user.is_active ? 'active' : 'inactive';
+            const statusText = user.is_active ? 'Active' : 'Inactive';
+            const roleClass = user.role_code ? user.role_code.replace('_', '-') : '';
+            
+            row.innerHTML = `
+                <td class="mdc-data-table__cell">
+                    <div class="user-info-cell">
+                        <div class="user-avatar">${avatar}</div>
+                        <div class="user-details">
+                            <h4>${user.full_name}</h4>
+                            <p>@${user.username}</p>
+                        </div>
+                    </div>
+                </td>
+                <td class="mdc-data-table__cell">${user.email}</td>
+                <td class="mdc-data-table__cell">
+                    <span class="role-badge ${roleClass}">${user.role_name}</span>
+                </td>
+                <td class="mdc-data-table__cell">
+                    <span class="user-status-badge ${statusClass}">${statusText}</span>
+                </td>
+                <td class="mdc-data-table__cell">${this.formatDateTime(user.last_login)}</td>
+                <td class="mdc-data-table__cell">${this.formatDate(user.created_at)}</td>
+                <td class="mdc-data-table__cell">
+                    <div class="user-actions">
+                        <button class="mdc-icon-button edit-btn" onclick="app.editUser(${user.id})" title="Edit User">
+                            <span class="material-icons">edit</span>
+                        </button>
+                        <button class="mdc-icon-button toggle-btn" onclick="app.toggleUserStatus(${user.id})" title="${user.is_active ? 'Deactivate' : 'Activate'} User">
+                            <span class="material-icons">${user.is_active ? 'person_off' : 'person'}</span>
+                        </button>
+                        ${user.username !== 'superadmin' ? `
+                        <button class="mdc-icon-button delete-btn" onclick="app.deleteUser(${user.id})" title="Delete User">
+                            <span class="material-icons">delete</span>
+                        </button>
+                        ` : ''}
+                    </div>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+
+        // Initialize ripples for action buttons
+        tbody.querySelectorAll('.mdc-icon-button').forEach(button => {
+            mdc.ripple.MDCRipple.attachTo(button).unbounded = true;
+        });
+    }
+
+    generateUserAvatar(fullName) {
+        if (!fullName) return '?';
+        const names = fullName.split(' ');
+        if (names.length >= 2) {
+            return names[0][0].toUpperCase() + names[1][0].toUpperCase();
+        }
+        return fullName[0].toUpperCase();
+    }
+
+    hasActiveUserFilters() {
+        return this.userFilters.search || this.userFilters.role || this.userFilters.status !== '';
+    }
+
+    showNewUserDialog() {
+        this.currentEditingUser = null;
+        document.getElementById('user-dialog-title').textContent = 'New User';
+        this.resetUserForm();
+        this.populateUserRoleSelect();
+        
+        // Show password fields for new user
+        document.getElementById('password-section').style.display = 'block';
+        document.getElementById('password-reset-section').style.display = 'none';
+        
+        // Make password required
+        document.getElementById('user_password').required = true;
+        document.getElementById('user_confirm_password').required = true;
+        
+        this.userDialog.open();
+    }
+
+    editUser(userId) {
+        const user = this.users.find(u => u.id === userId);
+        if (!user) {
+            this.showErrorMessage('Error', 'User not found');
+            return;
+        }
+
+        this.currentEditingUser = user;
+        document.getElementById('user-dialog-title').textContent = 'Edit User';
+        this.populateUserForm(user);
+        this.populateUserRoleSelect();
+        
+        // Hide password fields for existing user
+        document.getElementById('password-section').style.display = 'none';
+        document.getElementById('password-reset-section').style.display = 'block';
+        
+        // Make password not required
+        document.getElementById('user_password').required = false;
+        document.getElementById('user_confirm_password').required = false;
+        
+        this.userDialog.open();
+    }
+
+    populateUserRoleSelect() {
+        const roleList = document.getElementById('user-role-list');
+        if (!roleList) return;
+
+        roleList.innerHTML = '';
+        
+        this.roles.forEach((role, index) => {
+            const listItem = document.createElement('li');
+            listItem.className = 'mdc-deprecated-list-item';
+            if (index === 0) listItem.classList.add('mdc-deprecated-list-item--selected');
+            listItem.setAttribute('data-value', role.id);
+            listItem.innerHTML = `
+                <span class="mdc-deprecated-list-item__ripple"></span>
+                <span class="mdc-deprecated-list-item__text">${role.display_name}</span>
+            `;
+            roleList.appendChild(listItem);
+        });
+
+        // Reinitialize the select component
+        const selectComponent = this.userFormComponents.selects.find(s => 
+            s.root.contains(roleList)
+        );
+        if (selectComponent) {
+            selectComponent.foundation.adapter.removeAttributeAtIndex = () => {};
+            selectComponent.foundation.adapter.setAttributeAtIndex = () => {};
+        }
+    }
+
+    populateUserForm(user) {
+        // Populate form fields
+        document.getElementById('user_full_name').value = user.full_name;
+        document.getElementById('user_email').value = user.email;
+        document.getElementById('user_username').value = user.username;
+        document.getElementById('user_is_active').checked = Boolean(user.is_active);
+
+        // Set role
+        const roleSelect = this.userFormComponents.selects.find(s => 
+            s.root.querySelector('#user-role-list')
+        );
+        if (roleSelect) {
+            const role = this.roles.find(r => r.name === user.role_code);
+            if (role) {
+                roleSelect.value = role.id.toString();
+            }
+        }
+
+        // Refresh text field states
+        this.userFormComponents.textFields.forEach(textField => {
+            textField.foundation.handleInputChange();
+        });
+    }
+
+    resetUserForm() {
+        const form = document.getElementById('user-form');
+        form.reset();
+        
+        // Reset form components
+        this.userFormComponents.textFields.forEach(textField => {
+            textField.foundation.handleInputChange();
+        });
+        
+        // Set default active state
+        document.getElementById('user_is_active').checked = true;
+    }
+
+    async handleSaveUser() {
+        try {
+            const formData = this.collectUserFormData();
+            
+            if (!this.validateUserData(formData)) {
+                return;
+            }
+
+            if (window.electronAPI) {
+                if (this.currentEditingUser) {
+                    // Update existing user
+                    await window.electronAPI.users.update(
+                        this.currentEditingUser.id, 
+                        formData, 
+                        this.currentUser.id
+                    );
+                    this.showSuccessMessage('User updated successfully');
+                } else {
+                    // Create new user
+                    const result = await window.electronAPI.users.create(formData, this.currentUser.id);
+                    if (result.success) {
+                        this.showSuccessMessage('User created successfully');
+                    } else {
+                        this.showErrorMessage('Create Failed', result.message);
+                        return;
+                    }
+                }
+            }
+
+            // Reload users
+            await this.loadUsers();
+            this.updateUserStats();
+            this.applyUserFilters();
+
+        } catch (error) {
+            console.error('❌ Error saving user:', error);
+            this.showErrorMessage('Save Failed', error.message);
+        }
+    }
+
+    collectUserFormData() {
+        const roleSelect = this.userFormComponents.selects.find(s => 
+            s.root.querySelector('#user-role-list')
+        );
+
+        const formData = {
+            full_name: document.getElementById('user_full_name').value.trim(),
+            email: document.getElementById('user_email').value.trim(),
+            username: document.getElementById('user_username').value.trim(),
+            role_id: roleSelect ? parseInt(roleSelect.value) : null,
+            is_active: document.getElementById('user_is_active').checked ? 1 : 0
+        };
+
+        // Add password for new users
+        if (!this.currentEditingUser) {
+            formData.password = document.getElementById('user_password').value;
+        }
+
+        return formData;
+    }
+
+    validateUserData(data) {
+        // Required fields validation
+        const required = ['full_name', 'email', 'username'];
+        for (const field of required) {
+            if (!data[field]) {
+                this.showErrorMessage('Validation Error', `${field.replace('_', ' ')} is required`);
+                return false;
+            }
+        }
+
+        // Email validation
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(data.email)) {
+            this.showErrorMessage('Validation Error', 'Please enter a valid email address');
+            return false;
+        }
+
+        // Role validation
+        if (!data.role_id) {
+            this.showErrorMessage('Validation Error', 'Please select a role');
+            return false;
+        }
+
+        // Password validation for new users
+        if (!this.currentEditingUser) {
+            const password = document.getElementById('user_password').value;
+            const confirmPassword = document.getElementById('user_confirm_password').value;
+
+            if (!password) {
+                this.showErrorMessage('Validation Error', 'Password is required');
+                return false;
+            }
+
+            if (password.length < 8) {
+                this.showErrorMessage('Validation Error', 'Password must be at least 8 characters long');
+                return false;
+            }
+
+            if (password !== confirmPassword) {
+                this.showErrorMessage('Validation Error', 'Passwords do not match');
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    async toggleUserStatus(userId) {
+        try {
+            const user = this.users.find(u => u.id === userId);
+            if (!user) return;
+
+            if (user.username === 'superadmin') {
+                this.showErrorMessage('Error', 'Cannot deactivate the super admin account');
+                return;
+            }
+
+            const newStatus = user.is_active ? 0 : 1;
+            const action = newStatus ? 'activate' : 'deactivate';
+            
+            const confirmed = confirm(`Are you sure you want to ${action} user "${user.full_name}"?`);
+            if (!confirmed) return;
+
+            const updateData = {
+                ...user,
+                is_active: newStatus
+            };
+
+            if (window.electronAPI) {
+                await window.electronAPI.users.update(userId, updateData, this.currentUser.id);
+            }
+
+            // Update local data
+            user.is_active = newStatus;
+            
+            this.updateUserStats();
+            this.applyUserFilters();
+            this.showSuccessMessage(`User ${action}d successfully`);
+
+        } catch (error) {
+            console.error('❌ Error toggling user status:', error);
+            this.showErrorMessage('Update Failed', error.message);
+        }
+    }
+
+    async deleteUser(userId) {
+        try {
+            const user = this.users.find(u => u.id === userId);
+            if (!user) return;
+
+            if (user.username === 'superadmin') {
+                this.showErrorMessage('Error', 'Cannot delete the super admin account');
+                return;
+            }
+
+            const confirmed = confirm(`Are you sure you want to delete user "${user.full_name}"?\n\nThis action cannot be undone.`);
+            if (!confirmed) return;
+
+            if (window.electronAPI) {
+                await window.electronAPI.users.delete(userId, this.currentUser.id);
+            }
+
+            // Remove from local data
+            this.users = this.users.filter(u => u.id !== userId);
+            
+            this.updateUserStats();
+            this.applyUserFilters();
+            this.showSuccessMessage('User deleted successfully');
+
+        } catch (error) {
+            console.error('❌ Error deleting user:', error);
+            this.showErrorMessage('Delete Failed', error.message);
+        }
+    }
+
+    showRoleManagementDialog() {
+        this.loadRoleManagementData();
+        this.roleDialog.open();
+    }
+
+    loadRoleManagementData() {
+        // This would load and display role management interface
+        // For now, show a placeholder
+        this.showSuccessMessage('Role Management', 'Role management interface will be implemented in the next update');
+    }
+
+    formatDateTime(dateString) {
+        if (!dateString) return 'Never';
+        try {
+            return new Date(dateString).toLocaleString();
+        } catch (e) {
+            return 'Invalid date';
+        }
     }
 }
 
