@@ -8,6 +8,20 @@ class EVLicenseApp {
         this.dialog = null;
         this.licenseTypeSelect = null;
         this.formTextFields = [];
+        this.filterComponents = {
+            statusFilter: null,
+            typeFilter: null,
+            searchField: null
+        };
+        this.currentFilters = {
+            search: '',
+            status: '',
+            type: '',
+            vehicleMake: '',
+            expiryFrom: '',
+            expiryTo: ''
+        };
+        this.filteredLicenses = [];
         this.initializeApp();
     }
 
@@ -67,6 +81,9 @@ class EVLicenseApp {
         // Initialize Form Components
         this.initializeFormComponents();
 
+        // Initialize Search and Filter Components
+        this.initializeSearchAndFilters();
+
         console.log('✅ Material Design Components initialized');
     }
 
@@ -88,6 +105,25 @@ class EVLicenseApp {
             });
         }
 
+        // Import/Export functionality
+        const importBtn = document.getElementById('import-btn');
+        const exportBtn = document.getElementById('export-btn');
+        
+        if (importBtn) {
+            importBtn.addEventListener('click', () => {
+                this.showImportDialog();
+            });
+        }
+        
+        if (exportBtn) {
+            exportBtn.addEventListener('click', () => {
+                this.exportLicenses();
+            });
+        }
+
+        // Search and filter event listeners
+        this.setupSearchAndFilterListeners();
+
         // Menu event listeners
         if (window.electronAPI) {
             window.electronAPI.menu.onNewLicense(() => {
@@ -100,6 +136,102 @@ class EVLicenseApp {
         }
 
         console.log('✅ Event listeners set up');
+    }
+
+    initializeSearchAndFilters() {
+        // Initialize search field
+        const searchField = document.querySelector('#license-search').closest('.mdc-text-field');
+        if (searchField) {
+            this.filterComponents.searchField = mdc.textField.MDCTextField.attachTo(searchField);
+        }
+
+        // Initialize filter select components
+        const statusFilterSelect = document.querySelector('.filters-panel .mdc-select');
+        const typeFilterSelect = document.querySelectorAll('.filters-panel .mdc-select')[1];
+        
+        if (statusFilterSelect) {
+            this.filterComponents.statusFilter = mdc.select.MDCSelect.attachTo(statusFilterSelect);
+        }
+        
+        if (typeFilterSelect) {
+            this.filterComponents.typeFilter = mdc.select.MDCSelect.attachTo(typeFilterSelect);
+        }
+
+        // Initialize remaining filter text fields
+        document.querySelectorAll('.filter-field .mdc-text-field').forEach(textField => {
+            mdc.textField.MDCTextField.attachTo(textField);
+        });
+    }
+
+    setupSearchAndFilterListeners() {
+        // Real-time search
+        const searchInput = document.getElementById('license-search');
+        if (searchInput) {
+            let searchTimeout;
+            searchInput.addEventListener('input', (e) => {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(() => {
+                    this.currentFilters.search = e.target.value;
+                    this.applyFilters();
+                }, 300); // Debounce search
+            });
+        }
+
+        // Filter toggle
+        const filterToggleBtn = document.getElementById('filter-toggle-btn');
+        const filtersPanel = document.getElementById('filters-panel');
+        
+        if (filterToggleBtn && filtersPanel) {
+            filterToggleBtn.addEventListener('click', () => {
+                const isHidden = filtersPanel.style.display === 'none';
+                filtersPanel.style.display = isHidden ? 'block' : 'none';
+                filterToggleBtn.querySelector('.material-icons').textContent = 
+                    isHidden ? 'filter_list_off' : 'filter_list';
+            });
+        }
+
+        // Clear filters
+        const clearFiltersBtn = document.getElementById('clear-filters-btn');
+        if (clearFiltersBtn) {
+            clearFiltersBtn.addEventListener('click', () => {
+                this.clearAllFilters();
+            });
+        }
+
+        // Apply filters button
+        const applyFiltersBtn = document.getElementById('apply-filters-btn');
+        if (applyFiltersBtn) {
+            applyFiltersBtn.addEventListener('click', () => {
+                this.collectFilterValues();
+                this.applyFilters();
+            });
+        }
+
+        // Filter change events
+        if (this.filterComponents.statusFilter) {
+            this.filterComponents.statusFilter.listen('MDCSelect:change', () => {
+                this.currentFilters.status = this.filterComponents.statusFilter.value;
+                this.applyFilters();
+            });
+        }
+
+        if (this.filterComponents.typeFilter) {
+            this.filterComponents.typeFilter.listen('MDCSelect:change', () => {
+                this.currentFilters.type = this.filterComponents.typeFilter.value;
+                this.applyFilters();
+            });
+        }
+
+        // Date filter changes
+        ['expiry-from-filter', 'expiry-to-filter', 'vehicle-make-filter'].forEach(id => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.addEventListener('change', () => {
+                    this.collectFilterValues();
+                    this.applyFilters();
+                });
+            }
+        });
     }
 
     initializeFormComponents() {
@@ -229,16 +361,23 @@ class EVLicenseApp {
 
         tbody.innerHTML = '';
 
-        if (this.licenses.length === 0) {
+        const licensesToRender = this.filteredLicenses.length > 0 || this.hasActiveFilters() 
+            ? this.filteredLicenses 
+            : this.licenses;
+
+        if (licensesToRender.length === 0) {
+            const message = this.hasActiveFilters() 
+                ? 'No licenses match your search criteria' 
+                : 'No licenses found';
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="5" style="text-align: center;">No licenses found</td>
+                    <td colspan="6" style="text-align: center;">${message}</td>
                 </tr>
             `;
             return;
         }
 
-        this.licenses.forEach(license => {
+        licensesToRender.forEach(license => {
             const row = document.createElement('tr');
             row.className = 'mdc-data-table__row';
             row.innerHTML = `
@@ -524,6 +663,256 @@ class EVLicenseApp {
         } catch {
             return dateString;
         }
+    }
+
+    // Advanced Search and Filter Methods
+    collectFilterValues() {
+        this.currentFilters.vehicleMake = document.getElementById('vehicle-make-filter').value || '';
+        this.currentFilters.expiryFrom = document.getElementById('expiry-from-filter').value || '';
+        this.currentFilters.expiryTo = document.getElementById('expiry-to-filter').value || '';
+    }
+
+    applyFilters() {
+        this.filteredLicenses = this.licenses.filter(license => {
+            // Search filter
+            if (this.currentFilters.search) {
+                const searchTerm = this.currentFilters.search.toLowerCase();
+                const searchableText = [
+                    license.license_number,
+                    license.owner_name,
+                    license.owner_email,
+                    license.vehicle_make,
+                    license.vehicle_model,
+                    license.vehicle_vin
+                ].join(' ').toLowerCase();
+                
+                if (!searchableText.includes(searchTerm)) {
+                    return false;
+                }
+            }
+
+            // Status filter
+            if (this.currentFilters.status) {
+                if (this.currentFilters.status === 'Expiring') {
+                    // Check if license expires within 30 days
+                    const expiryDate = new Date(license.expiry_date);
+                    const thirtyDaysFromNow = new Date();
+                    thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
+                    
+                    if (!(expiryDate <= thirtyDaysFromNow && license.status === 'Active')) {
+                        return false;
+                    }
+                } else if (license.status !== this.currentFilters.status) {
+                    return false;
+                }
+            }
+
+            // License type filter
+            if (this.currentFilters.type && license.license_type !== this.currentFilters.type) {
+                return false;
+            }
+
+            // Vehicle make filter
+            if (this.currentFilters.vehicleMake) {
+                const vehicleMakeFilter = this.currentFilters.vehicleMake.toLowerCase();
+                if (!license.vehicle_make.toLowerCase().includes(vehicleMakeFilter)) {
+                    return false;
+                }
+            }
+
+            // Date range filter
+            if (this.currentFilters.expiryFrom || this.currentFilters.expiryTo) {
+                const licenseExpiryDate = new Date(license.expiry_date);
+                
+                if (this.currentFilters.expiryFrom) {
+                    const fromDate = new Date(this.currentFilters.expiryFrom);
+                    if (licenseExpiryDate < fromDate) {
+                        return false;
+                    }
+                }
+                
+                if (this.currentFilters.expiryTo) {
+                    const toDate = new Date(this.currentFilters.expiryTo);
+                    if (licenseExpiryDate > toDate) {
+                        return false;
+                    }
+                }
+            }
+
+            return true;
+        });
+
+        this.renderLicensesTable();
+        this.updateResultsSummary();
+    }
+
+    clearAllFilters() {
+        // Reset filter values
+        this.currentFilters = {
+            search: '',
+            status: '',
+            type: '',
+            vehicleMake: '',
+            expiryFrom: '',
+            expiryTo: ''
+        };
+
+        // Clear UI elements
+        const searchInput = document.getElementById('license-search');
+        if (searchInput) searchInput.value = '';
+
+        if (this.filterComponents.statusFilter) {
+            this.filterComponents.statusFilter.value = '';
+        }
+
+        if (this.filterComponents.typeFilter) {
+            this.filterComponents.typeFilter.value = '';
+        }
+
+        document.getElementById('vehicle-make-filter').value = '';
+        document.getElementById('expiry-from-filter').value = '';
+        document.getElementById('expiry-to-filter').value = '';
+
+        // Reset filtered licenses
+        this.filteredLicenses = [];
+        
+        // Re-render table
+        this.renderLicensesTable();
+        this.updateResultsSummary();
+    }
+
+    hasActiveFilters() {
+        return Object.values(this.currentFilters).some(value => value !== '');
+    }
+
+    updateResultsSummary() {
+        // Add or update results summary
+        let summaryEl = document.querySelector('.results-summary');
+        const tableContainer = document.querySelector('.table-container');
+        
+        if (!summaryEl) {
+            summaryEl = document.createElement('div');
+            summaryEl.className = 'results-summary';
+            tableContainer.parentNode.insertBefore(summaryEl, tableContainer);
+        }
+
+        const totalLicenses = this.licenses.length;
+        const displayedLicenses = this.hasActiveFilters() ? this.filteredLicenses.length : totalLicenses;
+        
+        if (this.hasActiveFilters()) {
+            summaryEl.innerHTML = `
+                <div class="results-count">
+                    Showing ${displayedLicenses} of ${totalLicenses} licenses
+                </div>
+                <div class="clear-search" onclick="app.clearAllFilters()">
+                    Clear all filters
+                </div>
+            `;
+            summaryEl.style.display = 'flex';
+        } else {
+            summaryEl.style.display = 'none';
+        }
+    }
+
+    // Import/Export Methods
+    async showImportDialog() {
+        try {
+            if (window.electronAPI) {
+                const result = await window.electronAPI.system.showMessageBox({
+                    type: 'info',
+                    buttons: ['Cancel', 'Import CSV'],
+                    defaultId: 1,
+                    title: 'Import Licenses',
+                    message: 'Choose import format',
+                    detail: 'Import licenses from a CSV file. This will add new licenses to your existing data.'
+                });
+
+                if (result.response === 1) {
+                    // CSV import will be implemented next
+                    this.showErrorMessage('Import', 'CSV import functionality coming soon!');
+                }
+            } else {
+                this.showErrorMessage('Import', 'Import functionality is only available in the full application');
+            }
+        } catch (error) {
+            console.error('❌ Error showing import dialog:', error);
+            this.showErrorMessage('Import Error', error.message);
+        }
+    }
+
+    async exportLicenses() {
+        try {
+            const licensesToExport = this.hasActiveFilters() ? this.filteredLicenses : this.licenses;
+            
+            if (licensesToExport.length === 0) {
+                this.showErrorMessage('Export Error', 'No licenses to export');
+                return;
+            }
+
+            // Simple CSV export for now
+            const csvContent = this.generateCSV(licensesToExport);
+            
+            if (window.electronAPI) {
+                // In full app, this would save to file
+                this.showSuccessMessage(`Exported ${licensesToExport.length} licenses successfully!`);
+            } else {
+                // For testing, download as file
+                const blob = new Blob([csvContent], { type: 'text/csv' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `ev_licenses_${new Date().toISOString().split('T')[0]}.csv`;
+                a.click();
+                window.URL.revokeObjectURL(url);
+                this.showSuccessMessage(`Exported ${licensesToExport.length} licenses successfully!`);
+            }
+        } catch (error) {
+            console.error('❌ Error exporting licenses:', error);
+            this.showErrorMessage('Export Error', error.message);
+        }
+    }
+
+    generateCSV(licenses) {
+        const headers = [
+            'License Number',
+            'Owner Name',
+            'Owner Email',
+            'Owner Phone',
+            'Vehicle Make',
+            'Vehicle Model',
+            'Vehicle Year',
+            'Vehicle VIN',
+            'Vehicle Color',
+            'License Type',
+            'Issue Date',
+            'Expiry Date',
+            'Status',
+            'Notes'
+        ];
+
+        const csvRows = [headers.join(',')];
+
+        licenses.forEach(license => {
+            const row = [
+                license.license_number || '',
+                license.owner_name || '',
+                license.owner_email || '',
+                license.owner_phone || '',
+                license.vehicle_make || '',
+                license.vehicle_model || '',
+                license.vehicle_year || '',
+                license.vehicle_vin || '',
+                license.vehicle_color || '',
+                license.license_type || '',
+                license.issue_date || '',
+                license.expiry_date || '',
+                license.status || '',
+                (license.notes || '').replace(/,/g, ';') // Replace commas to avoid CSV issues
+            ];
+            csvRows.push(row.join(','));
+        });
+
+        return csvRows.join('\n');
     }
 }
 

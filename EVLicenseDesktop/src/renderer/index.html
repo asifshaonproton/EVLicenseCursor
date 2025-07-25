@@ -117,11 +117,175 @@
                 <div class="page-header">
                     <h1 class="mdc-typography--headline4">License Management</h1>
                     <div class="page-actions">
+                        <button class="mdc-button mdc-button--outlined" id="export-btn">
+                            <span class="mdc-button__ripple"></span>
+                            <i class="material-icons mdc-button__icon">download</i>
+                            <span class="mdc-button__label">Export</span>
+                        </button>
+                        <button class="mdc-button mdc-button--outlined" id="import-btn">
+                            <span class="mdc-button__ripple"></span>
+                            <i class="material-icons mdc-button__icon">upload</i>
+                            <span class="mdc-button__label">Import</span>
+                        </button>
                         <button class="mdc-button mdc-button--raised" id="new-license-btn">
                             <span class="mdc-button__ripple"></span>
                             <i class="material-icons mdc-button__icon">add</i>
                             <span class="mdc-button__label">New License</span>
                         </button>
+                    </div>
+                </div>
+
+                <!-- Advanced Search and Filter Bar -->
+                <div class="search-filter-container">
+                    <div class="search-bar">
+                        <div class="mdc-text-field mdc-text-field--outlined mdc-text-field--with-leading-icon search-field">
+                            <i class="material-icons mdc-text-field__icon mdc-text-field__icon--leading">search</i>
+                            <input type="text" id="license-search" class="mdc-text-field__input" placeholder="Search licenses...">
+                            <div class="mdc-notched-outline">
+                                <div class="mdc-notched-outline__leading"></div>
+                                <div class="mdc-notched-outline__notch">
+                                    <label for="license-search" class="mdc-floating-label">Search</label>
+                                </div>
+                                <div class="mdc-notched-outline__trailing"></div>
+                            </div>
+                        </div>
+                        
+                        <button class="mdc-icon-button" id="filter-toggle-btn" title="Show/Hide Filters">
+                            <span class="material-icons">filter_list</span>
+                        </button>
+                        
+                        <button class="mdc-icon-button" id="clear-filters-btn" title="Clear All Filters">
+                            <span class="material-icons">clear</span>
+                        </button>
+                    </div>
+                    
+                    <!-- Advanced Filters Panel -->
+                    <div class="filters-panel" id="filters-panel" style="display: none;">
+                        <div class="filter-row">
+                            <div class="mdc-select mdc-select--outlined filter-field">
+                                <div class="mdc-select__anchor">
+                                    <span class="mdc-notched-outline">
+                                        <span class="mdc-notched-outline__leading"></span>
+                                        <span class="mdc-notched-outline__notch">
+                                            <span class="mdc-floating-label">Status</span>
+                                        </span>
+                                        <span class="mdc-notched-outline__trailing"></span>
+                                    </span>
+                                    <span class="mdc-select__selected-text-container">
+                                        <span class="mdc-select__selected-text"></span>
+                                    </span>
+                                    <span class="mdc-select__dropdown-icon">
+                                        <svg class="mdc-select__dropdown-icon-graphic" viewBox="7 10 10 5">
+                                            <polygon class="mdc-select__dropdown-icon-inactive" stroke="none" fill-rule="evenodd" points="7 10 12 15 17 10"></polygon>
+                                            <polygon class="mdc-select__dropdown-icon-active" stroke="none" fill-rule="evenodd" points="7 15 12 10 17 15"></polygon>
+                                        </svg>
+                                    </span>
+                                </div>
+                                <div class="mdc-select__menu mdc-menu mdc-menu-surface mdc-menu-surface--fullwidth">
+                                    <ul class="mdc-deprecated-list" id="status-filter-list">
+                                        <li class="mdc-deprecated-list-item mdc-deprecated-list-item--selected" data-value="">
+                                            <span class="mdc-deprecated-list-item__ripple"></span>
+                                            <span class="mdc-deprecated-list-item__text">All Statuses</span>
+                                        </li>
+                                        <li class="mdc-deprecated-list-item" data-value="Active">
+                                            <span class="mdc-deprecated-list-item__ripple"></span>
+                                            <span class="mdc-deprecated-list-item__text">Active</span>
+                                        </li>
+                                        <li class="mdc-deprecated-list-item" data-value="Expired">
+                                            <span class="mdc-deprecated-list-item__ripple"></span>
+                                            <span class="mdc-deprecated-list-item__text">Expired</span>
+                                        </li>
+                                        <li class="mdc-deprecated-list-item" data-value="Expiring">
+                                            <span class="mdc-deprecated-list-item__ripple"></span>
+                                            <span class="mdc-deprecated-list-item__text">Expiring Soon</span>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                            
+                            <div class="mdc-select mdc-select--outlined filter-field">
+                                <div class="mdc-select__anchor">
+                                    <span class="mdc-notched-outline">
+                                        <span class="mdc-notched-outline__leading"></span>
+                                        <span class="mdc-notched-outline__notch">
+                                            <span class="mdc-floating-label">License Type</span>
+                                        </span>
+                                        <span class="mdc-notched-outline__trailing"></span>
+                                    </span>
+                                    <span class="mdc-select__selected-text-container">
+                                        <span class="mdc-select__selected-text"></span>
+                                    </span>
+                                    <span class="mdc-select__dropdown-icon">
+                                        <svg class="mdc-select__dropdown-icon-graphic" viewBox="7 10 10 5">
+                                            <polygon class="mdc-select__dropdown-icon-inactive" stroke="none" fill-rule="evenodd" points="7 10 12 15 17 10"></polygon>
+                                            <polygon class="mdc-select__dropdown-icon-active" stroke="none" fill-rule="evenodd" points="7 15 12 10 17 15"></polygon>
+                                        </svg>
+                                    </span>
+                                </div>
+                                <div class="mdc-select__menu mdc-menu mdc-menu-surface mdc-menu-surface--fullwidth">
+                                    <ul class="mdc-deprecated-list" id="type-filter-list">
+                                        <li class="mdc-deprecated-list-item mdc-deprecated-list-item--selected" data-value="">
+                                            <span class="mdc-deprecated-list-item__ripple"></span>
+                                            <span class="mdc-deprecated-list-item__text">All Types</span>
+                                        </li>
+                                        <li class="mdc-deprecated-list-item" data-value="Standard">
+                                            <span class="mdc-deprecated-list-item__ripple"></span>
+                                            <span class="mdc-deprecated-list-item__text">Standard</span>
+                                        </li>
+                                        <li class="mdc-deprecated-list-item" data-value="Premium">
+                                            <span class="mdc-deprecated-list-item__ripple"></span>
+                                            <span class="mdc-deprecated-list-item__text">Premium</span>
+                                        </li>
+                                        <li class="mdc-deprecated-list-item" data-value="Commercial">
+                                            <span class="mdc-deprecated-list-item__ripple"></span>
+                                            <span class="mdc-deprecated-list-item__text">Commercial</span>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                            
+                            <div class="mdc-text-field mdc-text-field--outlined filter-field">
+                                <input type="text" id="vehicle-make-filter" class="mdc-text-field__input">
+                                <div class="mdc-notched-outline">
+                                    <div class="mdc-notched-outline__leading"></div>
+                                    <div class="mdc-notched-outline__notch">
+                                        <label for="vehicle-make-filter" class="mdc-floating-label">Vehicle Make</label>
+                                    </div>
+                                    <div class="mdc-notched-outline__trailing"></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="filter-row">
+                            <div class="mdc-text-field mdc-text-field--outlined filter-field">
+                                <input type="date" id="expiry-from-filter" class="mdc-text-field__input">
+                                <div class="mdc-notched-outline">
+                                    <div class="mdc-notched-outline__leading"></div>
+                                    <div class="mdc-notched-outline__notch">
+                                        <label for="expiry-from-filter" class="mdc-floating-label">Expiry From</label>
+                                    </div>
+                                    <div class="mdc-notched-outline__trailing"></div>
+                                </div>
+                            </div>
+                            
+                            <div class="mdc-text-field mdc-text-field--outlined filter-field">
+                                <input type="date" id="expiry-to-filter" class="mdc-text-field__input">
+                                <div class="mdc-notched-outline">
+                                    <div class="mdc-notched-outline__leading"></div>
+                                    <div class="mdc-notched-outline__notch">
+                                        <label for="expiry-to-filter" class="mdc-floating-label">Expiry To</label>
+                                    </div>
+                                    <div class="mdc-notched-outline__trailing"></div>
+                                </div>
+                            </div>
+                            
+                            <div class="filter-actions">
+                                <button class="mdc-button mdc-button--outlined" id="apply-filters-btn">
+                                    <span class="mdc-button__ripple"></span>
+                                    <span class="mdc-button__label">Apply Filters</span>
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
