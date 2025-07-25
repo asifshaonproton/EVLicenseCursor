@@ -333,14 +333,57 @@ class EVLicenseApp {
             const indicator = document.getElementById('nfcStatus');
             const deviceInfo = document.getElementById('nfcDeviceInfo');
 
-            if (status.activeDevice) {
+            if (status.connected && status.deviceInfo) {
+                const device = status.deviceInfo;
                 indicator.className = 'nfc-status-indicator connected';
-                indicator.querySelector('.status-text').textContent = status.activeDevice.product;
+                indicator.querySelector('.status-text').textContent = device.product || device.deviceType?.name || 'NFC Device';
+                
+                // Enhanced device information display
+                const firmwareInfo = status.firmwareVersion ? `Firmware: ${status.firmwareVersion}` : 'Firmware: Unknown';
+                const pollingStatus = status.polling ? 'Polling Active' : 'Polling Inactive';
+                const lastCard = status.lastCardUID ? `Last Card: ${status.lastCardUID}` : 'No card detected';
                 
                 deviceInfo.innerHTML = `
-                    <div class="device-status">
-                        <span class="status-indicator online"></span>
-                        <span class="status-text">${status.activeDevice.product} connected</span>
+                    <div class="device-status enhanced">
+                        <div class="device-header">
+                            <span class="status-indicator online"></span>
+                            <span class="device-name">${device.product || device.deviceType?.name || 'NFC Reader'}</span>
+                            <span class="device-type">${device.deviceType?.type || 'USB NFC Reader'}</span>
+                        </div>
+                        <div class="device-details">
+                            <div class="detail-row">
+                                <span class="detail-label">Serial:</span>
+                                <span class="detail-value">${device.serialNumber || 'Unknown'}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Vendor ID:</span>
+                                <span class="detail-value">0x${device.vendorId?.toString(16).toUpperCase().padStart(4, '0') || 'Unknown'}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Product ID:</span>
+                                <span class="detail-value">0x${device.productId?.toString(16).toUpperCase().padStart(4, '0') || 'Unknown'}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Status:</span>
+                                <span class="detail-value status-${status.polling ? 'active' : 'inactive'}">${pollingStatus}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">${firmwareInfo}</span>
+                            </div>
+                            <div class="detail-row last-card">
+                                <span class="detail-label">${lastCard}</span>
+                            </div>
+                        </div>
+                        ${device.capabilities ? `
+                        <div class="device-capabilities">
+                            <div class="capabilities-header">Capabilities:</div>
+                            <div class="capabilities-list">
+                                <div class="capability-item">Protocols: ${device.capabilities.supportedProtocols?.join(', ') || 'ISO14443-A/B'}</div>
+                                <div class="capability-item">Data Rate: ${device.capabilities.maxDataRate || '424 kbps'}</div>
+                                <div class="capability-item">Range: ${device.capabilities.workingDistance || '~5cm'}</div>
+                                <div class="capability-item">Cards: ${device.capabilities.supportedCards?.join(', ') || 'MIFARE, NTAG'}</div>
+                            </div>
+                        </div>` : ''}
                     </div>
                 `;
             } else {
@@ -350,12 +393,39 @@ class EVLicenseApp {
                 deviceInfo.innerHTML = `
                     <div class="device-status">
                         <span class="status-indicator offline"></span>
-                        <span class="status-text">No ACR122U device detected</span>
+                        <span class="status-text">No compatible NFC device detected</span>
+                        <button onclick="app.refreshNfcDevices()" class="refresh-button">
+                            <span class="material-icons">refresh</span>
+                            Refresh Devices
+                        </button>
                     </div>
                 `;
             }
         } catch (error) {
             console.error('❌ Error updating NFC status:', error);
+            
+            // Show error state
+            const indicator = document.getElementById('nfcStatus');
+            const deviceInfo = document.getElementById('nfcDeviceInfo');
+            
+            if (indicator) {
+                indicator.className = 'nfc-status-indicator error';
+                const statusText = indicator.querySelector('.status-text');
+                if (statusText) statusText.textContent = 'Error';
+            }
+            
+            if (deviceInfo) {
+                deviceInfo.innerHTML = `
+                    <div class="device-status error">
+                        <span class="status-indicator error"></span>
+                        <span class="status-text">Error: ${error.message || 'Failed to get NFC status'}</span>
+                        <button onclick="app.refreshNfcDevices()" class="refresh-button">
+                            <span class="material-icons">refresh</span>
+                            Try Again
+                        </button>
+                    </div>
+                `;
+            }
         }
     }
 
@@ -448,9 +518,28 @@ class EVLicenseApp {
             const result = await window.electronAPI.nfc.writeCard(data);
             
             this.showNotification('Card Write', 'Data written to NFC card successfully', 'success');
+            console.log('💾 Card write result:', result);
         } catch (error) {
             console.error('❌ Error writing card:', error);
             this.showError('Write Error', error.message);
+        } finally {
+            this.showLoading(false);
+        }
+    }
+
+    async refreshNfcDevices() {
+        try {
+            this.showLoading(true, 'Refreshing NFC devices...');
+            const result = await window.electronAPI.nfc.refreshDevices();
+            
+            if (result.success) {
+                this.showNotification('Devices Refreshed', 'NFC devices refreshed successfully', 'success');
+                await this.updateNfcStatus();
+            } else {
+                this.showNotification('Refresh Failed', 'No compatible NFC devices found', 'warning');
+            }
+        } catch (error) {
+            this.showError('Refresh Error', error.message || error);
         } finally {
             this.showLoading(false);
         }
@@ -460,19 +549,195 @@ class EVLicenseApp {
         const section = document.getElementById('cardDataSection');
         const container = document.getElementById('cardData');
         
+        // Enhanced card data display with comprehensive information
+        const capabilities = cardData.capabilities ? cardData.capabilities.join(', ') : 'Unknown';
+        const sectors = cardData.sectors > 0 ? cardData.sectors : 'Unknown';
+        const technology = cardData.technology || 'Unknown';
+        const atr = cardData.atr || 'Not available';
+        
+        let sectorsInfo = '';
+        if (cardData.sectors && cardData.sectors.length > 0) {
+            sectorsInfo = `
+                <div class="sectors-info">
+                    <h4>Sector Data:</h4>
+                    ${cardData.sectors.map(sector => `
+                        <div class="sector-item ${sector.readable ? 'readable' : 'unreadable'}">
+                            <strong>Sector ${sector.sector}:</strong> 
+                            ${sector.readable ? 
+                                `<span class="data-hex">${Array.from(sector.data).map(b => b.toString(16).padStart(2, '0').toUpperCase()).join(' ')}</span>` : 
+                                `<span class="error-text">${sector.error || 'Not readable'}</span>`
+                            }
+                        </div>
+                    `).join('')}
+                    <div class="read-summary">
+                        <strong>Total Data Read:</strong> ${cardData.totalDataRead || 0} bytes
+                        ${cardData.readErrors && cardData.readErrors.length > 0 ? 
+                            `<br><strong>Read Errors:</strong> ${cardData.readErrors.length}` : ''
+                        }
+                    </div>
+                </div>
+            `;
+        }
+        
+        let additionalDataInfo = '';
+        if (cardData.additionalData) {
+            additionalDataInfo = `
+                <div class="additional-data">
+                    <h4>Additional Data:</h4>
+                    <div class="data-row">
+                        <strong>First Block:</strong> <span class="data-hex">${cardData.additionalData.firstBlock}</span>
+                    </div>
+                    <div class="data-row">
+                        <strong>Data Length:</strong> ${cardData.additionalData.dataLength} bytes
+                    </div>
+                    <div class="data-row">
+                        <strong>Contains Data:</strong> ${cardData.additionalData.hasData ? 'Yes' : 'No'}
+                    </div>
+                </div>
+            `;
+        }
+        
+        let readerInfo = '';
+        if (cardData.readerInfo) {
+            readerInfo = `
+                <div class="reader-info">
+                    <h4>Reader Information:</h4>
+                    <div class="data-row">
+                        <strong>Device:</strong> ${cardData.readerInfo.product || cardData.readerInfo.deviceType?.name || 'Unknown'}
+                    </div>
+                    <div class="data-row">
+                        <strong>Serial:</strong> ${cardData.readerInfo.serialNumber || 'Unknown'}
+                    </div>
+                    <div class="data-row">
+                        <strong>Firmware:</strong> ${cardData.readerInfo.firmwareVersion || 'Unknown'}
+                    </div>
+                </div>
+            `;
+        }
+        
         container.innerHTML = `
-            <strong>Card UID:</strong> ${cardData.uid}<br>
-            <strong>Card Type:</strong> ${cardData.type}<br>
-            <strong>Detected:</strong> ${this.formatDateTime(cardData.timestamp)}<br>
-            <strong>Data (Hex):</strong> ${cardData.dataHex || 'No data available'}
+            <div class="card-data-enhanced">
+                <div class="card-header">
+                    <div class="card-uid">
+                        <span class="uid-label">UID:</span>
+                        <span class="uid-value">${cardData.uid}</span>
+                        <button onclick="navigator.clipboard.writeText('${cardData.uid}')" class="copy-button" title="Copy UID">
+                            <span class="material-icons">content_copy</span>
+                        </button>
+                    </div>
+                    <div class="card-type">
+                        <span class="type-badge">${cardData.type}</span>
+                    </div>
+                </div>
+                
+                <div class="card-properties">
+                    <div class="property-grid">
+                        <div class="property-item">
+                            <span class="property-label">Size:</span>
+                            <span class="property-value">${cardData.size || 'Unknown'}</span>
+                        </div>
+                        <div class="property-item">
+                            <span class="property-label">Sectors:</span>
+                            <span class="property-value">${sectors}</span>
+                        </div>
+                        <div class="property-item">
+                            <span class="property-label">Technology:</span>
+                            <span class="property-value">${technology}</span>
+                        </div>
+                        <div class="property-item">
+                            <span class="property-label">Capabilities:</span>
+                            <span class="property-value">${capabilities}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="technical-details">
+                    <div class="detail-section">
+                        <h4>Technical Details:</h4>
+                        <div class="data-row">
+                            <strong>ATR:</strong> <span class="data-hex">${atr}</span>
+                        </div>
+                        <div class="data-row">
+                            <strong>Detected:</strong> ${this.formatDateTime(cardData.timestamp)}
+                        </div>
+                        ${cardData.readTimestamp ? `
+                        <div class="data-row">
+                            <strong>Last Read:</strong> ${this.formatDateTime(cardData.readTimestamp)}
+                        </div>` : ''}
+                    </div>
+                </div>
+                
+                ${additionalDataInfo}
+                ${sectorsInfo}
+                ${readerInfo}
+                
+                <div class="card-actions">
+                    <button onclick="app.readNfcCard()" class="action-button primary">
+                        <span class="material-icons">visibility</span>
+                        Re-read Card
+                    </button>
+                    <button onclick="app.writeNfcCard()" class="action-button secondary">
+                        <span class="material-icons">edit</span>
+                        Write Data
+                    </button>
+                    <button onclick="app.exportCardData('${cardData.uid}')" class="action-button secondary">
+                        <span class="material-icons">download</span>
+                        Export Data
+                    </button>
+                </div>
+            </div>
         `;
         
         section.style.display = 'block';
     }
 
+    exportCardData(uid) {
+        try {
+            // Find the current card data
+            const cardData = this.lastDetectedCard || { uid: uid };
+            
+            // Create export data
+            const exportData = {
+                uid: cardData.uid,
+                type: cardData.type,
+                size: cardData.size,
+                sectors: cardData.sectors,
+                technology: cardData.technology,
+                capabilities: cardData.capabilities,
+                atr: cardData.atr,
+                timestamp: cardData.timestamp,
+                readTimestamp: cardData.readTimestamp,
+                additionalData: cardData.additionalData,
+                readerInfo: cardData.readerInfo,
+                exportedAt: new Date().toISOString()
+            };
+            
+            // Create and download JSON file
+            const dataStr = JSON.stringify(exportData, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(dataBlob);
+            link.download = `nfc-card-${uid}-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            this.showNotification('Export Complete', `Card data exported successfully`, 'success');
+            
+        } catch (error) {
+            console.error('❌ Error exporting card data:', error);
+            this.showError('Export Error', error.message || 'Failed to export card data');
+        }
+    }
+
     handleCardDetected(cardData) {
         console.log('📱 Card detected:', cardData);
-        this.showNotification('Card Detected', `Card UID: ${cardData.uid}`, 'info');
+        
+        // Store the last detected card data for export functionality
+        this.lastDetectedCard = cardData;
+        
+        this.showNotification('Card Detected', `${cardData.type || 'NFC Card'} (${cardData.uid})`, 'info');
         
         // Auto-navigate to NFC page if not already there
         if (this.currentPage !== 'nfc') {
