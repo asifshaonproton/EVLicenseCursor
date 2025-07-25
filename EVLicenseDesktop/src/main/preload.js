@@ -91,26 +91,38 @@ contextBridge.exposeInMainWorld('electronAPI', {
         }
     },
 
-    // NFC operations (placeholder for now)
+    // NFC operations
     nfc: {
         getStatus: async () => {
-            return {
-                devicesFound: 0,
-                activeDevice: null,
-                isPolling: false
-            };
+            return await ipcRenderer.invoke('nfc-get-status');
         },
+        startPolling: async () => {
+            return await ipcRenderer.invoke('nfc-start-polling');
+        },
+        stopPolling: async () => {
+            return await ipcRenderer.invoke('nfc-stop-polling');
+        },
+        readCard: async () => {
+            return await ipcRenderer.invoke('nfc-read-card');
+        },
+        writeCard: async (data) => {
+            return await ipcRenderer.invoke('nfc-write-card', data);
+        },
+        // Event listeners
         onDeviceConnected: (callback) => {
-            // Placeholder for NFC device events
+            ipcRenderer.on('nfc-device-connected', (event, data) => callback(data));
         },
         onDeviceDisconnected: (callback) => {
-            // Placeholder for NFC device events
+            ipcRenderer.on('nfc-device-disconnected', (event, data) => callback(data));
         },
         onCardDetected: (callback) => {
-            // Placeholder for card detection events
+            ipcRenderer.on('nfc-card-detected', (event, data) => callback(data));
+        },
+        onCardRemoved: (callback) => {
+            ipcRenderer.on('nfc-card-removed', (event, data) => callback(data));
         },
         onError: (callback) => {
-            // Placeholder for error events
+            ipcRenderer.on('nfc-error', (event, data) => callback(data));
         }
     }
 });
