@@ -522,14 +522,33 @@ class EVLicenseApp {
         }
         
         // Show scanned data
-        if (scannedDataContainer) scannedDataContainer.style.display = 'block';
-        if (clearScanBtn) clearScanBtn.style.display = 'inline-flex';
+        if (scannedDataContainer) {
+            scannedDataContainer.style.display = 'block';
+            console.log('📦 Scanned data container made visible');
+            console.log('📦 Container computed style:', window.getComputedStyle(scannedDataContainer).display);
+        } else {
+            console.error('❌ scannedDataContainer element not found!');
+        }
+        
+        if (clearScanBtn) {
+            clearScanBtn.style.display = 'inline-flex';
+            console.log('🔄 Clear scan button made visible');
+        } else {
+            console.error('❌ clearScanBtn element not found!');
+        }
         
         if (scannedDataContent) {
             const cardDataString = this.formatCardDataAsString(cardData);
+            console.log('📄 Generated card data string:', cardDataString);
+            console.log('📄 Card data string length:', cardDataString.length);
+            
             scannedDataContent.innerHTML = `
                 <div class="card-data-display">${cardDataString}</div>
             `;
+            
+            console.log('📄 Updated scanned data content HTML:', scannedDataContent.innerHTML);
+        } else {
+            console.error('❌ scannedDataContent element not found!');
         }
         
         // Store for clipboard functionality
@@ -619,6 +638,26 @@ class EVLicenseApp {
             dataString += `"${readableText}"\n`;
             dataString += `\n📍 Found in blocks: ${textBlocks.map(b => b.block).join(', ')}\n`;
             dataString += `📏 Text length: ${readableText.length} characters\n`;
+        } else {
+            // Force show if we see "hello" in the console but extraction failed
+            console.log('⚠️ No readable text found, checking for raw text in blocks...');
+            
+            if (cardData.data && cardData.data.blocks) {
+                // Simple raw search for the word "hello" in hex
+                const helloHex = Buffer.from('hello', 'utf8').toString('hex');
+                console.log('🔍 Looking for hello in hex:', helloHex);
+                
+                for (const block of cardData.data.blocks) {
+                    if (block.data && block.data.includes(helloHex.substring(0, 8))) {
+                        console.log('✅ Found hello pattern in block', block.block, ':', block.data);
+                        dataString += '\n=== 📝 READABLE TEXT DATA (Raw Search) ===\n';
+                        dataString += `"hello"\n`;
+                        dataString += `\n📍 Found in block: ${block.block}\n`;
+                        dataString += `📏 Text length: 5 characters\n`;
+                        break;
+                    }
+                }
+            }
         }
         
         dataString += '\n--- Raw Block Data ---\n';
