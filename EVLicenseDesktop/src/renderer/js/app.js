@@ -4,6 +4,10 @@ class EVLicenseApp {
     constructor() {
         this.currentPage = 'dashboard';
         this.licenses = [];
+        this.currentEditingLicense = null;
+        this.dialog = null;
+        this.licenseTypeSelect = null;
+        this.formTextFields = [];
         this.initializeApp();
     }
 
@@ -57,6 +61,12 @@ class EVLicenseApp {
             mdc.ripple.MDCRipple.attachTo(listItem);
         });
 
+        // Initialize Dialog
+        this.dialog = mdc.dialog.MDCDialog.attachTo(document.querySelector('#license-dialog'));
+        
+        // Initialize Form Components
+        this.initializeFormComponents();
+
         console.log('✅ Material Design Components initialized');
     }
 
@@ -90,6 +100,29 @@ class EVLicenseApp {
         }
 
         console.log('✅ Event listeners set up');
+    }
+
+    initializeFormComponents() {
+        // Initialize text fields
+        document.querySelectorAll('.mdc-text-field').forEach(textField => {
+            const mdcTextField = mdc.textField.MDCTextField.attachTo(textField);
+            this.formTextFields.push(mdcTextField);
+        });
+
+        // Initialize select component
+        const selectElement = document.querySelector('.mdc-select');
+        if (selectElement) {
+            this.licenseTypeSelect = mdc.select.MDCSelect.attachTo(selectElement);
+        }
+
+        // Dialog event handlers
+        this.dialog.listen('MDCDialog:closed', (event) => {
+            if (event.detail.action === 'save') {
+                this.handleSaveLicense();
+            } else {
+                this.resetForm();
+            }
+        });
     }
 
     async loadInitialData() {
@@ -143,24 +176,51 @@ class EVLicenseApp {
             }
             
             this.renderLicensesTable();
-            this.updateDashboardStats();
+            await this.updateDashboardStats();
             console.log(`✅ Loaded ${this.licenses.length} licenses`);
         } catch (error) {
             console.error('❌ Error loading licenses:', error);
+            this.showErrorMessage('Failed to load licenses', error.message);
         }
     }
 
-    updateDashboardStats() {
-        const stats = {
-            totalLicenses: this.licenses.length,
-            activeLicenses: this.licenses.filter(l => l.status === 'Active').length
-        };
+    async updateDashboardStats() {
+        try {
+            let stats;
+            
+            if (window.electronAPI) {
+                // Get enhanced stats from database
+                stats = await window.electronAPI.database.getDashboardStats();
+            } else {
+                // Fallback calculation
+                stats = {
+                    totalLicenses: this.licenses.length,
+                    activeLicenses: this.licenses.filter(l => l.status === 'Active').length,
+                    expiredLicenses: this.licenses.filter(l => l.status === 'Expired').length,
+                    expiringIn30Days: 0,
+                    associatedCards: 0
+                };
+            }
 
-        const totalEl = document.getElementById('totalLicenses');
-        const activeEl = document.getElementById('activeLicenses');
-        
-        if (totalEl) totalEl.textContent = stats.totalLicenses;
-        if (activeEl) activeEl.textContent = stats.activeLicenses;
+            // Update basic stats
+            const totalEl = document.getElementById('totalLicenses');
+            const activeEl = document.getElementById('activeLicenses');
+            
+            if (totalEl) totalEl.textContent = stats.totalLicenses;
+            if (activeEl) activeEl.textContent = stats.activeLicenses;
+
+            // Update additional stats if elements exist
+            const expiredEl = document.getElementById('expiredLicenses');
+            const expiringEl = document.getElementById('expiringLicenses');
+            const cardsEl = document.getElementById('associatedCards');
+            
+            if (expiredEl) expiredEl.textContent = stats.expiredLicenses;
+            if (expiringEl) expiringEl.textContent = stats.expiringIn30Days;
+            if (cardsEl) cardsEl.textContent = stats.associatedCards;
+
+        } catch (error) {
+            console.error('❌ Error updating dashboard stats:', error);
+        }
     }
 
     renderLicensesTable() {
@@ -189,6 +249,16 @@ class EVLicenseApp {
                     <span class="status-badge ${license.status.toLowerCase()}">${license.status}</span>
                 </td>
                 <td class="mdc-data-table__cell">${this.formatDate(license.expiry_date)}</td>
+                <td class="mdc-data-table__cell">
+                    <div class="action-buttons">
+                        <button class="mdc-icon-button action-button" onclick="app.editLicense(${license.id})" title="Edit License">
+                            <span class="material-icons">edit</span>
+                        </button>
+                        <button class="mdc-icon-button action-button" onclick="app.deleteLicense(${license.id})" title="Delete License">
+                            <span class="material-icons">delete</span>
+                        </button>
+                    </div>
+                </td>
             `;
             tbody.appendChild(row);
         });
@@ -238,7 +308,214 @@ class EVLicenseApp {
     }
 
     showNewLicenseDialog() {
-        alert('New License dialog would open here. This will be implemented in the next phase.');
+        this.currentEditingLicense = null;
+        document.getElementById('dialog-title').textContent = 'New License';
+        this.resetForm();
+        this.setDefaultFormValues();
+        this.dialog.open();
+    }
+
+    editLicense(licenseId) {
+        const license = this.licenses.find(l => l.id === licenseId);
+        if (!license) {
+            this.showErrorMessage('Error', 'License not found');
+            return;
+        }
+
+        this.currentEditingLicense = license;
+        document.getElementById('dialog-title').textContent = 'Edit License';
+        this.populateForm(license);
+        this.dialog.open();
+    }
+
+    async deleteLicense(licenseId) {
+        const license = this.licenses.find(l => l.id === licenseId);
+        if (!license) {
+            this.showErrorMessage('Error', 'License not found');
+            return;
+        }
+
+        try {
+            if (window.electronAPI) {
+                const result = await window.electronAPI.system.showMessageBox({
+                    type: 'warning',
+                    buttons: ['Cancel', 'Delete'],
+                    defaultId: 0,
+                    title: 'Confirm Delete',
+                    message: `Are you sure you want to delete license ${license.license_number}?`,
+                    detail: 'This action cannot be undone.'
+                });
+
+                if (result.response === 1) { // Delete button clicked
+                    await window.electronAPI.database.deleteLicense(licenseId);
+                    await this.loadLicenses();
+                    this.showSuccessMessage('License deleted successfully');
+                }
+            } else {
+                if (confirm(`Are you sure you want to delete license ${license.license_number}?`)) {
+                    this.licenses = this.licenses.filter(l => l.id !== licenseId);
+                    this.renderLicensesTable();
+                    await this.updateDashboardStats();
+                    this.showSuccessMessage('License deleted successfully');
+                }
+            }
+        } catch (error) {
+            console.error('❌ Error deleting license:', error);
+            this.showErrorMessage('Delete Failed', error.message);
+        }
+    }
+
+    async handleSaveLicense() {
+        try {
+            const formData = this.collectFormData();
+            
+            if (!this.validateFormData(formData)) {
+                return;
+            }
+
+            if (window.electronAPI) {
+                if (this.currentEditingLicense) {
+                    // Update existing license
+                    formData.id = this.currentEditingLicense.id;
+                    await window.electronAPI.database.updateLicense(formData);
+                    this.showSuccessMessage('License updated successfully');
+                } else {
+                    // Add new license
+                    await window.electronAPI.database.addLicense(formData);
+                    this.showSuccessMessage('License created successfully');
+                }
+            } else {
+                // Fallback for testing
+                if (this.currentEditingLicense) {
+                    const index = this.licenses.findIndex(l => l.id === this.currentEditingLicense.id);
+                    if (index !== -1) {
+                        this.licenses[index] = { ...formData, id: this.currentEditingLicense.id };
+                    }
+                } else {
+                    formData.id = Date.now(); // Simple ID for testing
+                    this.licenses.push(formData);
+                }
+                this.renderLicensesTable();
+                await this.updateDashboardStats();
+                this.showSuccessMessage('License saved successfully');
+            }
+
+            await this.loadLicenses();
+            this.resetForm();
+        } catch (error) {
+            console.error('❌ Error saving license:', error);
+            this.showErrorMessage('Save Failed', error.message);
+        }
+    }
+
+    collectFormData() {
+        const form = document.getElementById('license-form');
+        const formData = new FormData(form);
+        const data = {};
+
+        for (let [key, value] of formData.entries()) {
+            data[key] = value || null;
+        }
+
+        // Convert numbers
+        if (data.vehicle_year) {
+            data.vehicle_year = parseInt(data.vehicle_year);
+        }
+
+        // Get license type from select component
+        if (this.licenseTypeSelect) {
+            data.license_type = this.licenseTypeSelect.value || 'Standard';
+        }
+
+        return data;
+    }
+
+    validateFormData(data) {
+        const requiredFields = ['license_number', 'owner_name', 'vehicle_make', 'vehicle_model', 'issue_date', 'expiry_date'];
+        
+        for (const field of requiredFields) {
+            if (!data[field] || data[field].trim() === '') {
+                this.showErrorMessage('Validation Error', `${field.replace('_', ' ')} is required`);
+                return false;
+            }
+        }
+
+        // Validate dates
+        const issueDate = new Date(data.issue_date);
+        const expiryDate = new Date(data.expiry_date);
+        
+        if (expiryDate <= issueDate) {
+            this.showErrorMessage('Validation Error', 'Expiry date must be after issue date');
+            return false;
+        }
+
+        return true;
+    }
+
+    populateForm(license) {
+        // Populate text fields
+        Object.keys(license).forEach(key => {
+            const element = document.getElementById(key);
+            if (element && license[key] !== null && license[key] !== undefined) {
+                element.value = license[key];
+            }
+        });
+
+        // Set license type in select
+        if (this.licenseTypeSelect && license.license_type) {
+            this.licenseTypeSelect.value = license.license_type;
+        }
+
+        // Refresh text field states
+        this.formTextFields.forEach(textField => {
+            textField.foundation.handleInputChange();
+        });
+    }
+
+    resetForm() {
+        const form = document.getElementById('license-form');
+        form.reset();
+        
+        // Reset select component
+        if (this.licenseTypeSelect) {
+            this.licenseTypeSelect.value = 'Standard';
+        }
+
+        // Reset text field states
+        this.formTextFields.forEach(textField => {
+            textField.foundation.handleInputChange();
+        });
+
+        this.currentEditingLicense = null;
+    }
+
+    setDefaultFormValues() {
+        // Set default issue date to today
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('issue_date').value = today;
+
+        // Set default expiry date to 1 year from today
+        const nextYear = new Date();
+        nextYear.setFullYear(nextYear.getFullYear() + 1);
+        document.getElementById('expiry_date').value = nextYear.toISOString().split('T')[0];
+
+        // Refresh text field states
+        this.formTextFields.forEach(textField => {
+            textField.foundation.handleInputChange();
+        });
+    }
+
+    showSuccessMessage(message) {
+        // You could implement a snackbar or toast here
+        console.log('✅ Success:', message);
+        // For now, use alert as fallback
+        alert(message);
+    }
+
+    showErrorMessage(title, message) {
+        console.error('❌ Error:', title, message);
+        // For now, use alert as fallback
+        alert(`${title}: ${message}`);
     }
 
     formatDate(dateString) {

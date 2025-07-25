@@ -1,16 +1,22 @@
 const { app, BrowserWindow, ipcMain, Menu, dialog } = require('electron');
 const path = require('path');
 
+// Import our custom modules
+const DatabaseManager = require('./database-manager');
+
 class EVLicenseDesktop {
     constructor() {
         this.mainWindow = null;
+        this.databaseManager = null;
         this.isDev = process.argv.includes('--dev');
         this.initializeApp();
     }
 
     initializeApp() {
-        app.whenReady().then(() => {
+        app.whenReady().then(async () => {
             this.createWindow();
+            await this.initializeServices();
+            this.setupIpcHandlers();
             this.createApplicationMenu();
         });
 
@@ -22,7 +28,98 @@ class EVLicenseDesktop {
 
         app.on('window-all-closed', () => {
             if (process.platform !== 'darwin') {
+                this.cleanup();
                 app.quit();
+            }
+        });
+
+        app.on('before-quit', () => {
+            this.cleanup();
+        });
+    }
+
+    async initializeServices() {
+        try {
+            // Initialize database
+            this.databaseManager = new DatabaseManager();
+            await this.databaseManager.initialize();
+            
+            console.log('✅ Services initialized successfully');
+        } catch (error) {
+            console.error('❌ Failed to initialize services:', error);
+            this.showErrorDialog('Initialization Error', 
+                'Failed to initialize application services. Some features may not work correctly.');
+        }
+    }
+
+    setupIpcHandlers() {
+        // Database operations
+        ipcMain.handle('db-get-licenses', async () => {
+            try {
+                return await this.databaseManager.getAllLicenses();
+            } catch (error) {
+                console.error('Error getting licenses:', error);
+                throw error;
+            }
+        });
+
+        ipcMain.handle('db-add-license', async (event, licenseData) => {
+            try {
+                return await this.databaseManager.addLicense(licenseData);
+            } catch (error) {
+                console.error('Error adding license:', error);
+                throw error;
+            }
+        });
+
+        ipcMain.handle('db-update-license', async (event, licenseData) => {
+            try {
+                return await this.databaseManager.updateLicense(licenseData);
+            } catch (error) {
+                console.error('Error updating license:', error);
+                throw error;
+            }
+        });
+
+        ipcMain.handle('db-delete-license', async (event, licenseId) => {
+            try {
+                return await this.databaseManager.deleteLicense(licenseId);
+            } catch (error) {
+                console.error('Error deleting license:', error);
+                throw error;
+            }
+        });
+
+        ipcMain.handle('db-search-licenses', async (event, searchTerm) => {
+            try {
+                return await this.databaseManager.searchLicenses(searchTerm);
+            } catch (error) {
+                console.error('Error searching licenses:', error);
+                throw error;
+            }
+        });
+
+        ipcMain.handle('db-get-dashboard-stats', async () => {
+            try {
+                return await this.databaseManager.getDashboardStats();
+            } catch (error) {
+                console.error('Error getting dashboard stats:', error);
+                throw error;
+            }
+        });
+
+        // System operations
+        ipcMain.handle('app-get-version', () => {
+            return app.getVersion();
+        });
+
+        ipcMain.handle('app-show-message-box', async (event, options) => {
+            try {
+                const result = await dialog.showMessageBox(this.mainWindow, options);
+                return result;
+            } catch (error) {
+                console.error('Error showing message box:', error);
+                throw error;
             }
         });
     }
@@ -106,6 +203,27 @@ class EVLicenseDesktop {
     sendToRenderer(channel, data) {
         if (this.mainWindow && this.mainWindow.webContents) {
             this.mainWindow.webContents.send(channel, data);
+        }
+    }
+
+    showErrorDialog(title, message) {
+        if (this.mainWindow) {
+            dialog.showErrorBox(title, message);
+        }
+    }
+
+    cleanup() {
+        try {
+            console.log('🧹 Cleaning up application...');
+            
+            if (this.databaseManager) {
+                this.databaseManager.cleanup();
+                this.databaseManager = null;
+            }
+            
+            console.log('✅ Application cleanup completed');
+        } catch (error) {
+            console.error('❌ Error during cleanup:', error);
         }
     }
 }
