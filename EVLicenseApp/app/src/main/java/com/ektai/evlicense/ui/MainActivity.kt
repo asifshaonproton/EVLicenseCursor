@@ -18,14 +18,18 @@ import android.widget.Toast
 import android.nfc.tech.MifareClassic
 import android.nfc.tech.MifareUltralight
 import com.ektai.evlicense.util.NfcUtils
+import com.ektai.evlicense.util.NfcManager
 
-class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener {
+class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener, NfcManager.NfcCallback {
     private var nfcAdapter: NfcAdapter? = null
     private var nfcPendingIntent: PendingIntent? = null
     private var nfcIntentFilters: Array<IntentFilter>? = null
     private lateinit var drawerLayout: DrawerLayout
     private lateinit var navigationView: NavigationView
     var pendingWriteData: String? = null
+    
+    // New NFC Manager for handling both built-in and external NFC
+    private lateinit var nfcManager: NfcManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -62,6 +66,11 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         drawerLayout.addDrawerListener(toggle)
         toggle.syncState()
 
+        // Initialize the new NFC Manager
+        nfcManager = NfcManager(this)
+        nfcManager.initialize(this)
+        
+        // Keep the old NFC adapter for backward compatibility
         nfcAdapter = NfcAdapter.getDefaultAdapter(this)
         nfcPendingIntent = PendingIntent.getActivity(
             this, 0, Intent(this, javaClass).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP), PendingIntent.FLAG_MUTABLE
@@ -81,12 +90,19 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     override fun onResume() {
         super.onResume()
         android.util.Log.d("MainActivity", "onResume called")
+        nfcManager.enableForegroundDispatch()
         enableNfcForegroundDispatch()
     }
 
     override fun onPause() {
         super.onPause()
+        nfcManager.disableForegroundDispatch()
         disableNfcForegroundDispatch()
+    }
+    
+    override fun onDestroy() {
+        super.onDestroy()
+        nfcManager.cleanup()
     }
 
     override fun onNavigationItemSelected(item: MenuItem): Boolean {
@@ -162,10 +178,17 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         val action = intent?.action
         android.util.Log.d("MainActivity", "onNewIntent called, intent: $action, hash: ${this.hashCode()}")
         Toast.makeText(this, "onNewIntent called: $action", Toast.LENGTH_SHORT).show()
+        
+        // Try to handle with new NFC Manager first
+        if (intent != null && nfcManager.handleNewIntent(intent)) {
+            return
+        }
+        
+        // Fallback to original NFC handling for backward compatibility
         if (action == NfcAdapter.ACTION_NDEF_DISCOVERED ||
             action == NfcAdapter.ACTION_TAG_DISCOVERED ||
             action == NfcAdapter.ACTION_TECH_DISCOVERED) {
-            val tag = intent.getParcelableExtra<Tag>(NfcAdapter.EXTRA_TAG)
+            val tag = intent?.getParcelableExtra<Tag>(NfcAdapter.EXTRA_TAG)
             if (tag != null) {
                 if (pendingWriteData != null) {
                     // Write mode
@@ -177,16 +200,8 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                     }
                     pendingWriteData = null
                 } else {
-                    // Read mode
-                    val tagData = dumpTagData(tag)
-                    if (tagData.contains("Read from NDEF: N/A")) {
-                        Toast.makeText(this, "No NDEF data found on this card.", Toast.LENGTH_LONG).show()
-                    } else {
-                        Toast.makeText(this, "Navigating to debug screen", Toast.LENGTH_SHORT).show()
-                    }
-                    android.util.Log.d("MainActivity", "Calling showLicenseNfcDetail with tagData: ${tagData.take(100)}")
-                    showLicenseNfcDetail(tagData)
-                    android.util.Log.d("MainActivity", "showLicenseNfcDetail called")
+                    // Read mode - use NfcManager callback instead
+                    onTagDiscovered(NfcUtils.dumpTagData(tag), true)
                 }
             }
         }
@@ -302,6 +317,49 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         } else {
             super.onBackPressed()
         }
+    }
+    
+    // NfcManager.NfcCallback implementation
+    override fun onTagDiscovered(tagData: String, isBuiltinNfc: Boolean) {
+        val nfcType = if (isBuiltinNfc) "Built-in" else "External ACR122U"
+        android.util.Log.d("MainActivity", "Tag discovered via $nfcType NFC: ${tagData.take(100)}")
+        
+        if (tagData.contains("Read from NDEF: N/A")) {
+            Toast.makeText(this, "No NDEF data found on this card ($nfcType)", Toast.LENGTH_LONG).show()
+        } else {
+            Toast.makeText(this, "Tag detected via $nfcType NFC", Toast.LENGTH_SHORT).show()
+        }
+        
+        // Always show the NFC detail screen regardless of source
+        showLicenseNfcDetail(tagData)
+    }
+    
+    override fun onNfcWrite(success: Boolean, errorMessage: String?, isBuiltinNfc: Boolean) {
+        val nfcType = if (isBuiltinNfc) "Built-in" else "External ACR122U"
+        if (success) {
+            Toast.makeText(this, "NFC write successful via $nfcType!", Toast.LENGTH_LONG).show()
+        } else {
+            Toast.makeText(this, "NFC write failed via $nfcType: $errorMessage", Toast.LENGTH_LONG).show()
+        }
+        pendingWriteData = null
+    }
+    
+    override fun onNfcStatusChanged(enabled: Boolean, isBuiltinNfc: Boolean) {
+        val nfcType = if (isBuiltinNfc) "Built-in" else "External ACR122U"
+        val status = if (enabled) "enabled" else "disabled"
+        android.util.Log.d("MainActivity", "$nfcType NFC $status")
+        
+        // Update UI or show notification as needed
+        if (!isBuiltinNfc) {
+            // This is for external NFC status changes
+            val message = if (enabled) "External NFC Reader connected" else "External NFC Reader disconnected"
+            // Don't show toast here as it's already handled in NfcManager
+        }
+    }
+    
+    // Helper method to get current NFC status
+    fun getNfcStatusReport(): String {
+        return nfcManager.getNfcStatus()
     }
 }
 

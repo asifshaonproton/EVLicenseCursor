@@ -52,6 +52,9 @@ class DashboardFragment : Fragment() {
         recyclerRecent.layoutManager = LinearLayoutManager(requireContext())
         recyclerRecent.adapter = recentAdapter
 
+        // Update NFC status
+        updateNfcStatus(view)
+
         return view
     }
 
@@ -76,6 +79,24 @@ class DashboardFragment : Fragment() {
             validityDate = ""
         )
         (activity as? MainActivity)?.showLicenseDetail(license)
+    }
+    
+    private fun updateNfcStatus(view: View) {
+        val nfcStatusText = view.findViewById<TextView>(R.id.textNfcStatus)
+        val mainActivity = activity as? MainActivity
+        
+        if (mainActivity != null) {
+            val status = mainActivity.getNfcStatusReport()
+            nfcStatusText.text = status
+        } else {
+            nfcStatusText.text = "Unable to determine NFC status"
+        }
+    }
+    
+    override fun onResume() {
+        super.onResume()
+        // Update NFC status when fragment resumes
+        view?.let { updateNfcStatus(it) }
     }
 }
 
