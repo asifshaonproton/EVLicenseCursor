@@ -258,14 +258,15 @@ class NFCPCSCManager extends EventEmitter {
             
             if (dataBlocks.length === 0) return;
             
-            // Concatenate all block data to reconstruct NDEF record
+            // Concatenate block data to reconstruct plain text, but only use actual data length
             let allData = Buffer.alloc(0);
             for (const block of dataBlocks) {
                 try {
                     const blockBuffer = Buffer.from(block.data, 'hex');
                     allData = Buffer.concat([allData, blockBuffer]);
+                    console.log(`🔗 Added block ${block.block} (${blockBuffer.length} bytes) to data stream`);
                 } catch (e) {
-                    console.warn(`⚠️ Could not process block ${block.block}`);
+                    console.warn(`⚠️ Could not process block ${block.block}:`, e);
                     break;
                 }
             }
@@ -277,18 +278,36 @@ class NFCPCSCManager extends EventEmitter {
             console.log(`🔍 Raw data (${allData.length} bytes): ${allData.toString('hex')}`);
             
             try {
+                // Debug: log each block's contribution
+                console.log('🔍 Debug: Examining individual blocks...');
+                for (const block of dataBlocks) {
+                    const blockBuffer = Buffer.from(block.data, 'hex');
+                    const blockText = blockBuffer.toString('utf8');
+                    console.log(`🔍 Block ${block.block}: "${blockText}"`);
+                    console.log(`🔍 Block ${block.block} hex: ${block.data}`);
+                }
+                
                 // Convert raw data to string and clean it
                 let plainText = allData.toString('utf8');
+                console.log('🔍 Raw UTF-8 text (first 300 chars):', JSON.stringify(plainText.substring(0, 300)));
                 
-                // Remove null bytes and control characters
-                plainText = plainText.replace(/\0/g, '').replace(/[\x00-\x1F\x7F-\x9F]/g, '').trim();
+                // Try a smart approach - find the JSON by looking for { and }
+                let jsonMatch = plainText.match(/\{[\s\S]*\}/);
+                let cleanedText;
                 
-                console.log('📋 Cleaned plain text:', plainText.substring(0, 200) + '...');
+                if (jsonMatch) {
+                    cleanedText = jsonMatch[0];
+                    console.log('🎯 Found JSON pattern in text:', JSON.stringify(cleanedText.substring(0, 100)) + '...');
+                } else {
+                    // Fallback: remove null bytes and control characters
+                    cleanedText = plainText.replace(/\0+/g, '').replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, '').trim();
+                    console.log('📋 No JSON pattern found, using cleaned text:', JSON.stringify(cleanedText.substring(0, 300)));
+                }
                 
-                if (plainText && plainText.length > 0) {
+                if (cleanedText && cleanedText.length > 0) {
                     // Try to parse as license JSON
                     try {
-                        const licenseData = JSON.parse(plainText);
+                        const licenseData = JSON.parse(cleanedText);
                         if (licenseData.holderName || licenseData.licenseNumber) {
                             // Format license data nicely
                             cardData.extractedText = `📄 LICENSE INFORMATION:\n\n• Holder Name: ${licenseData.holderName || 'N/A'}\n• Mobile: ${licenseData.mobile || 'N/A'}\n• City: ${licenseData.city || 'N/A'}\n• License Type: ${licenseData.licenseType || 'N/A'}\n• License Number: ${licenseData.licenseNumber || 'N/A'}\n• Card Number: ${licenseData.nfcCardNumber || 'N/A'}\n• Valid Until: ${licenseData.validityDate || 'N/A'}`;
@@ -302,9 +321,9 @@ class NFCPCSCManager extends EventEmitter {
                     }
                     
                     // Not license JSON, display as plain text
-                    cardData.extractedText = `📝 PLAIN TEXT DATA:\n\n"${plainText}"`;
+                    cardData.extractedText = `📝 PLAIN TEXT DATA:\n\n"${cleanedText}"`;
                     cardData.isPlainTextFormat = true;
-                    console.log(`📝 Extracted plain text: "${plainText.substring(0, 100)}..."`);
+                    console.log(`📝 Extracted plain text: "${cleanedText.substring(0, 100)}..."`);
                     return;
                 } else {
                     console.log('⚠️ No readable text found in data');
