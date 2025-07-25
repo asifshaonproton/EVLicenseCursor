@@ -291,36 +291,98 @@ class NFCPCSCManager extends EventEmitter {
                 let plainText = allData.toString('utf8');
                 console.log('🔍 Raw UTF-8 text (first 300 chars):', JSON.stringify(plainText.substring(0, 300)));
                 
-                // Try a smart approach - find the JSON by looking for { and }
-                let jsonMatch = plainText.match(/\{[\s\S]*\}/);
-                let cleanedText;
-                
-                if (jsonMatch) {
-                    cleanedText = jsonMatch[0];
-                    console.log('🎯 Found JSON pattern in text:', JSON.stringify(cleanedText.substring(0, 100)) + '...');
-                } else {
-                    // Fallback: remove null bytes and control characters
-                    cleanedText = plainText.replace(/\0+/g, '').replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, '').trim();
-                    console.log('📋 No JSON pattern found, using cleaned text:', JSON.stringify(cleanedText.substring(0, 300)));
-                }
+                // Clean the text (remove null bytes and control characters)
+                let cleanedText = plainText.replace(/\0+/g, '').replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, '').trim();
+                console.log('📋 Cleaned text for parsing:', JSON.stringify(cleanedText.substring(0, 300)));
                 
                 if (cleanedText && cleanedText.length > 0) {
-                    // Try to parse as license JSON
+                    // Try to parse as field:value format first
                     try {
-                        const licenseData = JSON.parse(cleanedText);
-                        if (licenseData.holderName || licenseData.licenseNumber) {
+                        const lines = cleanedText.split('\n').filter(line => line.trim().length > 0);
+                        const licenseData = {};
+                        let hasLicenseFields = false;
+                        
+                        console.log('🔍 Parsing lines:', lines);
+                        
+                        for (const line of lines) {
+                            const colonIndex = line.indexOf(':');
+                            if (colonIndex > 0) {
+                                const field = line.substring(0, colonIndex).trim();
+                                const value = line.substring(colonIndex + 1).trim();
+                                
+                                console.log(`🔍 Field: "${field}" = "${value}"`);
+                                
+                                // Map field names to license data
+                                switch (field.toUpperCase()) {
+                                    case 'NAME':
+                                        licenseData.holderName = value;
+                                        hasLicenseFields = true;
+                                        break;
+                                    case 'MOBILE':
+                                        licenseData.mobile = value;
+                                        hasLicenseFields = true;
+                                        break;
+                                    case 'CITY':
+                                        licenseData.city = value;
+                                        hasLicenseFields = true;
+                                        break;
+                                    case 'TYPE':
+                                        licenseData.licenseType = value;
+                                        hasLicenseFields = true;
+                                        break;
+                                    case 'NUMBER':
+                                        licenseData.licenseNumber = value;
+                                        hasLicenseFields = true;
+                                        break;
+                                    case 'CARD':
+                                        licenseData.nfcCardNumber = value;
+                                        hasLicenseFields = true;
+                                        break;
+                                    case 'EXPIRY':
+                                        licenseData.validityDate = value;
+                                        hasLicenseFields = true;
+                                        break;
+                                    case 'TEXT':
+                                        // Plain text data
+                                        cardData.extractedText = `📝 PLAIN TEXT DATA:\n\n"${value}"`;
+                                        cardData.isPlainTextFormat = true;
+                                        console.log(`📝 Extracted plain text: "${value}"`);
+                                        return;
+                                }
+                            }
+                        }
+                        
+                        if (hasLicenseFields) {
                             // Format license data nicely
                             cardData.extractedText = `📄 LICENSE INFORMATION:\n\n• Holder Name: ${licenseData.holderName || 'N/A'}\n• Mobile: ${licenseData.mobile || 'N/A'}\n• City: ${licenseData.city || 'N/A'}\n• License Type: ${licenseData.licenseType || 'N/A'}\n• License Number: ${licenseData.licenseNumber || 'N/A'}\n• Card Number: ${licenseData.nfcCardNumber || 'N/A'}\n• Valid Until: ${licenseData.validityDate || 'N/A'}`;
                             cardData.licenseData = licenseData;
-                            cardData.isPlainTextFormat = true;
-                            console.log(`📄 Extracted plain license data for: ${licenseData.holderName}`);
+                            cardData.isPlainTextFormat = false;
+                            console.log('✅ Extracted license data from fields:', licenseData);
                             return;
                         }
-                    } catch (jsonError) {
-                        console.log('⚠️ Not JSON, treating as plain text');
+                    } catch (fieldError) {
+                        console.log('📋 Not field:value format, trying JSON fallback');
                     }
                     
-                    // Not license JSON, display as plain text
+                    // Fallback: try JSON parsing for backward compatibility
+                    try {
+                        const jsonMatch = cleanedText.match(/\{[\s\S]*\}/);
+                        if (jsonMatch) {
+                            const licenseData = JSON.parse(jsonMatch[0]);
+                            if (licenseData.holderName || licenseData.licenseNumber) {
+                                // Format license data nicely
+                                cardData.extractedText = `📄 LICENSE INFORMATION:\n\n• Holder Name: ${licenseData.holderName || 'N/A'}\n• Mobile: ${licenseData.mobile || 'N/A'}\n• City: ${licenseData.city || 'N/A'}\n• License Type: ${licenseData.licenseType || 'N/A'}\n• License Number: ${licenseData.licenseNumber || 'N/A'}\n• Card Number: ${licenseData.nfcCardNumber || 'N/A'}\n• Valid Until: ${licenseData.validityDate || 'N/A'}`;
+                                cardData.licenseData = licenseData;
+                                cardData.isPlainTextFormat = false;
+                                console.log('✅ Extracted license data from JSON:', licenseData);
+                                return;
+                            }
+                        }
+                    } catch (jsonError) {
+                        console.log('📋 Not valid JSON either');
+                    }
+                    
+                    // Not license data, display as plain text
                     cardData.extractedText = `📝 PLAIN TEXT DATA:\n\n"${cleanedText}"`;
                     cardData.isPlainTextFormat = true;
                     console.log(`📝 Extracted plain text: "${cleanedText.substring(0, 100)}..."`);
@@ -424,7 +486,7 @@ class NFCPCSCManager extends EventEmitter {
             
             console.log('📝 Writing Android-compatible data to card:', data);
             
-            // Handle different data types - NO ENCRYPTION, PLAIN JSON/TEXT
+            // Handle different data types - USE FIELD:VALUE FORMAT INSTEAD OF JSON
             let finalData;
             if (typeof data === 'object' && data !== null) {
                 // If it's a license object, set the NFC card number from current card
@@ -436,15 +498,24 @@ class NFCPCSCManager extends EventEmitter {
                     console.log(`📇 Set NFC card number to: ${uidDecimal}`);
                 }
                 
-                // Write plain JSON - NO ENCRYPTION
-                finalData = JSON.stringify(licenseData, null, 2);
-                console.log('📄 Plain License JSON:', finalData);
+                // Write as field:value pairs separated by newlines (avoids JSON corruption)
+                const fields = [
+                    `NAME:${licenseData.holderName || ''}`,
+                    `MOBILE:${licenseData.mobile || ''}`,
+                    `CITY:${licenseData.city || ''}`,
+                    `TYPE:${licenseData.licenseType || ''}`,
+                    `NUMBER:${licenseData.licenseNumber || ''}`,
+                    `CARD:${licenseData.nfcCardNumber || ''}`,
+                    `EXPIRY:${licenseData.validityDate || ''}`
+                ];
+                finalData = fields.join('\n');
+                console.log('📄 License field data:', finalData);
             } else if (typeof data === 'string') {
                 // For plain text, use as-is - NO ENCRYPTION
-                finalData = data;
+                finalData = `TEXT:${data}`;
                 console.log('📝 Plain text data:', finalData);
             } else {
-                finalData = String(data);
+                finalData = `TEXT:${String(data)}`;
                 console.log('📝 Converted to string:', finalData);
             }
 
