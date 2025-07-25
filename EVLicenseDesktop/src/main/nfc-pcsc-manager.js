@@ -178,31 +178,64 @@ class NFCPCSCManager extends EventEmitter {
                 blocks: []
             };
 
-            // Try to read some basic blocks (this is generic and may not work for all card types)
+            // Try to read blocks including data blocks (0-15 for typical MIFARE cards)
             try {
-                // Read first few blocks if possible
-                for (let block = 0; block < 4; block++) {
+                // Read blocks 0-15 to capture both header and data blocks
+                for (let block = 0; block < 16; block++) {
                     try {
                         const blockData = await reader.read(block, 16);
                         data.blocks.push({
                             block: block,
                             data: blockData.toString('hex'),
-                            length: blockData.length
+                            length: blockData.length,
+                            // Try to extract readable text for data blocks (4+)
+                            textContent: block >= 4 ? this.extractTextFromBlock(blockData) : null
                         });
+                        console.log(`📊 Read block ${block}: ${blockData.toString('hex')}`);
                     } catch (blockError) {
-                        // Some blocks may not be readable
+                        // Some blocks may not be readable (especially sector trailers)
                         console.warn(`⚠️ Could not read block ${block}:`, blockError.message);
-                        break;
+                        
+                        // For MIFARE Classic, skip sector trailer blocks (3, 7, 11, 15)
+                        // but continue reading other blocks
+                        if (block % 4 === 3) {
+                            console.log(`ℹ️ Skipping sector trailer block ${block}`);
+                            continue;
+                        }
+                        
+                        // If we can't read multiple consecutive blocks, stop
+                        if (block > 3) {
+                            console.log(`ℹ️ Stopping read at block ${block} due to access restrictions`);
+                            break;
+                        }
                     }
                 }
             } catch (readError) {
-                console.warn('⚠️ Basic block reading not supported:', readError.message);
+                console.warn('⚠️ Block reading not supported:', readError.message);
             }
 
             return data;
         } catch (error) {
             console.error('❌ Error reading card data:', error);
             throw error;
+        }
+    }
+
+    extractTextFromBlock(blockData) {
+        try {
+            if (!blockData || blockData.length === 0) return null;
+            
+            // Convert to string and remove null bytes
+            const text = blockData.toString('utf8').replace(/\0/g, '').trim();
+            
+            // Only return if there's meaningful text content (printable ASCII)
+            if (text && text.length > 0 && /^[\x20-\x7E]+$/.test(text)) {
+                return text;
+            }
+            
+            return null;
+        } catch (error) {
+            return null;
         }
     }
 
