@@ -258,13 +258,20 @@ class NFCPCSCManager extends EventEmitter {
             
             if (dataBlocks.length === 0) return;
             
-            // Concatenate block data to reconstruct plain text, but only use actual data length
+            // Concatenate block data to reconstruct plain text, but only use actual data length  
             let allData = Buffer.alloc(0);
             for (const block of dataBlocks) {
                 try {
                     const blockBuffer = Buffer.from(block.data, 'hex');
+                    
+                    // Stop at first completely empty block (all zeros) to avoid including old data
+                    if (blockBuffer.every(byte => byte === 0x00)) {
+                        console.log(`🛑 Stopping at empty block ${block.block}`);
+                        break;
+                    }
+                    
                     allData = Buffer.concat([allData, blockBuffer]);
-                    console.log(`🔗 Added block ${block.block} (${blockBuffer.length} bytes) to data stream`);
+                    console.log(`🔗 Added block ${block.block} (${blockBuffer.length} bytes): "${blockBuffer.toString('utf8').replace(/\0/g, '·')}"`);
                 } catch (e) {
                     console.warn(`⚠️ Could not process block ${block.block}:`, e);
                     break;
@@ -296,13 +303,43 @@ class NFCPCSCManager extends EventEmitter {
                 console.log('📋 Cleaned text for parsing:', JSON.stringify(cleanedText.substring(0, 300)));
                 
                 if (cleanedText && cleanedText.length > 0) {
-                    // Try to parse as field:value format first
-                    try {
+                    // Try to extract fields using regex to handle corruption better
+                    console.log('🔍 Attempting field extraction from corrupted text...');
+                    
+                    const licenseData = {};
+                    let hasLicenseFields = false;
+                    
+                    // Use regex to find field patterns even in corrupted text
+                    const fieldPatterns = [
+                        { field: 'holderName', pattern: /NAME:([^:\n]+?)(?:MOBILE|$)/i },
+                        { field: 'mobile', pattern: /MOBILE:([^:\n]+?)(?:CITY|$)/i },
+                        { field: 'city', pattern: /CITY:([^:\n]+?)(?:TYPE|$)/i },
+                        { field: 'licenseType', pattern: /TYPE:([^:\n]+?)(?:NUMBER|$)/i },
+                        { field: 'licenseNumber', pattern: /NUMBER:([^:\n]+?)(?:CARD|$)/i },
+                        { field: 'nfcCardNumber', pattern: /CARD:([^:\n]+?)(?:EXPIRY|$)/i },
+                        { field: 'validityDate', pattern: /EXPIRY:([^:\n]*?)(?:$)/i }
+                    ];
+                    
+                    for (const { field, pattern } of fieldPatterns) {
+                        const match = cleanedText.match(pattern);
+                        if (match && match[1]) {
+                            let value = match[1].trim();
+                            // Clean up any corruption artifacts
+                            value = value.replace(/[^\w\s\-\/\@\.\(\)]/g, '').trim();
+                            if (value && value.length > 0) {
+                                licenseData[field] = value;
+                                hasLicenseFields = true;
+                                console.log(`✅ Extracted ${field}: "${value}"`);
+                            }
+                        } else {
+                            console.log(`❌ Could not extract ${field} from text`);
+                        }
+                    }
+                    
+                    // Fallback: try line-by-line parsing for clean data
+                    if (!hasLicenseFields) {
+                        console.log('🔍 Trying line-by-line parsing...');
                         const lines = cleanedText.split('\n').filter(line => line.trim().length > 0);
-                        const licenseData = {};
-                        let hasLicenseFields = false;
-                        
-                        console.log('🔍 Parsing lines:', lines);
                         
                         for (const line of lines) {
                             const colonIndex = line.indexOf(':');
@@ -310,7 +347,7 @@ class NFCPCSCManager extends EventEmitter {
                                 const field = line.substring(0, colonIndex).trim();
                                 const value = line.substring(colonIndex + 1).trim();
                                 
-                                console.log(`🔍 Field: "${field}" = "${value}"`);
+                                console.log(`🔍 Line Field: "${field}" = "${value}"`);
                                 
                                 // Map field names to license data
                                 switch (field.toUpperCase()) {
@@ -351,6 +388,7 @@ class NFCPCSCManager extends EventEmitter {
                                 }
                             }
                         }
+                    }
                         
                         if (hasLicenseFields) {
                             // Format license data nicely
@@ -522,19 +560,36 @@ class NFCPCSCManager extends EventEmitter {
             // Write plain text directly to blocks (no NDEF wrapping)
             const dataBuffer = Buffer.from(finalData, 'utf8');
             console.log(`📋 Plain data buffer length: ${dataBuffer.length} bytes`);
-            console.log(`📋 Data: "${finalData}"`);
+            console.log(`📋 Data to write: "${finalData}"`);
+            console.log(`📋 Data buffer hex: ${dataBuffer.toString('hex')}`);
 
             // Write directly to blocks starting from block 4 (data blocks)
             const maxBlockSize = 16;
             const blocks = [];
             let totalBytesWritten = 0;
             
-            // Calculate how many blocks we need
-            const totalBlocks = Math.ceil(dataBuffer.length / maxBlockSize);
-            console.log(`📦 Will write ${totalBlocks} blocks starting from block 4`);
+            // Calculate how many blocks we need (add extra blocks to clear old data)
+            const minBlocks = Math.ceil(dataBuffer.length / maxBlockSize);
+            const totalBlocks = Math.max(minBlocks, 8); // Clear at least 8 blocks to erase old data
+            console.log(`📦 Will write ${minBlocks} data blocks + clear ${totalBlocks - minBlocks} extra blocks starting from block 4`);
 
+            // First, clear all data blocks to prevent old data interference
+            console.log('🧹 Clearing old data from blocks 4-15...');
+            for (let i = 0; i < 12; i++) { // Clear blocks 4-15
+                const blockNumber = 4 + i;
+                const emptyBlock = Buffer.alloc(16, 0x00);
+                try {
+                    await reader.write(blockNumber, emptyBlock);
+                    console.log(`🧹 Cleared block ${blockNumber}`);
+                } catch (clearError) {
+                    console.warn(`⚠️ Could not clear block ${blockNumber}: ${clearError.message}`);
+                    // Continue anyway - might be protected
+                }
+            }
+
+            console.log('📝 Writing actual data...');
             // Write plain data across multiple blocks starting from block 4
-            for (let i = 0; i < totalBlocks; i++) {
+            for (let i = 0; i < minBlocks; i++) {
                 const blockNumber = 4 + i; // Start from block 4 (first data block)
                 const start = i * maxBlockSize;
                 const end = Math.min(start + maxBlockSize, dataBuffer.length);
@@ -546,6 +601,10 @@ class NFCPCSCManager extends EventEmitter {
                     const padding = Buffer.alloc(maxBlockSize - blockData.length, 0x00);
                     blockData = Buffer.concat([blockData, padding]);
                 }
+
+                console.log(`📝 Block ${blockNumber} - Data slice: "${finalData.substring(start, end)}"`);
+                console.log(`📝 Block ${blockNumber} - Buffer: ${blockData.toString('hex')}`);
+                console.log(`📝 Block ${blockNumber} - Text: "${blockData.toString('utf8')}"`);
 
                 try {
                     console.log(`📝 Writing block ${blockNumber}: "${blockData.slice(0, end-start).toString('utf8')}" (${blockData.toString('hex')})`);
