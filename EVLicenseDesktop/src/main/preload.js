@@ -108,6 +108,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
         writeCard: async (data) => {
             return await ipcRenderer.invoke('nfc-write-card', data);
         },
+        refreshDevices: async () => {
+            return await ipcRenderer.invoke('nfc-refresh-devices');
+        },
         // Event listeners
         onDeviceConnected: (callback) => {
             ipcRenderer.on('nfc-device-connected', (event, data) => callback(data));
