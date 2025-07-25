@@ -1,0 +1,14 @@
+# Icon File: icon.ico (Windows Icon)
+# This file should contain a Windows ICO icon for the EV License Desktop application
+# For production, replace this with an actual ICO icon file
+# 
+# ICO Requirements:
+# - Multiple sizes: 16x16, 32x32, 48x48, 64x64, 128x128, 256x256
+# - Use tools like IcoFX, GIMP with ICO plugin, or online converters
+# - Convert from a high-quality PNG source
+#
+# To create:
+# 1. Start with the 512x512 PNG icon
+# 2. Use an ICO converter tool
+# 3. Include multiple resolutions in single ICO file
+# 4. Replace this file with the actual ICO binary
