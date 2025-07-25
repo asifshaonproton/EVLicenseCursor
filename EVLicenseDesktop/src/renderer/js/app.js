@@ -505,6 +505,7 @@ class EVLicenseApp {
 
     showScanSuccess(cardData) {
         console.log('✅ Showing scan success:', cardData);
+        console.log('📊 Card data structure:', JSON.stringify(cardData, null, 2));
         
         const scanArea = document.getElementById('scan-area');
         const scannedDataContainer = document.getElementById('scanned-data-container');
@@ -554,8 +555,10 @@ class EVLicenseApp {
         let textBlocks = [];
         
         // Use server-extracted text if available
+        console.log('🔍 Checking for extracted text:', cardData.data?.extractedText);
         if (cardData.data && cardData.data.extractedText) {
             readableText = cardData.data.extractedText;
+            console.log('✅ Found extracted text:', readableText);
             
             // Find blocks that contain this text
             if (cardData.data.blocks && readableText.length > 0) {
@@ -571,9 +574,45 @@ class EVLicenseApp {
                         textBlocks.push(block);
                         remainingLength -= blockSize;
                     }
-                }
-            }
-        }
+                                 }
+             }
+         } else {
+             console.log('⚠️ No extracted text from server, trying fallback extraction');
+             // Fallback: try manual extraction if server didn't extract text
+             if (cardData.data && cardData.data.blocks && cardData.data.blocks.length > 0) {
+                 const dataBlocks = cardData.data.blocks.filter(block => block.block >= 4).sort((a, b) => a.block - b.block);
+                 
+                 if (dataBlocks.length > 0) {
+                     // Concatenate all block data
+                     let allData = Buffer.alloc(0);
+                     for (const block of dataBlocks) {
+                         try {
+                             const blockBuffer = Buffer.from(block.data, 'hex');
+                             allData = Buffer.concat([allData, blockBuffer]);
+                         } catch (e) {
+                             break;
+                         }
+                     }
+                     
+                     // Extract text
+                     if (allData.length > 0) {
+                         try {
+                             const fullText = allData.toString('utf8');
+                             const nullIndex = fullText.indexOf('\0');
+                             readableText = nullIndex >= 0 ? fullText.substring(0, nullIndex) : fullText;
+                             readableText = readableText.replace(/[^\x20-\x7E]/g, '').trim();
+                             
+                             if (readableText.length > 0) {
+                                 console.log('✅ Fallback extraction successful:', readableText);
+                                 textBlocks = dataBlocks.slice(0, Math.ceil((readableText.length + 1) / 16));
+                             }
+                         } catch (e) {
+                             console.error('❌ Fallback extraction failed:', e);
+                         }
+                     }
+                 }
+             }
+         }
         
         if (readableText) {
             dataString += '\n=== 📝 READABLE TEXT DATA ===\n';
