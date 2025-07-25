@@ -587,11 +587,11 @@ class EVLicenseApp {
             readableText = cardData.data.extractedText;
             console.log('✅ Found extracted text:', readableText);
             
-            // Find blocks that contain this text
+                        // Find blocks that contain this text
             if (cardData.data.blocks && readableText.length > 0) {
                 const dataBlocks = cardData.data.blocks.filter(block => block.block >= 4).sort((a, b) => a.block - b.block);
-                const textBuffer = Buffer.from(readableText + '\0', 'utf8'); // Add null terminator for calculation
-                let remainingLength = textBuffer.length;
+                const textLength = readableText.length + 1; // Add space for null terminator
+                let remainingLength = textLength;
                 
                 for (const block of dataBlocks) {
                     if (remainingLength <= 0) break;
@@ -601,8 +601,8 @@ class EVLicenseApp {
                         textBlocks.push(block);
                         remainingLength -= blockSize;
                     }
-                                 }
-             }
+                }
+            }
          } else {
              console.log('⚠️ No extracted text from server, trying fallback extraction');
              // Fallback: try manual extraction if server didn't extract text
@@ -610,23 +610,31 @@ class EVLicenseApp {
                  const dataBlocks = cardData.data.blocks.filter(block => block.block >= 4).sort((a, b) => a.block - b.block);
                  
                  if (dataBlocks.length > 0) {
-                     // Concatenate all block data
-                     let allData = Buffer.alloc(0);
+                     // Simple approach: convert hex to text for each block
+                     let allText = '';
                      for (const block of dataBlocks) {
                          try {
-                             const blockBuffer = Buffer.from(block.data, 'hex');
-                             allData = Buffer.concat([allData, blockBuffer]);
+                             // Convert hex string to text
+                             const hexStr = block.data;
+                             let blockText = '';
+                             for (let i = 0; i < hexStr.length; i += 2) {
+                                 const hexByte = hexStr.substr(i, 2);
+                                 const charCode = parseInt(hexByte, 16);
+                                 if (charCode > 0) { // Skip null bytes
+                                     blockText += String.fromCharCode(charCode);
+                                 }
+                             }
+                             allText += blockText;
                          } catch (e) {
                              break;
                          }
                      }
                      
                      // Extract text
-                     if (allData.length > 0) {
+                     if (allText.length > 0) {
                          try {
-                             const fullText = allData.toString('utf8');
-                             const nullIndex = fullText.indexOf('\0');
-                             readableText = nullIndex >= 0 ? fullText.substring(0, nullIndex) : fullText;
+                             const nullIndex = allText.indexOf('\0');
+                             readableText = nullIndex >= 0 ? allText.substring(0, nullIndex) : allText;
                              readableText = readableText.replace(/[^\x20-\x7E]/g, '').trim();
                              
                              if (readableText.length > 0) {
@@ -652,7 +660,7 @@ class EVLicenseApp {
             
             if (cardData.data && cardData.data.blocks) {
                 // Simple raw search for the word "hello" in hex
-                const helloHex = Buffer.from('hello', 'utf8').toString('hex');
+                const helloHex = '68656c6c6f'; // "hello" in hex
                 console.log('🔍 Looking for hello in hex:', helloHex);
                 
                 for (const block of cardData.data.blocks) {
@@ -954,7 +962,7 @@ class EVLicenseApp {
                 reader: 'Test Reader',
                 standard: 'TEST',
                 detectedAt: new Date(),
-                atr: Buffer.from('test'),
+                atr: 'test',  // Remove Buffer usage
                 data: {
                     extractedText: 'hello world test',
                     blocks: [
