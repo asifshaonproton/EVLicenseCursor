@@ -604,6 +604,7 @@ class EVLicenseApp {
         let dataString = '';
         
         // Basic card information
+        dataString += `=== 🏷️ NFC CARD INFORMATION ===\n`;
         dataString += `Card Type: ${cardData.type}\n`;
         dataString += `UID: ${cardData.uid}\n`;
         dataString += `Reader: ${cardData.reader}\n`;
@@ -614,106 +615,48 @@ class EVLicenseApp {
             dataString += `ATR: ${cardData.atr.toString('hex')}\n`;
         }
         
-        // Extract readable text data from server-side extraction
-        let readableText = '';
-        let textBlocks = [];
+        // Show Android compatibility status
+        if (cardData.data && cardData.data.isAndroidCompatible) {
+            dataString += `✅ Android Compatible: YES\n`;
+        }
         
-        // Use server-extracted text if available
+        // Priority 1: Use server-extracted and decrypted text
         console.log('🔍 Checking for extracted text:', cardData.data?.extractedText);
         if (cardData.data && cardData.data.extractedText) {
-            readableText = cardData.data.extractedText;
-            console.log('✅ Found extracted text:', readableText);
-            
-                        // Find blocks that contain this text
-            if (cardData.data.blocks && readableText.length > 0) {
-                const dataBlocks = cardData.data.blocks.filter(block => block.block >= 4).sort((a, b) => a.block - b.block);
-                const textLength = readableText.length + 1; // Add space for null terminator
-                let remainingLength = textLength;
-                
-                for (const block of dataBlocks) {
-                    if (remainingLength <= 0) break;
-                    
-                    const blockSize = Math.min(16, remainingLength);
-                    if (blockSize > 0) {
-                        textBlocks.push(block);
-                        remainingLength -= blockSize;
-                    }
-                }
-            }
-         } else {
-             console.log('⚠️ No extracted text from server, trying fallback extraction');
-             // Fallback: try manual extraction if server didn't extract text
-             if (cardData.data && cardData.data.blocks && cardData.data.blocks.length > 0) {
-                 const dataBlocks = cardData.data.blocks.filter(block => block.block >= 4).sort((a, b) => a.block - b.block);
-                 
-                 if (dataBlocks.length > 0) {
-                     // Simple approach: convert hex to text for each block
-                     let allText = '';
-                     for (const block of dataBlocks) {
-                         try {
-                             // Convert hex string to text
-                             const hexStr = block.data;
-                             let blockText = '';
-                             for (let i = 0; i < hexStr.length; i += 2) {
-                                 const hexByte = hexStr.substr(i, 2);
-                                 const charCode = parseInt(hexByte, 16);
-                                 if (charCode > 0) { // Skip null bytes
-                                     blockText += String.fromCharCode(charCode);
-                                 }
-                             }
-                             allText += blockText;
-                         } catch (e) {
-                             break;
-                         }
-                     }
-                     
-                     // Extract text
-                     if (allText.length > 0) {
-                         try {
-                             const nullIndex = allText.indexOf('\0');
-                             readableText = nullIndex >= 0 ? allText.substring(0, nullIndex) : allText;
-                             readableText = readableText.replace(/[^\x20-\x7E]/g, '').trim();
-                             
-                             if (readableText.length > 0) {
-                                 console.log('✅ Fallback extraction successful:', readableText);
-                                 textBlocks = dataBlocks.slice(0, Math.ceil((readableText.length + 1) / 16));
-                             }
-                         } catch (e) {
-                             console.error('❌ Fallback extraction failed:', e);
-                         }
-                     }
-                 }
-             }
-         }
-        
-        if (readableText) {
             dataString += '\n=== 📝 READABLE TEXT DATA ===\n';
-            dataString += `"${readableText}"\n`;
-            dataString += `\n📍 Found in blocks: ${textBlocks.map(b => b.block).join(', ')}\n`;
-            dataString += `📏 Text length: ${readableText.length} characters\n`;
-        } else {
-            // Force show if we see "hello" in the console but extraction failed
-            console.log('⚠️ No readable text found, checking for raw text in blocks...');
+            dataString += `${cardData.data.extractedText}\n`;
             
-            if (cardData.data && cardData.data.blocks) {
-                // Simple raw search for the word "hello" in hex
-                const helloHex = '68656c6c6f'; // "hello" in hex
-                console.log('🔍 Looking for hello in hex:', helloHex);
-                
-                for (const block of cardData.data.blocks) {
-                    if (block.data && block.data.includes(helloHex.substring(0, 8))) {
-                        console.log('✅ Found hello pattern in block', block.block, ':', block.data);
-                        dataString += '\n=== 📝 READABLE TEXT DATA (Raw Search) ===\n';
-                        dataString += `"hello"\n`;
-                        dataString += `\n📍 Found in block: ${block.block}\n`;
-                        dataString += `📏 Text length: 5 characters\n`;
-                        break;
-                    }
-                }
+            // If it contains license data, show structured info
+            if (cardData.data.licenseData) {
+                dataString += '\n=== 📋 STRUCTURED LICENSE DATA ===\n';
+                const license = cardData.data.licenseData;
+                dataString += `Holder Name: ${license.holderName}\n`;
+                dataString += `Mobile: ${license.mobile}\n`;
+                dataString += `City: ${license.city}\n`;
+                dataString += `License Type: ${license.licenseType}\n`;
+                dataString += `License Number: ${license.licenseNumber}\n`;
+                dataString += `NFC Card Number: ${license.nfcCardNumber}\n`;
+                dataString += `Validity Date: ${license.validityDate}\n`;
+            }
+            
+            console.log('✅ Found extracted text:', cardData.data.extractedText);
+        } else {
+            console.log('⚠️ No extracted text from server, trying fallback extraction');
+            
+            // Priority 2: Fallback extraction from raw blocks
+            let fallbackText = this.extractTextFromRawBlocks(cardData);
+            if (fallbackText) {
+                dataString += '\n=== 📝 READABLE TEXT DATA ===\n';
+                dataString += `"${fallbackText}"\n`;
+                console.log('✅ Fallback extraction successful:', fallbackText);
+            } else {
+                dataString += '\n=== ⚠️ NO READABLE TEXT DATA ===\n';
+                dataString += `No decryptable text found on this card.\n`;
+                console.log('❌ No readable text could be extracted');
             }
         }
         
-        dataString += '\n--- Raw Block Data ---\n';
+        dataString += '\n=== 📊 RAW BLOCK DATA ===\n';
         
         // Add raw data if available
         if (cardData.data && cardData.data.blocks && cardData.data.blocks.length > 0) {
@@ -730,6 +673,51 @@ class EVLicenseApp {
         dataString += JSON.stringify(cardData, null, 2);
         
         return dataString;
+    }
+    
+    extractTextFromRawBlocks(cardData) {
+        if (!cardData.data || !cardData.data.blocks || cardData.data.blocks.length === 0) {
+            return null;
+        }
+        
+        try {
+            // Get data blocks (4+) and sort them
+            const dataBlocks = cardData.data.blocks
+                .filter(block => block.block >= 4)
+                .sort((a, b) => a.block - b.block);
+            
+            if (dataBlocks.length === 0) return null;
+            
+            // Concatenate all hex data
+            let allHex = '';
+            for (const block of dataBlocks) {
+                if (block.data) {
+                    allHex += block.data.replace(/\s+/g, '');
+                }
+            }
+            
+            if (allHex.length === 0) return null;
+            
+            // Convert hex to text
+            let text = '';
+            for (let i = 0; i < allHex.length; i += 2) {
+                const hex = allHex.substring(i, i + 2);
+                const charCode = parseInt(hex, 16);
+                
+                if (charCode === 0) {
+                    break; // Stop at null terminator
+                } else if (charCode >= 32 && charCode <= 126) {
+                    text += String.fromCharCode(charCode);
+                }
+            }
+            
+            text = text.trim();
+            return text.length > 2 ? text : null;
+            
+        } catch (error) {
+            console.error('❌ Error extracting text from raw blocks:', error);
+            return null;
+        }
     }
 
     updateScannerStatus(state, text) {

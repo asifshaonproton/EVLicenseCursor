@@ -272,44 +272,81 @@ class NFCPCSCManager extends EventEmitter {
             
             if (allData.length === 0) return;
             
-            // Try to parse as NDEF text record (Android compatible)
+            // Try to parse as NDEF message with TLV format (Android compatible)
             console.log('🔍 Attempting to parse Android-compatible NDEF data...');
             
             try {
-                // First, try to extract NDEF text record
-                const ndefText = NdefUtils.parseTextRecord(allData);
+                // First, try to extract complete NDEF message (with TLV parsing)
+                const ndefText = NdefUtils.parseNdefMessage(allData);
                 if (ndefText) {
-                    console.log('📋 Found NDEF text record:', ndefText.substring(0, 50) + '...');
+                    console.log('📋 Found NDEF message text:', ndefText.substring(0, 50) + '...');
                     
                     // Try to decrypt the text (it should be encrypted license data)
                     try {
                         const decryptedText = CryptoUtils.decrypt(ndefText);
-                        console.log('🔓 Successfully decrypted data');
+                        console.log('🔓 Successfully decrypted data:', decryptedText.substring(0, 50) + '...');
                         
                         // Try to parse as license JSON
                         try {
                             const licenseData = CryptoUtils.parseLicenseJson(decryptedText);
-                            cardData.extractedText = `License Data:\nHolder: ${licenseData.holderName}\nMobile: ${licenseData.mobile}\nCity: ${licenseData.city}\nType: ${licenseData.licenseType}\nNumber: ${licenseData.licenseNumber}\nCard: ${licenseData.nfcCardNumber}\nValidity: ${licenseData.validityDate}`;
+                            cardData.extractedText = `📄 License Data (Decrypted):\n• Holder: ${licenseData.holderName}\n• Mobile: ${licenseData.mobile}\n• City: ${licenseData.city}\n• Type: ${licenseData.licenseType}\n• Number: ${licenseData.licenseNumber}\n• Card ID: ${licenseData.nfcCardNumber}\n• Valid Until: ${licenseData.validityDate}`;
                             cardData.licenseData = licenseData;
                             cardData.isAndroidCompatible = true;
                             console.log(`📄 Extracted Android-compatible license data for: ${licenseData.holderName}`);
                             return;
                         } catch (jsonError) {
                             // Not license JSON, but decrypted text is valid
-                            cardData.extractedText = `Encrypted Text: "${decryptedText}"`;
+                            cardData.extractedText = `📝 Decrypted Text:\n"${decryptedText}"`;
                             cardData.isAndroidCompatible = true;
                             console.log(`📝 Extracted encrypted text: "${decryptedText}"`);
                             return;
                         }
                     } catch (decryptError) {
                         // Not encrypted, but NDEF text is valid
-                        cardData.extractedText = `NDEF Text: "${ndefText}"`;
+                        cardData.extractedText = `📋 NDEF Text:\n"${ndefText}"`;
                         console.log(`📋 Extracted NDEF text: "${ndefText}"`);
                         return;
                     }
                 }
             } catch (ndefError) {
-                console.warn('⚠️ Not a valid NDEF text record, trying fallback...');
+                console.warn('⚠️ TLV NDEF parsing failed, trying direct text record parsing...');
+            }
+            
+            // Fallback: try direct text record parsing (without TLV)
+            try {
+                const ndefText = NdefUtils.parseTextRecord(allData);
+                if (ndefText) {
+                    console.log('📋 Found direct NDEF text record:', ndefText.substring(0, 50) + '...');
+                    
+                    // Try to decrypt the text
+                    try {
+                        const decryptedText = CryptoUtils.decrypt(ndefText);
+                        console.log('🔓 Successfully decrypted data:', decryptedText.substring(0, 50) + '...');
+                        
+                        // Try to parse as license JSON
+                        try {
+                            const licenseData = CryptoUtils.parseLicenseJson(decryptedText);
+                            cardData.extractedText = `📄 License Data (Decrypted):\n• Holder: ${licenseData.holderName}\n• Mobile: ${licenseData.mobile}\n• City: ${licenseData.city}\n• Type: ${licenseData.licenseType}\n• Number: ${licenseData.licenseNumber}\n• Card ID: ${licenseData.nfcCardNumber}\n• Valid Until: ${licenseData.validityDate}`;
+                            cardData.licenseData = licenseData;
+                            cardData.isAndroidCompatible = true;
+                            console.log(`📄 Extracted license data for: ${licenseData.holderName}`);
+                            return;
+                        } catch (jsonError) {
+                            // Not license JSON, but decrypted text is valid
+                            cardData.extractedText = `📝 Decrypted Text:\n"${decryptedText}"`;
+                            cardData.isAndroidCompatible = true;
+                            console.log(`📝 Extracted encrypted text: "${decryptedText}"`);
+                            return;
+                        }
+                    } catch (decryptError) {
+                        // Not encrypted, but NDEF text is valid
+                        cardData.extractedText = `📋 NDEF Text:\n"${ndefText}"`;
+                        console.log(`📋 Extracted NDEF text: "${ndefText}"`);
+                        return;
+                    }
+                }
+            } catch (directError) {
+                console.warn('⚠️ Direct NDEF text record parsing also failed...');
             }
             
             // Fallback: try simple text extraction (legacy format)
@@ -419,26 +456,26 @@ class NFCPCSCManager extends EventEmitter {
                 finalData = String(data);
             }
 
-            // Create NDEF text record (Android compatible)
-            const ndefRecord = NdefUtils.createTextRecord(finalData, 'en');
-            console.log(`📋 NDEF record length: ${ndefRecord.length} bytes`);
+            // Create complete NDEF message with TLV structure (Android compatible)
+            const ndefMessage = NdefUtils.createNdefMessage(finalData);
+            console.log(`📋 NDEF message length: ${ndefMessage.length} bytes`);
 
-            // Split NDEF record into 16-byte blocks for writing
+            // Split NDEF message into 16-byte blocks for writing
             const maxBlockSize = 16;
             const blocks = [];
             let totalBytesWritten = 0;
             
             // Calculate how many blocks we need
-            const totalBlocks = Math.ceil(ndefRecord.length / maxBlockSize);
+            const totalBlocks = Math.ceil(ndefMessage.length / maxBlockSize);
             console.log(`📦 Will write ${totalBlocks} blocks starting from block 4`);
 
-            // Write NDEF record across multiple blocks starting from block 4
+            // Write NDEF message across multiple blocks starting from block 4
             for (let i = 0; i < totalBlocks; i++) {
                 const blockNumber = 4 + i; // Start from block 4
                 const start = i * maxBlockSize;
-                const end = Math.min(start + maxBlockSize, ndefRecord.length);
+                const end = Math.min(start + maxBlockSize, ndefMessage.length);
                 
-                let blockData = ndefRecord.slice(start, end);
+                let blockData = ndefMessage.slice(start, end);
                 
                 // Pad block to 16 bytes with zeros for NDEF compatibility
                 if (blockData.length < maxBlockSize) {
@@ -452,7 +489,7 @@ class NFCPCSCManager extends EventEmitter {
                     blocks.push({
                         block: blockNumber,
                         hexData: blockData.toString('hex'),
-                        originalData: ndefRecord.slice(start, end),
+                        originalData: ndefMessage.slice(start, end),
                         bytesWritten: end - start
                     });
                     console.log(`✅ Block ${blockNumber} written successfully (${end - start} bytes)`);
@@ -469,7 +506,7 @@ class NFCPCSCManager extends EventEmitter {
                 uid: this.currentCard.uid,
                 originalData: data,
                 encryptedData: finalData,
-                ndefRecord: ndefRecord.toString('hex'),
+                ndefMessage: ndefMessage.toString('hex'),
                 blocks: blocks,
                 totalBytesWritten: totalBytesWritten,
                 isAndroidCompatible: true,
