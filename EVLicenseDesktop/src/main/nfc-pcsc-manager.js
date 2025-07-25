@@ -1,5 +1,7 @@
 const { NFC } = require('nfc-pcsc');
 const { EventEmitter } = require('events');
+const CryptoUtils = require('./crypto-utils');
+const NdefUtils = require('./ndef-utils');
 
 class NFCPCSCManager extends EventEmitter {
     constructor() {
@@ -256,49 +258,81 @@ class NFCPCSCManager extends EventEmitter {
             
             if (dataBlocks.length === 0) return;
             
-            // Simple approach: just read from block 4 and extract text
-            const firstDataBlock = dataBlocks[0];
-            if (firstDataBlock && firstDataBlock.data) {
-                try {
-                    const blockBuffer = Buffer.from(firstDataBlock.data, 'hex');
-                    const text = blockBuffer.toString('utf8');
-                    
-                    // Remove padding spaces and any control characters
-                    const cleanText = text.replace(/[\x00-\x1F\x7F]/g, '').replace(/\s+$/, '');
-                    
-                    if (cleanText && cleanText.length > 0) {
-                        cardData.extractedText = cleanText;
-                        console.log(`📝 Extracted clean text: "${cleanText}"`);
-                        return;
-                    }
-                } catch (e) {
-                    console.warn(`⚠️ Could not extract text from block ${firstDataBlock.block}`);
-                }
-            }
-            
-            // Fallback: try to concatenate multiple blocks if needed
+            // Concatenate all block data to reconstruct NDEF record
             let allData = Buffer.alloc(0);
-            for (const block of dataBlocks.slice(0, 4)) { // Only check first 4 data blocks
+            for (const block of dataBlocks) {
                 try {
                     const blockBuffer = Buffer.from(block.data, 'hex');
                     allData = Buffer.concat([allData, blockBuffer]);
                 } catch (e) {
+                    console.warn(`⚠️ Could not process block ${block.block}`);
                     break;
                 }
             }
             
-            if (allData.length > 0) {
-                const fullText = allData.toString('utf8');
-                // Remove padding and control characters
-                const cleanText = fullText.replace(/[\x00-\x1F\x7F]/g, '').replace(/\s+$/, '').trim();
-                
-                if (cleanText && cleanText.length > 0) {
-                    cardData.extractedText = cleanText;
-                    console.log(`📝 Extracted clean text (multi-block): "${cleanText}"`);
+            if (allData.length === 0) return;
+            
+            // Try to parse as NDEF text record (Android compatible)
+            console.log('🔍 Attempting to parse Android-compatible NDEF data...');
+            
+            try {
+                // First, try to extract NDEF text record
+                const ndefText = NdefUtils.parseTextRecord(allData);
+                if (ndefText) {
+                    console.log('📋 Found NDEF text record:', ndefText.substring(0, 50) + '...');
+                    
+                    // Try to decrypt the text (it should be encrypted license data)
+                    try {
+                        const decryptedText = CryptoUtils.decrypt(ndefText);
+                        console.log('🔓 Successfully decrypted data');
+                        
+                        // Try to parse as license JSON
+                        try {
+                            const licenseData = CryptoUtils.parseLicenseJson(decryptedText);
+                            cardData.extractedText = `License Data:\nHolder: ${licenseData.holderName}\nMobile: ${licenseData.mobile}\nCity: ${licenseData.city}\nType: ${licenseData.licenseType}\nNumber: ${licenseData.licenseNumber}\nCard: ${licenseData.nfcCardNumber}\nValidity: ${licenseData.validityDate}`;
+                            cardData.licenseData = licenseData;
+                            cardData.isAndroidCompatible = true;
+                            console.log(`📄 Extracted Android-compatible license data for: ${licenseData.holderName}`);
+                            return;
+                        } catch (jsonError) {
+                            // Not license JSON, but decrypted text is valid
+                            cardData.extractedText = `Encrypted Text: "${decryptedText}"`;
+                            cardData.isAndroidCompatible = true;
+                            console.log(`📝 Extracted encrypted text: "${decryptedText}"`);
+                            return;
+                        }
+                    } catch (decryptError) {
+                        // Not encrypted, but NDEF text is valid
+                        cardData.extractedText = `NDEF Text: "${ndefText}"`;
+                        console.log(`📋 Extracted NDEF text: "${ndefText}"`);
+                        return;
+                    }
                 }
+            } catch (ndefError) {
+                console.warn('⚠️ Not a valid NDEF text record, trying fallback...');
             }
+            
+            // Fallback: try simple text extraction (legacy format)
+            try {
+                const simpleText = NdefUtils.parseSimpleTextRecord(allData);
+                if (simpleText) {
+                    cardData.extractedText = `Simple Text: "${simpleText}"`;
+                    console.log(`📝 Extracted simple text: "${simpleText}"`);
+                    return;
+                }
+            } catch (simpleError) {
+                console.warn('⚠️ Not a simple text record either');
+            }
+            
+            // Last resort: raw text extraction
+            const rawText = allData.toString('utf8').replace(/[\x00-\x1F\x7F]/g, '').trim();
+            if (rawText && rawText.length > 0) {
+                cardData.extractedText = `Raw Text: "${rawText}"`;
+                console.log(`📝 Extracted raw text: "${rawText}"`);
+            }
+            
         } catch (error) {
-            console.warn('⚠️ Error extracting clean text:', error);
+            console.warn('⚠️ Error extracting Android-compatible text:', error);
         }
     }
 
@@ -368,43 +402,47 @@ class NFCPCSCManager extends EventEmitter {
 
             const reader = readerInfo.reader;
             
-            console.log('📝 Writing data to card:', data);
+            console.log('📝 Writing Android-compatible data to card:', data);
             
-            // Convert data to buffer - pure plain text, no null terminators
-            let buffer;
-            if (typeof data === 'string') {
-                // Write pure text without any null terminators
-                buffer = Buffer.from(data, 'utf8');
-            } else if (Array.isArray(data)) {
-                buffer = Buffer.from(data);
-            } else if (typeof data === 'object') {
-                buffer = Buffer.from(JSON.stringify(data), 'utf8');
+            // Handle different data types
+            let finalData;
+            if (typeof data === 'object' && data !== null) {
+                // If it's a license object, create JSON and encrypt it
+                const licenseJson = CryptoUtils.createLicenseJson(data);
+                console.log('📄 License JSON:', licenseJson);
+                finalData = CryptoUtils.encrypt(licenseJson);
+                console.log('🔐 Encrypted data length:', finalData.length);
+            } else if (typeof data === 'string') {
+                // For plain text, encrypt it directly
+                finalData = CryptoUtils.encrypt(data);
             } else {
-                buffer = data;
+                finalData = String(data);
             }
 
-            console.log(`📊 Data length: ${buffer.length} bytes`);
+            // Create NDEF text record (Android compatible)
+            const ndefRecord = NdefUtils.createTextRecord(finalData, 'en');
+            console.log(`📋 NDEF record length: ${ndefRecord.length} bytes`);
 
-            // Split data into 16-byte blocks and write across multiple blocks
+            // Split NDEF record into 16-byte blocks for writing
             const maxBlockSize = 16;
             const blocks = [];
             let totalBytesWritten = 0;
             
             // Calculate how many blocks we need
-            const totalBlocks = Math.ceil(buffer.length / maxBlockSize);
+            const totalBlocks = Math.ceil(ndefRecord.length / maxBlockSize);
             console.log(`📦 Will write ${totalBlocks} blocks starting from block 4`);
 
-            // Write data across multiple blocks starting from block 4
+            // Write NDEF record across multiple blocks starting from block 4
             for (let i = 0; i < totalBlocks; i++) {
                 const blockNumber = 4 + i; // Start from block 4
                 const start = i * maxBlockSize;
-                const end = Math.min(start + maxBlockSize, buffer.length);
+                const end = Math.min(start + maxBlockSize, ndefRecord.length);
                 
-                let blockData = buffer.slice(start, end);
+                let blockData = ndefRecord.slice(start, end);
                 
-                // Pad block to 16 bytes with spaces (0x20) instead of zeros for better readability
+                // Pad block to 16 bytes with zeros for NDEF compatibility
                 if (blockData.length < maxBlockSize) {
-                    const padding = Buffer.alloc(maxBlockSize - blockData.length, 0x20);
+                    const padding = Buffer.alloc(maxBlockSize - blockData.length, 0x00);
                     blockData = Buffer.concat([blockData, padding]);
                 }
 
@@ -414,7 +452,7 @@ class NFCPCSCManager extends EventEmitter {
                     blocks.push({
                         block: blockNumber,
                         hexData: blockData.toString('hex'),
-                        originalData: buffer.slice(start, end).toString('utf8'),
+                        originalData: ndefRecord.slice(start, end),
                         bytesWritten: end - start
                     });
                     console.log(`✅ Block ${blockNumber} written successfully (${end - start} bytes)`);
@@ -424,30 +462,34 @@ class NFCPCSCManager extends EventEmitter {
                 }
             }
 
-            console.log(`✅ Writing completed. Total: ${totalBytesWritten} bytes across ${blocks.length} blocks`);
+            console.log(`✅ Android-compatible writing completed. Total: ${totalBytesWritten} bytes across ${blocks.length} blocks`);
             
             // Emit write success event
             this.emit('card-written', {
                 uid: this.currentCard.uid,
                 originalData: data,
-                buffer: buffer.toString('hex'),
+                encryptedData: finalData,
+                ndefRecord: ndefRecord.toString('hex'),
                 blocks: blocks,
                 totalBytesWritten: totalBytesWritten,
+                isAndroidCompatible: true,
                 timestamp: new Date()
             });
 
             return {
                 success: true,
-                message: `Successfully wrote ${totalBytesWritten} bytes to ${blocks.length} blocks`,
+                message: `Successfully wrote ${totalBytesWritten} bytes to ${blocks.length} blocks (Android compatible)`,
                 originalData: data,
+                encryptedData: finalData,
                 blocks: blocks,
                 totalBytesWritten: totalBytesWritten,
                 startBlock: 4,
-                endBlock: 4 + blocks.length - 1
+                endBlock: 4 + blocks.length - 1,
+                isAndroidCompatible: true
             };
 
         } catch (error) {
-            console.error('❌ Error writing to card:', error);
+            console.error('❌ Error writing Android-compatible data to card:', error);
             this.emit('card-write-error', {
                 error: error.message,
                 uid: this.currentCard ? this.currentCard.uid : null,

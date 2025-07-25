@@ -1899,6 +1899,49 @@ body {
     color: #c62828;
 }
 
+/* License Form Styles */
+.license-form-section {
+    margin-bottom: 24px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.license-form-section h4 {
+    color: #333;
+    margin-bottom: 16px;
+    font-weight: 500;
+    font-size: 16px;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+}
+
+.form-field {
+    margin-bottom: 12px;
+}
+
+.form-field .mdc-text-field {
+    width: 100%;
+}
+
+.form-field .mdc-select {
+    width: 100%;
+}
+
+.text-input-section {
+    margin-top: 16px;
+}
+
+.text-input-section h4 {
+    color: #666;
+    margin-bottom: 12px;
+    font-weight: 400;
+    font-size: 14px;
+}
+
 .write-controls {
     display: flex;
     gap: 12px;

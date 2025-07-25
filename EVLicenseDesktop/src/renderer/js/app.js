@@ -328,6 +328,43 @@ class EVLicenseApp {
         }
 
         console.log('✅ Scanner event listeners set up');
+        
+        // Setup license form interactions
+        this.setupLicenseFormListeners();
+    }
+
+    setupLicenseFormListeners() {
+        console.log('📋 Setting up license form listeners...');
+
+        // City selector
+        const cityList = document.getElementById('city-list');
+        const citySelected = document.getElementById('city-selected');
+        if (cityList && citySelected) {
+            cityList.addEventListener('click', (e) => {
+                const listItem = e.target.closest('.mdc-deprecated-list-item');
+                if (listItem) {
+                    const value = listItem.dataset.value;
+                    citySelected.textContent = value;
+                    console.log('🏙️ City selected:', value);
+                }
+            });
+        }
+
+        // License type selector
+        const licenseTypeList = document.getElementById('license-type-list');
+        const licenseTypeSelected = document.getElementById('license-type-selected');
+        if (licenseTypeList && licenseTypeSelected) {
+            licenseTypeList.addEventListener('click', (e) => {
+                const listItem = e.target.closest('.mdc-deprecated-list-item');
+                if (listItem) {
+                    const value = listItem.dataset.value;
+                    licenseTypeSelected.textContent = value;
+                    console.log('📄 License type selected:', value);
+                }
+            });
+        }
+
+        console.log('✅ License form listeners set up');
     }
 
     handleCardDetected(cardData) {
@@ -757,29 +794,47 @@ class EVLicenseApp {
     async writeToCard() {
         console.log('✍️ Writing to NFC card...');
         
-        const writeDataInput = document.getElementById('write-data-input');
         const writeCardBtn = document.getElementById('write-card-btn');
         
-        if (!writeDataInput) {
-            this.showErrorMessage('Write Error', 'Write input field not found');
-            return;
-        }
-        
-        const data = writeDataInput.value.trim();
-        
-        if (!data) {
-            this.showWarningMessage('Please enter some text to write to the card');
-            return;
-        }
-        
-        if (data.length > 256) {
-            this.showWarningMessage('Text is too long. Maximum 256 characters allowed.');
-            return;
-        }
-        
         try {
+            // Collect license data first
+            const licenseData = this.collectLicenseData();
+            
+            // If license data is available, use it; otherwise use plain text
+            let dataToWrite;
+            let dataType;
+            
+            if (licenseData && Object.values(licenseData).some(value => value.trim())) {
+                // License data available
+                dataToWrite = licenseData;
+                dataType = 'license';
+                console.log('📄 Writing license data:', licenseData);
+            } else {
+                // Fall back to plain text
+                const writeDataInput = document.getElementById('write-data-input');
+                if (!writeDataInput) {
+                    this.showErrorMessage('Write Error', 'Write input field not found');
+                    return;
+                }
+                
+                const plainText = writeDataInput.value.trim();
+                if (!plainText) {
+                    this.showWarningMessage('Please enter license information or plain text to write to the card');
+                    return;
+                }
+                
+                if (plainText.length > 256) {
+                    this.showWarningMessage('Text is too long. Maximum 256 characters allowed.');
+                    return;
+                }
+                
+                dataToWrite = plainText;
+                dataType = 'text';
+                console.log('📝 Writing plain text:', plainText);
+            }
+            
             // Update UI to show writing state
-            this.updateWriterStatus('writing', 'Writing to card...');
+            this.updateWriterStatus('writing', `Writing ${dataType} to card...`);
             if (writeCardBtn) writeCardBtn.disabled = true;
             
             // Check if a card is present
@@ -788,11 +843,11 @@ class EVLicenseApp {
                 throw new Error('No NFC card detected. Please place a card on the reader and try again.');
             }
             
-            // Write data to card
-            const result = await window.electronAPI.nfc.writeCard(data);
+            // Write data to card (Android compatible)
+            const result = await window.electronAPI.nfc.writeCard(dataToWrite);
             
             if (result.success) {
-                this.showWriteSuccess(result);
+                this.showWriteSuccess(result, dataType);
             } else {
                 throw new Error(result.message || 'Write operation failed');
             }
@@ -809,15 +864,55 @@ class EVLicenseApp {
             if (writeCardBtn) writeCardBtn.disabled = false;
         }
     }
+    
+    collectLicenseData() {
+        // Get NFC card number from current card if available
+        const getCurrentCardNumber = async () => {
+            try {
+                const status = await window.electronAPI.nfc.getStatus();
+                return status.currentCard ? status.currentCard.uid : '';
+            } catch (error) {
+                return '';
+            }
+        };
+        
+        const holderName = document.getElementById('holder-name-input')?.value?.trim() || '';
+        const mobile = document.getElementById('mobile-input')?.value?.trim() || '';
+        const city = document.getElementById('city-selected')?.textContent?.trim() || '';
+        const licenseType = document.getElementById('license-type-selected')?.textContent?.trim() || '';
+        const licenseNumber = document.getElementById('license-number-input')?.value?.trim() || '';
+        const validityDate = document.getElementById('validity-date-input')?.value?.trim() || '';
+        
+        // Only return license data if at least holder name and license number are provided
+        if (holderName && licenseNumber) {
+            return {
+                holderName,
+                mobile,
+                city,
+                licenseType,
+                licenseNumber,
+                nfcCardNumber: '', // Will be set by backend based on current card
+                validityDate
+            };
+        }
+        
+        return null;
+    }
 
-    showWriteSuccess(result) {
+    showWriteSuccess(result, dataType = 'data') {
         console.log('✅ Write operation successful:', result);
         
         // Update writer status
-        this.updateWriterStatus('success', 'Write successful');
+        const statusText = dataType === 'license' ? 'License written successfully' : 'Text written successfully';
+        this.updateWriterStatus('success', statusText);
         
         // Show success message with details
-        const message = `Successfully wrote ${result.totalBytesWritten} bytes to ${result.blocks.length} blocks (${result.startBlock}-${result.endBlock})`;
+        let message;
+        if (dataType === 'license') {
+            message = `✅ License data written to NFC card (Android compatible) - ${result.totalBytesWritten} bytes`;
+        } else {
+            message = `✅ Successfully wrote ${result.totalBytesWritten} bytes to ${result.blocks.length} blocks (${result.startBlock}-${result.endBlock})`;
+        }
         this.showSuccessMessage(message);
         
         // Trigger a re-scan to show the written data
@@ -833,11 +928,35 @@ class EVLicenseApp {
             }
         }, 1000);
         
-        // Clear the input after successful write
+        // Clear the appropriate input after successful write
         setTimeout(() => {
-            this.clearWriteInput();
+            if (dataType === 'license') {
+                this.clearLicenseForm();
+            } else {
+                this.clearWriteInput();
+            }
             this.updateWriterStatus('ready', 'Ready to write');
         }, 3000);
+    }
+    
+    clearLicenseForm() {
+        console.log('🧹 Clearing license form...');
+        
+        const holderNameInput = document.getElementById('holder-name-input');
+        const mobileInput = document.getElementById('mobile-input');
+        const licenseNumberInput = document.getElementById('license-number-input');
+        const validityDateInput = document.getElementById('validity-date-input');
+        const citySelected = document.getElementById('city-selected');
+        const licenseTypeSelected = document.getElementById('license-type-selected');
+        
+        if (holderNameInput) holderNameInput.value = '';
+        if (mobileInput) mobileInput.value = '';
+        if (licenseNumberInput) licenseNumberInput.value = '';
+        if (validityDateInput) validityDateInput.value = '';
+        if (citySelected) citySelected.textContent = '';
+        if (licenseTypeSelected) licenseTypeSelected.textContent = '';
+        
+        console.log('✅ License form cleared');
     }
 
     updateWriterStatus(state, text) {
