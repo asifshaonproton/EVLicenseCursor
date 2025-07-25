@@ -549,20 +549,30 @@ class EVLicenseApp {
             dataString += `ATR: ${cardData.atr.toString('hex')}\n`;
         }
         
-        // Try to extract readable text data from blocks
+        // Extract readable text data from blocks
         let readableText = '';
+        let textBlocks = [];
+        
         if (cardData.data && cardData.data.blocks && cardData.data.blocks.length > 0) {
             // Look for text data starting from block 4 (typical write location)
-            const textBlocks = cardData.data.blocks.filter(block => block.block >= 4);
-            if (textBlocks.length > 0) {
-                for (const block of textBlocks) {
+            const dataBlocks = cardData.data.blocks.filter(block => block.block >= 4);
+            
+            for (const block of dataBlocks) {
+                // First check if server already extracted text
+                if (block.textContent && block.textContent.length > 0) {
+                    readableText += block.textContent;
+                    textBlocks.push(block);
+                } else {
+                    // Fallback: try to extract text manually
                     try {
                         // Convert hex to buffer and then to text
                         const buffer = Buffer.from(block.data, 'hex');
                         // Remove null bytes and get readable text
                         const text = buffer.toString('utf8').replace(/\0/g, '').trim();
-                        if (text && text.length > 0) {
+                        // Only include printable ASCII characters
+                        if (text && text.length > 0 && /^[\x20-\x7E]+$/.test(text)) {
                             readableText += text;
+                            textBlocks.push({...block, textContent: text});
                         }
                     } catch (e) {
                         // Skip blocks that can't be converted to text
@@ -572,8 +582,10 @@ class EVLicenseApp {
         }
         
         if (readableText) {
-            dataString += '\n--- Readable Text Data ---\n';
+            dataString += '\n=== 📝 READABLE TEXT DATA ===\n';
             dataString += `"${readableText}"\n`;
+            dataString += `\n📍 Found in blocks: ${textBlocks.map(b => b.block).join(', ')}\n`;
+            dataString += `📏 Text length: ${readableText.length} characters\n`;
         }
         
         dataString += '\n--- Raw Block Data ---\n';
@@ -719,6 +731,19 @@ class EVLicenseApp {
         // Show success message with details
         const message = `Successfully wrote ${result.totalBytesWritten} bytes to ${result.blocks.length} blocks (${result.startBlock}-${result.endBlock})`;
         this.showSuccessMessage(message);
+        
+        // Trigger a re-scan to show the written data
+        setTimeout(async () => {
+            console.log('🔄 Auto re-scanning card after write...');
+            try {
+                const cardData = await window.electronAPI.nfc.readCard();
+                if (cardData) {
+                    this.showScanSuccess(cardData);
+                }
+            } catch (error) {
+                console.warn('⚠️ Auto re-scan failed:', error);
+            }
+        }, 1000);
         
         // Clear the input after successful write
         setTimeout(() => {
