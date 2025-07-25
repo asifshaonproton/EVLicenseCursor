@@ -122,9 +122,148 @@ class EVLicenseDesktop {
                 throw error;
             }
         });
+
+        // Authentication operations
+        ipcMain.handle('auth-login', async (event, username, password) => {
+            try {
+                return await this.databaseManager.authenticateUser(username, password);
+            } catch (error) {
+                console.error('Error during login:', error);
+                throw error;
+            }
+        });
+
+        ipcMain.handle('auth-validate-session', async (event, sessionToken) => {
+            try {
+                return await this.databaseManager.validateSession(sessionToken);
+            } catch (error) {
+                console.error('Error validating session:', error);
+                throw error;
+            }
+        });
+
+        ipcMain.handle('auth-logout', async (event, sessionToken) => {
+            try {
+                return await this.databaseManager.logout(sessionToken);
+            } catch (error) {
+                console.error('Error during logout:', error);
+                throw error;
+            }
+        });
+
+        ipcMain.handle('auth-change-password', async (event, userId, oldPassword, newPassword) => {
+            try {
+                return await this.databaseManager.changePassword(userId, oldPassword, newPassword);
+            } catch (error) {
+                console.error('Error changing password:', error);
+                throw error;
+            }
+        });
+
+        // User management operations
+        ipcMain.handle('users-get-all', async () => {
+            try {
+                return await this.databaseManager.getAllUsers();
+            } catch (error) {
+                console.error('Error getting users:', error);
+                throw error;
+            }
+        });
+
+        ipcMain.handle('users-create', async (event, userData, createdBy) => {
+            try {
+                return await this.databaseManager.createUser(userData, createdBy);
+            } catch (error) {
+                console.error('Error creating user:', error);
+                throw error;
+            }
+        });
+
+        ipcMain.handle('users-update', async (event, userId, userData, updatedBy) => {
+            try {
+                return await this.databaseManager.updateUser(userId, userData, updatedBy);
+            } catch (error) {
+                console.error('Error updating user:', error);
+                throw error;
+            }
+        });
+
+        ipcMain.handle('users-delete', async (event, userId, deletedBy) => {
+            try {
+                return await this.databaseManager.deleteUser(userId, deletedBy);
+            } catch (error) {
+                console.error('Error deleting user:', error);
+                throw error;
+            }
+        });
+
+        // Role management operations
+        ipcMain.handle('roles-get-all', async () => {
+            try {
+                return await this.databaseManager.getAllRoles();
+            } catch (error) {
+                console.error('Error getting roles:', error);
+                throw error;
+            }
+        });
+
+        // Window management
+        ipcMain.handle('window-open-main-app', async () => {
+            try {
+                this.createMainWindow();
+                return { success: true };
+            } catch (error) {
+                console.error('Error opening main app:', error);
+                throw error;
+            }
+        });
     }
 
     createWindow() {
+        // Create login window first
+        this.createLoginWindow();
+    }
+
+    createLoginWindow() {
+        this.loginWindow = new BrowserWindow({
+            width: 500,
+            height: 700,
+            resizable: false,
+            frame: true,
+            webPreferences: {
+                nodeIntegration: false,
+                contextIsolation: true,
+                preload: path.join(__dirname, 'preload.js')
+            },
+            title: 'EV License Desktop - Login',
+            show: false,
+            center: true,
+            titleBarStyle: 'default'
+        });
+
+        const loginUrl = this.isDev 
+            ? 'http://localhost:3000/login.html' 
+            : `file://${path.join(__dirname, '../renderer/login.html')}`;
+        
+        this.loginWindow.loadURL(loginUrl);
+
+        this.loginWindow.once('ready-to-show', () => {
+            this.loginWindow.show();
+            if (this.isDev) {
+                this.loginWindow.webContents.openDevTools();
+            }
+        });
+
+        this.loginWindow.on('closed', () => {
+            // If login window is closed, quit the app
+            if (!this.mainWindow) {
+                app.quit();
+            }
+            this.loginWindow = null;
+        });
+    }
+
+    createMainWindow() {
         this.mainWindow = new BrowserWindow({
             width: 1200,
             height: 800,
@@ -149,6 +288,12 @@ class EVLicenseDesktop {
             this.mainWindow.show();
             if (this.isDev) {
                 this.mainWindow.webContents.openDevTools();
+            }
+            
+            // Close login window
+            if (this.loginWindow) {
+                this.loginWindow.close();
+                this.loginWindow = null;
             }
         });
 

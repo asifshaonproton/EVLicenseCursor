@@ -34,6 +34,9 @@ class DatabaseManager {
             // Insert sample data if database is empty
             await this.insertSampleData();
             
+            // Initialize authentication system
+            await this.initializeAuthenticationSystem();
+            
             this.isInitialized = true;
             console.log('✅ Database Manager initialized successfully');
             
@@ -115,6 +118,66 @@ class DatabaseManager {
                 value TEXT,
                 description TEXT,
                 updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )`,
+            
+            // Users table
+            `CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT UNIQUE NOT NULL,
+                email TEXT UNIQUE NOT NULL,
+                password_hash TEXT NOT NULL,
+                salt TEXT NOT NULL,
+                full_name TEXT NOT NULL,
+                role_id INTEGER NOT NULL,
+                avatar_url TEXT,
+                is_active INTEGER DEFAULT 1,
+                last_login TEXT,
+                login_attempts INTEGER DEFAULT 0,
+                locked_until TEXT,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                created_by INTEGER,
+                FOREIGN KEY (role_id) REFERENCES roles (id),
+                FOREIGN KEY (created_by) REFERENCES users (id)
+            )`,
+            
+            // Roles table
+            `CREATE TABLE IF NOT EXISTS roles (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT UNIQUE NOT NULL,
+                display_name TEXT NOT NULL,
+                description TEXT,
+                permissions TEXT NOT NULL, -- JSON string of permissions
+                is_active INTEGER DEFAULT 1,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                created_by INTEGER,
+                FOREIGN KEY (created_by) REFERENCES users (id)
+            )`,
+            
+            // Sessions table
+            `CREATE TABLE IF NOT EXISTS user_sessions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                session_token TEXT UNIQUE NOT NULL,
+                expires_at TEXT NOT NULL,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                last_activity TEXT DEFAULT CURRENT_TIMESTAMP,
+                ip_address TEXT,
+                user_agent TEXT,
+                FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+            )`,
+            
+            // User Activity Log
+            `CREATE TABLE IF NOT EXISTS user_activity (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                action TEXT NOT NULL,
+                resource TEXT,
+                details TEXT,
+                ip_address TEXT,
+                timestamp TEXT DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users (id)
             )`
         ];
 
@@ -129,7 +192,16 @@ class DatabaseManager {
             'CREATE INDEX IF NOT EXISTS idx_licenses_expiry ON licenses(expiry_date)',
             'CREATE INDEX IF NOT EXISTS idx_nfc_cards_uid ON nfc_cards(card_uid)',
             'CREATE INDEX IF NOT EXISTS idx_activity_log_timestamp ON activity_log(timestamp)',
-            'CREATE INDEX IF NOT EXISTS idx_activity_log_type ON activity_log(action_type)'
+            'CREATE INDEX IF NOT EXISTS idx_activity_log_type ON activity_log(action_type)',
+            
+            // User authentication indexes
+            'CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)',
+            'CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)',
+            'CREATE INDEX IF NOT EXISTS idx_users_role ON users(role_id)',
+            'CREATE INDEX IF NOT EXISTS idx_sessions_token ON user_sessions(session_token)',
+            'CREATE INDEX IF NOT EXISTS idx_sessions_user ON user_sessions(user_id)',
+            'CREATE INDEX IF NOT EXISTS idx_user_activity_user ON user_activity(user_id)',
+            'CREATE INDEX IF NOT EXISTS idx_user_activity_timestamp ON user_activity(timestamp)'
         ];
 
         for (const indexSQL of indexes) {
@@ -474,6 +546,390 @@ class DatabaseManager {
         } catch (error) {
             console.error('❌ Error getting dashboard stats:', error);
             throw error;
+        }
+    }
+
+    // Authentication System Methods
+    async initializeAuthenticationSystem() {
+        try {
+            console.log('🔐 Initializing authentication system...');
+            
+            // Check if roles exist
+            const roleCount = await this.getQuery('SELECT COUNT(*) as count FROM roles');
+            if (roleCount.count === 0) {
+                await this.createDefaultRoles();
+            }
+            
+            // Check if super admin exists
+            const userCount = await this.getQuery('SELECT COUNT(*) as count FROM users');
+            if (userCount.count === 0) {
+                await this.createSuperAdmin();
+            }
+            
+            console.log('✅ Authentication system initialized');
+        } catch (error) {
+            console.error('❌ Error initializing authentication system:', error);
+        }
+    }
+
+    async createDefaultRoles() {
+        const defaultRoles = [
+            {
+                name: 'super_admin',
+                display_name: 'Super Administrator',
+                description: 'Full system access with all permissions',
+                permissions: JSON.stringify({
+                    users: ['create', 'read', 'update', 'delete'],
+                    roles: ['create', 'read', 'update', 'delete'],
+                    licenses: ['create', 'read', 'update', 'delete'],
+                    nfc: ['read', 'write', 'configure'],
+                    settings: ['read', 'update'],
+                    database: ['backup', 'restore', 'optimize'],
+                    reports: ['generate', 'export'],
+                    system: ['full_access']
+                })
+            },
+            {
+                name: 'admin',
+                display_name: 'Administrator',
+                description: 'Administrative access to most features',
+                permissions: JSON.stringify({
+                    users: ['create', 'read', 'update'],
+                    licenses: ['create', 'read', 'update', 'delete'],
+                    nfc: ['read', 'write', 'configure'],
+                    settings: ['read', 'update'],
+                    database: ['backup'],
+                    reports: ['generate', 'export']
+                })
+            },
+            {
+                name: 'operator',
+                display_name: 'Operator',
+                description: 'Standard user with license management access',
+                permissions: JSON.stringify({
+                    licenses: ['create', 'read', 'update'],
+                    nfc: ['read', 'write'],
+                    reports: ['generate']
+                })
+            },
+            {
+                name: 'viewer',
+                display_name: 'Viewer',
+                description: 'Read-only access to licenses and reports',
+                permissions: JSON.stringify({
+                    licenses: ['read'],
+                    reports: ['generate']
+                })
+            }
+        ];
+
+        for (const role of defaultRoles) {
+            await this.runQuery(`
+                INSERT INTO roles (name, display_name, description, permissions)
+                VALUES (?, ?, ?, ?)
+            `, [role.name, role.display_name, role.description, role.permissions]);
+        }
+
+        console.log('✅ Default roles created');
+    }
+
+    async createSuperAdmin() {
+        const crypto = require('crypto');
+        
+        // Generate salt and hash for default password
+        const defaultPassword = 'SuperAdmin123!';
+        const salt = crypto.randomBytes(32).toString('hex');
+        const passwordHash = crypto.pbkdf2Sync(defaultPassword, salt, 10000, 64, 'sha512').toString('hex');
+        
+        // Get super admin role ID
+        const superAdminRole = await this.getQuery("SELECT id FROM roles WHERE name = 'super_admin'");
+        
+        if (superAdminRole) {
+            await this.runQuery(`
+                INSERT INTO users (username, email, password_hash, salt, full_name, role_id)
+                VALUES (?, ?, ?, ?, ?, ?)
+            `, [
+                'superadmin',
+                'superadmin@evlicense.local',
+                passwordHash,
+                salt,
+                'Super Administrator',
+                superAdminRole.id
+            ]);
+            
+            console.log('🔑 Super Admin created:');
+            console.log('   Username: superadmin');
+            console.log('   Password: SuperAdmin123!');
+            console.log('   Email: superadmin@evlicense.local');
+        }
+    }
+
+    async authenticateUser(username, password) {
+        try {
+            const user = await this.getQuery(`
+                SELECT u.*, r.name as role_name, r.permissions 
+                FROM users u 
+                JOIN roles r ON u.role_id = r.id 
+                WHERE (u.username = ? OR u.email = ?) AND u.is_active = 1
+            `, [username, username]);
+
+            if (!user) {
+                return { success: false, message: 'Invalid credentials' };
+            }
+
+            // Check if account is locked
+            if (user.locked_until && new Date(user.locked_until) > new Date()) {
+                return { success: false, message: 'Account is temporarily locked' };
+            }
+
+            // Verify password
+            const crypto = require('crypto');
+            const hash = crypto.pbkdf2Sync(password, user.salt, 10000, 64, 'sha512').toString('hex');
+            
+            if (hash !== user.password_hash) {
+                // Increment login attempts
+                await this.runQuery(`
+                    UPDATE users SET login_attempts = login_attempts + 1,
+                    locked_until = CASE WHEN login_attempts >= 4 THEN datetime('now', '+30 minutes') ELSE NULL END
+                    WHERE id = ?
+                `, [user.id]);
+                
+                return { success: false, message: 'Invalid credentials' };
+            }
+
+            // Reset login attempts and update last login
+            await this.runQuery(`
+                UPDATE users SET login_attempts = 0, locked_until = NULL, last_login = CURRENT_TIMESTAMP
+                WHERE id = ?
+            `, [user.id]);
+
+            // Create session
+            const sessionToken = crypto.randomBytes(32).toString('hex');
+            const expiresAt = new Date();
+            expiresAt.setHours(expiresAt.getHours() + 24); // 24 hour session
+
+            await this.runQuery(`
+                INSERT INTO user_sessions (user_id, session_token, expires_at)
+                VALUES (?, ?, ?)
+            `, [user.id, sessionToken, expiresAt.toISOString()]);
+
+            // Log activity
+            await this.logUserActivity(user.id, 'LOGIN', null, 'User logged in successfully');
+
+            return {
+                success: true,
+                user: {
+                    id: user.id,
+                    username: user.username,
+                    email: user.email,
+                    full_name: user.full_name,
+                    role_name: user.role_name,
+                    permissions: JSON.parse(user.permissions),
+                    avatar_url: user.avatar_url
+                },
+                sessionToken: sessionToken
+            };
+
+        } catch (error) {
+            console.error('❌ Error authenticating user:', error);
+            return { success: false, message: 'Authentication failed' };
+        }
+    }
+
+    async validateSession(sessionToken) {
+        try {
+            const session = await this.getQuery(`
+                SELECT s.*, u.*, r.name as role_name, r.permissions 
+                FROM user_sessions s
+                JOIN users u ON s.user_id = u.id
+                JOIN roles r ON u.role_id = r.id
+                WHERE s.session_token = ? AND s.expires_at > datetime('now') AND u.is_active = 1
+            `, [sessionToken]);
+
+            if (!session) {
+                return { valid: false };
+            }
+
+            // Update last activity
+            await this.runQuery(`
+                UPDATE user_sessions SET last_activity = CURRENT_TIMESTAMP WHERE session_token = ?
+            `, [sessionToken]);
+
+            return {
+                valid: true,
+                user: {
+                    id: session.user_id,
+                    username: session.username,
+                    email: session.email,
+                    full_name: session.full_name,
+                    role_name: session.role_name,
+                    permissions: JSON.parse(session.permissions),
+                    avatar_url: session.avatar_url
+                }
+            };
+
+        } catch (error) {
+            console.error('❌ Error validating session:', error);
+            return { valid: false };
+        }
+    }
+
+    async createUser(userData, createdBy) {
+        try {
+            const crypto = require('crypto');
+            
+            // Generate salt and hash password
+            const salt = crypto.randomBytes(32).toString('hex');
+            const passwordHash = crypto.pbkdf2Sync(userData.password, salt, 10000, 64, 'sha512').toString('hex');
+            
+            const result = await this.runQuery(`
+                INSERT INTO users (username, email, password_hash, salt, full_name, role_id, created_by)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            `, [
+                userData.username,
+                userData.email,
+                passwordHash,
+                salt,
+                userData.full_name,
+                userData.role_id,
+                createdBy
+            ]);
+
+            await this.logUserActivity(createdBy, 'CREATE_USER', 'users', `Created user: ${userData.username}`);
+            return { success: true, userId: result.id };
+
+        } catch (error) {
+            console.error('❌ Error creating user:', error);
+            if (error.message.includes('UNIQUE constraint failed')) {
+                return { success: false, message: 'Username or email already exists' };
+            }
+            return { success: false, message: 'Failed to create user' };
+        }
+    }
+
+    async getAllUsers() {
+        try {
+            return await this.getAllQuery(`
+                SELECT u.id, u.username, u.email, u.full_name, u.is_active, u.last_login, u.created_at,
+                       r.display_name as role_name, r.name as role_code,
+                       creator.full_name as created_by_name
+                FROM users u
+                JOIN roles r ON u.role_id = r.id
+                LEFT JOIN users creator ON u.created_by = creator.id
+                ORDER BY u.created_at DESC
+            `);
+        } catch (error) {
+            console.error('❌ Error getting all users:', error);
+            throw error;
+        }
+    }
+
+    async getAllRoles() {
+        try {
+            return await this.getAllQuery(`
+                SELECT id, name, display_name, description, permissions, is_active, created_at
+                FROM roles
+                WHERE is_active = 1
+                ORDER BY name
+            `);
+        } catch (error) {
+            console.error('❌ Error getting all roles:', error);
+            throw error;
+        }
+    }
+
+    async updateUser(userId, userData, updatedBy) {
+        try {
+            await this.runQuery(`
+                UPDATE users SET
+                    username = ?, email = ?, full_name = ?, role_id = ?, is_active = ?,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+            `, [
+                userData.username,
+                userData.email,
+                userData.full_name,
+                userData.role_id,
+                userData.is_active,
+                userId
+            ]);
+
+            await this.logUserActivity(updatedBy, 'UPDATE_USER', 'users', `Updated user: ${userData.username}`);
+            return { success: true };
+
+        } catch (error) {
+            console.error('❌ Error updating user:', error);
+            return { success: false, message: 'Failed to update user' };
+        }
+    }
+
+    async deleteUser(userId, deletedBy) {
+        try {
+            const user = await this.getQuery('SELECT username FROM users WHERE id = ?', [userId]);
+            
+            await this.runQuery('DELETE FROM users WHERE id = ?', [userId]);
+            
+            await this.logUserActivity(deletedBy, 'DELETE_USER', 'users', 
+                `Deleted user: ${user ? user.username : userId}`);
+            return { success: true };
+        } catch (error) {
+            console.error('❌ Error deleting user:', error);
+            return { success: false, message: 'Failed to delete user' };
+        }
+    }
+
+    async logUserActivity(userId, action, resource, details) {
+        try {
+            await this.runQuery(`
+                INSERT INTO user_activity (user_id, action, resource, details)
+                VALUES (?, ?, ?, ?)
+            `, [userId, action, resource, details]);
+        } catch (error) {
+            console.error('❌ Error logging user activity:', error);
+        }
+    }
+
+    async logout(sessionToken) {
+        try {
+            await this.runQuery('DELETE FROM user_sessions WHERE session_token = ?', [sessionToken]);
+            return { success: true };
+        } catch (error) {
+            console.error('❌ Error logging out:', error);
+            return { success: false };
+        }
+    }
+
+    async changePassword(userId, oldPassword, newPassword) {
+        try {
+            const user = await this.getQuery('SELECT password_hash, salt FROM users WHERE id = ?', [userId]);
+            
+            if (!user) {
+                return { success: false, message: 'User not found' };
+            }
+
+            // Verify old password
+            const crypto = require('crypto');
+            const oldHash = crypto.pbkdf2Sync(oldPassword, user.salt, 10000, 64, 'sha512').toString('hex');
+            
+            if (oldHash !== user.password_hash) {
+                return { success: false, message: 'Current password is incorrect' };
+            }
+
+            // Generate new hash
+            const newSalt = crypto.randomBytes(32).toString('hex');
+            const newHash = crypto.pbkdf2Sync(newPassword, newSalt, 10000, 64, 'sha512').toString('hex');
+
+            await this.runQuery(`
+                UPDATE users SET password_hash = ?, salt = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+            `, [newHash, newSalt, userId]);
+
+            await this.logUserActivity(userId, 'CHANGE_PASSWORD', 'users', 'Password changed successfully');
+            return { success: true };
+
+        } catch (error) {
+            console.error('❌ Error changing password:', error);
+            return { success: false, message: 'Failed to change password' };
         }
     }
 

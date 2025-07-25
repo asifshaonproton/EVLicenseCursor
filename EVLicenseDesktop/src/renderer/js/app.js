@@ -29,12 +29,21 @@ class EVLicenseApp {
             textFields: []
         };
         this.csvImportData = null;
+        this.currentUser = null;
+        this.sessionToken = null;
         this.initializeApp();
     }
 
     async initializeApp() {
         try {
             console.log('🚀 Initializing EV License Desktop App...');
+            
+            // Check authentication first
+            const isAuthenticated = await this.checkAuthentication();
+            if (!isAuthenticated) {
+                this.redirectToLogin();
+                return;
+            }
             
             // Initialize Material Design Components
             this.initializeMDCComponents();
@@ -45,9 +54,13 @@ class EVLicenseApp {
             // Load initial data
             await this.loadInitialData();
             
+            // Update UI with user info
+            this.updateUserInterface();
+            
             console.log('✅ App initialized successfully');
         } catch (error) {
             console.error('❌ Failed to initialize app:', error);
+            this.redirectToLogin();
         }
     }
 
@@ -930,6 +943,252 @@ class EVLicenseApp {
         });
 
         return csvRows.join('\n');
+    }
+
+    // Authentication Methods
+    async checkAuthentication() {
+        try {
+            this.sessionToken = localStorage.getItem('sessionToken');
+            const userData = localStorage.getItem('currentUser');
+            
+            if (!this.sessionToken || !userData) {
+                return false;
+            }
+
+            // Validate session with backend
+            if (window.electronAPI) {
+                const validation = await window.electronAPI.auth.validateSession(this.sessionToken);
+                if (validation.valid) {
+                    this.currentUser = validation.user;
+                    return true;
+                }
+            }
+
+            // Clear invalid session
+            this.clearSession();
+            return false;
+
+        } catch (error) {
+            console.error('❌ Error checking authentication:', error);
+            this.clearSession();
+            return false;
+        }
+    }
+
+    clearSession() {
+        this.currentUser = null;
+        this.sessionToken = null;
+        localStorage.removeItem('sessionToken');
+        localStorage.removeItem('currentUser');
+    }
+
+    redirectToLogin() {
+        try {
+            window.location.href = 'login.html';
+        } catch (error) {
+            console.error('❌ Error redirecting to login:', error);
+        }
+    }
+
+    updateUserInterface() {
+        if (!this.currentUser) return;
+
+        // Update app title with user info
+        const appTitle = document.querySelector('.mdc-top-app-bar__title');
+        if (appTitle) {
+            appTitle.textContent = `EV License Desktop - ${this.currentUser.full_name}`;
+        }
+
+        // Add user menu to the top bar
+        this.createUserMenu();
+
+        // Apply role-based access control
+        this.applyRoleBasedAccess();
+    }
+
+    createUserMenu() {
+        const topAppBarSection = document.querySelector('.mdc-top-app-bar__section--align-end');
+        if (!topAppBarSection || topAppBarSection.querySelector('.user-menu')) return;
+
+        const userMenuHtml = `
+            <div class="user-menu">
+                <button class="mdc-icon-button user-menu-button" id="user-menu-btn" title="${this.currentUser.full_name}">
+                    <span class="material-icons">account_circle</span>
+                </button>
+                <div class="user-menu-dropdown" id="user-menu-dropdown" style="display: none;">
+                    <div class="user-info">
+                        <div class="user-name">${this.currentUser.full_name}</div>
+                        <div class="user-role">${this.currentUser.role_name}</div>
+                        <div class="user-email">${this.currentUser.email}</div>
+                    </div>
+                    <div class="menu-divider"></div>
+                    <button class="menu-item" id="profile-btn">
+                        <span class="material-icons">person</span>
+                        Profile Settings
+                    </button>
+                    <button class="menu-item" id="change-password-btn">
+                        <span class="material-icons">lock</span>
+                        Change Password
+                    </button>
+                    ${this.hasPermission('users', 'read') ? `
+                    <button class="menu-item" id="user-management-btn">
+                        <span class="material-icons">group</span>
+                        User Management
+                    </button>
+                    ` : ''}
+                    <div class="menu-divider"></div>
+                    <button class="menu-item logout-item" id="logout-btn">
+                        <span class="material-icons">logout</span>
+                        Logout
+                    </button>
+                </div>
+            </div>
+        `;
+
+        // Insert before NFC status
+        const nfcStatus = topAppBarSection.querySelector('.nfc-status-indicator');
+        if (nfcStatus) {
+            nfcStatus.insertAdjacentHTML('beforebegin', userMenuHtml);
+        } else {
+            topAppBarSection.insertAdjacentHTML('beforeend', userMenuHtml);
+        }
+
+        // Set up user menu event listeners
+        this.setupUserMenuListeners();
+    }
+
+    setupUserMenuListeners() {
+        const userMenuBtn = document.getElementById('user-menu-btn');
+        const userMenuDropdown = document.getElementById('user-menu-dropdown');
+        const logoutBtn = document.getElementById('logout-btn');
+        const changePasswordBtn = document.getElementById('change-password-btn');
+        const userManagementBtn = document.getElementById('user-management-btn');
+
+        if (userMenuBtn && userMenuDropdown) {
+            // Initialize ripple for user menu button
+            mdc.ripple.MDCRipple.attachTo(userMenuBtn).unbounded = true;
+
+            userMenuBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const isVisible = userMenuDropdown.style.display !== 'none';
+                userMenuDropdown.style.display = isVisible ? 'none' : 'block';
+            });
+
+            // Close menu when clicking outside
+            document.addEventListener('click', () => {
+                userMenuDropdown.style.display = 'none';
+            });
+
+            userMenuDropdown.addEventListener('click', (e) => {
+                e.stopPropagation();
+            });
+        }
+
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', () => {
+                this.handleLogout();
+            });
+        }
+
+        if (changePasswordBtn) {
+            changePasswordBtn.addEventListener('click', () => {
+                this.showChangePasswordDialog();
+            });
+        }
+
+        if (userManagementBtn) {
+            userManagementBtn.addEventListener('click', () => {
+                this.navigateToPage('users');
+            });
+        }
+    }
+
+    hasPermission(resource, action) {
+        if (!this.currentUser || !this.currentUser.permissions) {
+            return false;
+        }
+
+        const permissions = this.currentUser.permissions[resource];
+        return permissions && permissions.includes(action);
+    }
+
+    applyRoleBasedAccess() {
+        // Hide/show navigation items based on permissions
+        const navItems = {
+            'licenses': ['licenses', 'read'],
+            'settings': ['settings', 'read'],
+            'users': ['users', 'read']
+        };
+
+        Object.entries(navItems).forEach(([pageId, [resource, action]]) => {
+            const navItem = document.querySelector(`[data-page="${pageId}"]`);
+            if (navItem) {
+                if (!this.hasPermission(resource, action)) {
+                    navItem.style.display = 'none';
+                } else {
+                    navItem.style.display = '';
+                }
+            }
+        });
+
+        // Disable buttons based on permissions
+        this.updateButtonPermissions();
+    }
+
+    updateButtonPermissions() {
+        // License management buttons
+        const newLicenseBtn = document.getElementById('new-license-btn');
+        if (newLicenseBtn) {
+            newLicenseBtn.style.display = this.hasPermission('licenses', 'create') ? '' : 'none';
+        }
+
+        const importBtn = document.getElementById('import-btn');
+        if (importBtn) {
+            importBtn.style.display = this.hasPermission('licenses', 'create') ? '' : 'none';
+        }
+
+        // Update action buttons in licenses table
+        this.updateLicenseActionButtons();
+    }
+
+    updateLicenseActionButtons() {
+        const actionButtons = document.querySelectorAll('.action-buttons');
+        actionButtons.forEach(buttonGroup => {
+            const editBtn = buttonGroup.querySelector('[onclick*="editLicense"]');
+            const deleteBtn = buttonGroup.querySelector('[onclick*="deleteLicense"]');
+
+            if (editBtn) {
+                editBtn.style.display = this.hasPermission('licenses', 'update') ? '' : 'none';
+            }
+            if (deleteBtn) {
+                deleteBtn.style.display = this.hasPermission('licenses', 'delete') ? '' : 'none';
+            }
+        });
+    }
+
+    async handleLogout() {
+        try {
+            const confirmed = confirm('Are you sure you want to logout?');
+            if (!confirmed) return;
+
+            if (window.electronAPI && this.sessionToken) {
+                await window.electronAPI.auth.logout(this.sessionToken);
+            }
+
+            this.clearSession();
+            this.redirectToLogin();
+
+        } catch (error) {
+            console.error('❌ Error during logout:', error);
+            // Force logout even if API call fails
+            this.clearSession();
+            this.redirectToLogin();
+        }
+    }
+
+    showChangePasswordDialog() {
+        // Create and show change password dialog
+        this.showErrorMessage('Change Password', 'Change password functionality will be implemented in user management section.');
     }
 
     // Settings Management Methods
