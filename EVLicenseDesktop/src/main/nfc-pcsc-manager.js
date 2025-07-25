@@ -225,8 +225,10 @@ class NFCPCSCManager extends EventEmitter {
         try {
             if (!blockData || blockData.length === 0) return null;
             
-            // Convert to string and remove null bytes
-            const text = blockData.toString('utf8').replace(/\0/g, '').trim();
+            // Convert to string, but stop at first null byte (end of text)
+            const fullText = blockData.toString('utf8');
+            const nullIndex = fullText.indexOf('\0');
+            const text = nullIndex >= 0 ? fullText.substring(0, nullIndex) : fullText;
             
             // Only return if there's meaningful text content (printable ASCII)
             if (text && text.length > 0 && /^[\x20-\x7E]+$/.test(text)) {
@@ -310,11 +312,12 @@ class NFCPCSCManager extends EventEmitter {
             // Convert data to buffer if needed
             let buffer;
             if (typeof data === 'string') {
-                buffer = Buffer.from(data, 'utf8');
+                // Add a clear null terminator to mark end of text
+                buffer = Buffer.from(data + '\0', 'utf8');
             } else if (Array.isArray(data)) {
                 buffer = Buffer.from(data);
             } else if (typeof data === 'object') {
-                buffer = Buffer.from(JSON.stringify(data), 'utf8');
+                buffer = Buffer.from(JSON.stringify(data) + '\0', 'utf8');
             } else {
                 buffer = data;
             }
