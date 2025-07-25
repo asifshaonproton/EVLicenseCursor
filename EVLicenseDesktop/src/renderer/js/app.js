@@ -908,24 +908,68 @@ class EVLicenseApp {
     testDisplay() {
         console.log('🧪 Testing display functionality...');
         
-        // Create fake card data with text
-        const fakeCardData = {
-            uid: 'TEST123',
-            type: 'Test Card',
-            reader: 'Test Reader',
-            standard: 'TEST',
-            detectedAt: new Date(),
-            atr: Buffer.from('test'),
-            data: {
-                extractedText: 'hello',
-                blocks: [
-                    { block: 4, data: '68656c6c6f20202020202020202020202020' }
-                ]
+        try {
+            // First test: Simple direct HTML manipulation
+            const scannedDataContainer = document.getElementById('scanned-data-container');
+            const scannedDataContent = document.getElementById('scanned-data-content');
+            
+            if (!scannedDataContainer) {
+                console.error('❌ scannedDataContainer not found!');
+                alert('Error: scannedDataContainer element not found');
+                return;
             }
-        };
-        
-        console.log('🧪 Calling showScanSuccess with fake data...');
-        this.showScanSuccess(fakeCardData);
+            
+            if (!scannedDataContent) {
+                console.error('❌ scannedDataContent not found!');
+                alert('Error: scannedDataContent element not found');
+                return;
+            }
+            
+            console.log('✅ Found required elements, showing test data...');
+            
+            // Force show the container
+            scannedDataContainer.style.display = 'block';
+            
+            // Add simple test content
+            scannedDataContent.innerHTML = `
+                <div style="padding: 20px; background: #f0f0f0; border: 1px solid #ccc; border-radius: 8px;">
+                    <h3 style="color: green;">🧪 TEST DISPLAY WORKING!</h3>
+                    <p><strong>This is a test message.</strong></p>
+                    <p>If you can see this, the display mechanism is working.</p>
+                    <div style="font-family: monospace; background: white; padding: 10px; margin: 10px 0;">
+                        === 📝 READABLE TEXT DATA ===<br>
+                        "hello world test"<br><br>
+                        📍 Found in blocks: 4<br>
+                        📏 Text length: 17 characters
+                    </div>
+                </div>
+            `;
+            
+            console.log('✅ Test content added to DOM');
+            
+            // Also try the normal flow as backup
+            const fakeCardData = {
+                uid: 'TEST123',
+                type: 'Test Card',
+                reader: 'Test Reader',
+                standard: 'TEST',
+                detectedAt: new Date(),
+                atr: Buffer.from('test'),
+                data: {
+                    extractedText: 'hello world test',
+                    blocks: [
+                        { block: 4, data: '68656c6c6f20776f726c642074657374202020' }
+                    ]
+                }
+            };
+            
+            console.log('🧪 Also calling showScanSuccess with fake data...');
+            this.showScanSuccess(fakeCardData);
+            
+        } catch (error) {
+            console.error('❌ Test display error:', error);
+            alert('Test display failed: ' + error.message);
+        }
     }
 
     initializeSearchAndFilters() {

@@ -469,9 +469,8 @@ class EVLicenseDesktop {
 
         this.mainWindow.once('ready-to-show', () => {
             this.mainWindow.show();
-            if (this.isDev) {
-                this.mainWindow.webContents.openDevTools();
-            }
+            // Always open dev tools for debugging
+            this.mainWindow.webContents.openDevTools();
             
             // Close login window
             if (this.loginWindow) {
