@@ -58,6 +58,11 @@
                     <i class="material-icons mdc-deprecated-list-item__graphic">card_membership</i>
                     <span class="mdc-deprecated-list-item__text">Licenses</span>
                 </a>
+                <a class="mdc-deprecated-list-item" href="#" data-page="users">
+                    <span class="mdc-deprecated-list-item__ripple"></span>
+                    <i class="material-icons mdc-deprecated-list-item__graphic">group</i>
+                    <span class="mdc-deprecated-list-item__text">User Management</span>
+                </a>
                 <a class="mdc-deprecated-list-item" href="#" data-page="settings">
                     <span class="mdc-deprecated-list-item__ripple"></span>
                     <i class="material-icons mdc-deprecated-list-item__graphic">settings</i>
@@ -311,6 +316,195 @@
                                 </thead>
                                 <tbody class="mdc-data-table__content" id="licenses-table-body">
                                     <!-- License rows will be populated here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- User Management Page -->
+            <div class="page" id="users-page" style="display: none;">
+                <div class="page-header">
+                    <div class="page-header-content">
+                        <h1 class="mdc-typography--headline4">User Management</h1>
+                        <p class="mdc-typography--body1">Manage users, roles, and permissions</p>
+                    </div>
+                    <div class="page-actions">
+                        <button class="mdc-button mdc-button--outlined" id="roles-management-btn">
+                            <span class="mdc-button__ripple"></span>
+                            <i class="material-icons mdc-button__icon">admin_panel_settings</i>
+                            <span class="mdc-button__label">Manage Roles</span>
+                        </button>
+                        <button class="mdc-button mdc-button--raised" id="new-user-btn">
+                            <span class="mdc-button__ripple"></span>
+                            <i class="material-icons mdc-button__icon">person_add</i>
+                            <span class="mdc-button__label">New User</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- User Statistics Cards -->
+                <div class="user-stats-grid">
+                    <div class="mdc-card stat-card">
+                        <div class="mdc-card__primary-action">
+                            <div class="stat-content">
+                                <div class="stat-icon">
+                                    <span class="material-icons">group</span>
+                                </div>
+                                <div class="stat-info">
+                                    <div class="stat-number" id="totalUsers">0</div>
+                                    <div class="stat-label">Total Users</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mdc-card stat-card active">
+                        <div class="mdc-card__primary-action">
+                            <div class="stat-content">
+                                <div class="stat-icon">
+                                    <span class="material-icons">verified_user</span>
+                                </div>
+                                <div class="stat-info">
+                                    <div class="stat-number" id="activeUsers">0</div>
+                                    <div class="stat-label">Active Users</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mdc-card stat-card">
+                        <div class="mdc-card__primary-action">
+                            <div class="stat-content">
+                                <div class="stat-icon">
+                                    <span class="material-icons">admin_panel_settings</span>
+                                </div>
+                                <div class="stat-info">
+                                    <div class="stat-number" id="totalRoles">4</div>
+                                    <div class="stat-label">Available Roles</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mdc-card stat-card">
+                        <div class="mdc-card__primary-action">
+                            <div class="stat-content">
+                                <div class="stat-icon">
+                                    <span class="material-icons">login</span>
+                                </div>
+                                <div class="stat-info">
+                                    <div class="stat-number" id="recentLogins">0</div>
+                                    <div class="stat-label">Recent Logins</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Search and Filter Bar -->
+                <div class="user-search-container">
+                    <div class="search-bar">
+                        <div class="mdc-text-field mdc-text-field--outlined mdc-text-field--with-leading-icon search-field">
+                            <i class="material-icons mdc-text-field__icon mdc-text-field__icon--leading">search</i>
+                            <input type="text" id="user-search" class="mdc-text-field__input" placeholder="Search users...">
+                            <div class="mdc-notched-outline">
+                                <div class="mdc-notched-outline__leading"></div>
+                                <div class="mdc-notched-outline__notch">
+                                    <label for="user-search" class="mdc-floating-label">Search Users</label>
+                                </div>
+                                <div class="mdc-notched-outline__trailing"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="mdc-select mdc-select--outlined filter-select">
+                            <div class="mdc-select__anchor">
+                                <span class="mdc-notched-outline">
+                                    <span class="mdc-notched-outline__leading"></span>
+                                    <span class="mdc-notched-outline__notch">
+                                        <span class="mdc-floating-label">Filter by Role</span>
+                                    </span>
+                                    <span class="mdc-notched-outline__trailing"></span>
+                                </span>
+                                <span class="mdc-select__selected-text-container">
+                                    <span class="mdc-select__selected-text"></span>
+                                </span>
+                                <span class="mdc-select__dropdown-icon">
+                                    <svg class="mdc-select__dropdown-icon-graphic" viewBox="7 10 10 5">
+                                        <polygon class="mdc-select__dropdown-icon-inactive" stroke="none" fill-rule="evenodd" points="7 10 12 15 17 10"></polygon>
+                                        <polygon class="mdc-select__dropdown-icon-active" stroke="none" fill-rule="evenodd" points="7 15 12 10 17 15"></polygon>
+                                    </svg>
+                                </span>
+                            </div>
+                            <div class="mdc-select__menu mdc-menu mdc-menu-surface mdc-menu-surface--fullwidth">
+                                <ul class="mdc-deprecated-list" id="role-filter-list">
+                                    <li class="mdc-deprecated-list-item mdc-deprecated-list-item--selected" data-value="">
+                                        <span class="mdc-deprecated-list-item__ripple"></span>
+                                        <span class="mdc-deprecated-list-item__text">All Roles</span>
+                                    </li>
+                                    <!-- Role options will be populated dynamically -->
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="mdc-select mdc-select--outlined filter-select">
+                            <div class="mdc-select__anchor">
+                                <span class="mdc-notched-outline">
+                                    <span class="mdc-notched-outline__leading"></span>
+                                    <span class="mdc-notched-outline__notch">
+                                        <span class="mdc-floating-label">Status</span>
+                                    </span>
+                                    <span class="mdc-notched-outline__trailing"></span>
+                                </span>
+                                <span class="mdc-select__selected-text-container">
+                                    <span class="mdc-select__selected-text"></span>
+                                </span>
+                                <span class="mdc-select__dropdown-icon">
+                                    <svg class="mdc-select__dropdown-icon-graphic" viewBox="7 10 10 5">
+                                        <polygon class="mdc-select__dropdown-icon-inactive" stroke="none" fill-rule="evenodd" points="7 10 12 15 17 10"></polygon>
+                                        <polygon class="mdc-select__dropdown-icon-active" stroke="none" fill-rule="evenodd" points="7 15 12 10 17 15"></polygon>
+                                    </svg>
+                                </span>
+                            </div>
+                            <div class="mdc-select__menu mdc-menu mdc-menu-surface mdc-menu-surface--fullwidth">
+                                <ul class="mdc-deprecated-list">
+                                    <li class="mdc-deprecated-list-item mdc-deprecated-list-item--selected" data-value="">
+                                        <span class="mdc-deprecated-list-item__ripple"></span>
+                                        <span class="mdc-deprecated-list-item__text">All Status</span>
+                                    </li>
+                                    <li class="mdc-deprecated-list-item" data-value="1">
+                                        <span class="mdc-deprecated-list-item__ripple"></span>
+                                        <span class="mdc-deprecated-list-item__text">Active</span>
+                                    </li>
+                                    <li class="mdc-deprecated-list-item" data-value="0">
+                                        <span class="mdc-deprecated-list-item__ripple"></span>
+                                        <span class="mdc-deprecated-list-item__text">Inactive</span>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Users Table -->
+                <div class="mdc-card table-container">
+                    <div class="mdc-data-table">
+                        <div class="mdc-data-table__table-container">
+                            <table class="mdc-data-table__table">
+                                <thead>
+                                    <tr class="mdc-data-table__header-row">
+                                        <th class="mdc-data-table__header-cell">User</th>
+                                        <th class="mdc-data-table__header-cell">Email</th>
+                                        <th class="mdc-data-table__header-cell">Role</th>
+                                        <th class="mdc-data-table__header-cell">Status</th>
+                                        <th class="mdc-data-table__header-cell">Last Login</th>
+                                        <th class="mdc-data-table__header-cell">Created</th>
+                                        <th class="mdc-data-table__header-cell">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="mdc-data-table__content" id="users-table-body">
+                                    <!-- User rows will be populated here -->
                                 </tbody>
                             </table>
                         </div>
@@ -882,6 +1076,260 @@
                     <button type="button" class="mdc-button mdc-button--raised mdc-dialog__button" id="start-import-btn" data-mdc-dialog-action="import" disabled>
                         <div class="mdc-button__ripple"></div>
                         <span class="mdc-button__label">Import Licenses</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="mdc-dialog__scrim"></div>
+    </div>
+
+    <!-- User Management Dialog -->
+    <div class="mdc-dialog" id="user-dialog">
+        <div class="mdc-dialog__container">
+            <div class="mdc-dialog__surface">
+                <!-- Dialog Header -->
+                <div class="mdc-dialog__header">
+                    <h2 class="mdc-dialog__title" id="user-dialog-title">New User</h2>
+                </div>
+                
+                <!-- Dialog Content -->
+                <div class="mdc-dialog__content">
+                    <form id="user-form" class="user-form">
+                        <!-- Personal Information -->
+                        <div class="form-section">
+                            <h3 class="section-title">Personal Information</h3>
+                            
+                            <div class="form-row">
+                                <div class="mdc-text-field mdc-text-field--outlined form-field">
+                                    <input type="text" id="user_full_name" name="full_name" class="mdc-text-field__input" required>
+                                    <div class="mdc-notched-outline">
+                                        <div class="mdc-notched-outline__leading"></div>
+                                        <div class="mdc-notched-outline__notch">
+                                            <label for="user_full_name" class="mdc-floating-label">Full Name *</label>
+                                        </div>
+                                        <div class="mdc-notched-outline__trailing"></div>
+                                    </div>
+                                </div>
+                                
+                                <div class="mdc-text-field mdc-text-field--outlined form-field">
+                                    <input type="email" id="user_email" name="email" class="mdc-text-field__input" required>
+                                    <div class="mdc-notched-outline">
+                                        <div class="mdc-notched-outline__leading"></div>
+                                        <div class="mdc-notched-outline__notch">
+                                            <label for="user_email" class="mdc-floating-label">Email Address *</label>
+                                        </div>
+                                        <div class="mdc-notched-outline__trailing"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Account Information -->
+                        <div class="form-section">
+                            <h3 class="section-title">Account Information</h3>
+                            
+                            <div class="form-row">
+                                <div class="mdc-text-field mdc-text-field--outlined form-field">
+                                    <input type="text" id="user_username" name="username" class="mdc-text-field__input" required>
+                                    <div class="mdc-notched-outline">
+                                        <div class="mdc-notched-outline__leading"></div>
+                                        <div class="mdc-notched-outline__notch">
+                                            <label for="user_username" class="mdc-floating-label">Username *</label>
+                                        </div>
+                                        <div class="mdc-notched-outline__trailing"></div>
+                                    </div>
+                                </div>
+                                
+                                <div class="mdc-select mdc-select--outlined form-field">
+                                    <div class="mdc-select__anchor">
+                                        <span class="mdc-notched-outline">
+                                            <span class="mdc-notched-outline__leading"></span>
+                                            <span class="mdc-notched-outline__notch">
+                                                <span class="mdc-floating-label">Role *</span>
+                                            </span>
+                                            <span class="mdc-notched-outline__trailing"></span>
+                                        </span>
+                                        <span class="mdc-select__selected-text-container">
+                                            <span class="mdc-select__selected-text"></span>
+                                        </span>
+                                        <span class="mdc-select__dropdown-icon">
+                                            <svg class="mdc-select__dropdown-icon-graphic" viewBox="7 10 10 5">
+                                                <polygon class="mdc-select__dropdown-icon-inactive" stroke="none" fill-rule="evenodd" points="7 10 12 15 17 10"></polygon>
+                                                <polygon class="mdc-select__dropdown-icon-active" stroke="none" fill-rule="evenodd" points="7 15 12 10 17 15"></polygon>
+                                            </svg>
+                                        </span>
+                                    </div>
+                                    <div class="mdc-select__menu mdc-menu mdc-menu-surface mdc-menu-surface--fullwidth">
+                                        <ul class="mdc-deprecated-list" id="user-role-list">
+                                            <!-- Role options will be populated dynamically -->
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="form-row" id="password-section">
+                                <div class="mdc-text-field mdc-text-field--outlined form-field">
+                                    <input type="password" id="user_password" name="password" class="mdc-text-field__input">
+                                    <div class="mdc-notched-outline">
+                                        <div class="mdc-notched-outline__leading"></div>
+                                        <div class="mdc-notched-outline__notch">
+                                            <label for="user_password" class="mdc-floating-label">Password *</label>
+                                        </div>
+                                        <div class="mdc-notched-outline__trailing"></div>
+                                    </div>
+                                </div>
+                                
+                                <div class="mdc-text-field mdc-text-field--outlined form-field">
+                                    <input type="password" id="user_confirm_password" name="confirm_password" class="mdc-text-field__input">
+                                    <div class="mdc-notched-outline">
+                                        <div class="mdc-notched-outline__leading"></div>
+                                        <div class="mdc-notched-outline__notch">
+                                            <label for="user_confirm_password" class="mdc-floating-label">Confirm Password *</label>
+                                        </div>
+                                        <div class="mdc-notched-outline__trailing"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="mdc-form-field">
+                                    <div class="mdc-checkbox">
+                                        <input type="checkbox" class="mdc-checkbox__native-control" id="user_is_active" checked>
+                                        <div class="mdc-checkbox__background">
+                                            <svg class="mdc-checkbox__checkmark" viewBox="0 0 24 24">
+                                                <path class="mdc-checkbox__checkmark-path" fill="none" d="M1.73,12.91 8.1,19.28 22.79,4.59"></path>
+                                            </svg>
+                                            <div class="mdc-checkbox__mixedmark"></div>
+                                        </div>
+                                        <div class="mdc-checkbox__ripple"></div>
+                                    </div>
+                                    <label for="user_is_active">Account is active</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Password Reset Section (for editing existing users) -->
+                        <div class="form-section" id="password-reset-section" style="display: none;">
+                            <h3 class="section-title">Password Management</h3>
+                            <div class="password-options">
+                                <button type="button" class="mdc-button mdc-button--outlined" id="reset-password-btn">
+                                    <span class="mdc-button__ripple"></span>
+                                    <i class="material-icons mdc-button__icon">lock_reset</i>
+                                    <span class="mdc-button__label">Reset Password</span>
+                                </button>
+                                <p class="password-reset-note">User will be required to change password on next login</p>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                
+                <!-- Dialog Actions -->
+                <div class="mdc-dialog__actions">
+                    <button type="button" class="mdc-button mdc-dialog__button" data-mdc-dialog-action="cancel">
+                        <div class="mdc-button__ripple"></div>
+                        <span class="mdc-button__label">Cancel</span>
+                    </button>
+                    <button type="button" class="mdc-button mdc-button--raised mdc-dialog__button" data-mdc-dialog-action="save" id="save-user-btn">
+                        <div class="mdc-button__ripple"></div>
+                        <span class="mdc-button__label">Save User</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="mdc-dialog__scrim"></div>
+    </div>
+
+    <!-- Role Management Dialog -->
+    <div class="mdc-dialog" id="role-dialog">
+        <div class="mdc-dialog__container">
+            <div class="mdc-dialog__surface">
+                <!-- Dialog Header -->
+                <div class="mdc-dialog__header">
+                    <h2 class="mdc-dialog__title">Manage Roles & Permissions</h2>
+                </div>
+                
+                <!-- Dialog Content -->
+                <div class="mdc-dialog__content">
+                    <div class="roles-container">
+                        <!-- Roles List -->
+                        <div class="roles-list">
+                            <h3 class="section-title">Available Roles</h3>
+                            <div id="roles-list-container">
+                                <!-- Roles will be populated here -->
+                            </div>
+                            <button class="mdc-button mdc-button--outlined" id="new-role-btn">
+                                <span class="mdc-button__ripple"></span>
+                                <i class="material-icons mdc-button__icon">add</i>
+                                <span class="mdc-button__label">New Role</span>
+                            </button>
+                        </div>
+
+                        <!-- Role Details -->
+                        <div class="role-details" id="role-details" style="display: none;">
+                            <h3 class="section-title">Role Details</h3>
+                            <form id="role-form">
+                                <div class="form-field">
+                                    <div class="mdc-text-field mdc-text-field--outlined">
+                                        <input type="text" id="role_name" class="mdc-text-field__input" required>
+                                        <div class="mdc-notched-outline">
+                                            <div class="mdc-notched-outline__leading"></div>
+                                            <div class="mdc-notched-outline__notch">
+                                                <label for="role_name" class="mdc-floating-label">Role Name</label>
+                                            </div>
+                                            <div class="mdc-notched-outline__trailing"></div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="form-field">
+                                    <div class="mdc-text-field mdc-text-field--outlined">
+                                        <input type="text" id="role_display_name" class="mdc-text-field__input" required>
+                                        <div class="mdc-notched-outline">
+                                            <div class="mdc-notched-outline__leading"></div>
+                                            <div class="mdc-notched-outline__notch">
+                                                <label for="role_display_name" class="mdc-floating-label">Display Name</label>
+                                            </div>
+                                            <div class="mdc-notched-outline__trailing"></div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="form-field">
+                                    <div class="mdc-text-field mdc-text-field--outlined mdc-text-field--textarea">
+                                        <span class="mdc-notched-outline">
+                                            <span class="mdc-notched-outline__leading"></span>
+                                            <span class="mdc-notched-outline__notch">
+                                                <span class="mdc-floating-label">Description</span>
+                                            </span>
+                                            <span class="mdc-notched-outline__trailing"></span>
+                                        </span>
+                                        <span class="mdc-text-field__resizer">
+                                            <textarea class="mdc-text-field__input" id="role_description" rows="2" cols="40"></textarea>
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <!-- Permissions -->
+                                <div class="permissions-section">
+                                    <h4>Permissions</h4>
+                                    <div id="permissions-container">
+                                        <!-- Permissions checkboxes will be populated here -->
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Dialog Actions -->
+                <div class="mdc-dialog__actions">
+                    <button type="button" class="mdc-button mdc-dialog__button" data-mdc-dialog-action="cancel">
+                        <div class="mdc-button__ripple"></div>
+                        <span class="mdc-button__label">Close</span>
+                    </button>
+                    <button type="button" class="mdc-button mdc-button--raised mdc-dialog__button" data-mdc-dialog-action="save" id="save-role-btn" style="display: none;">
+                        <div class="mdc-button__ripple"></div>
+                        <span class="mdc-button__label">Save Role</span>
                     </button>
                 </div>
             </div>

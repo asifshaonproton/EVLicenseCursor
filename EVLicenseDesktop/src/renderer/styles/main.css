@@ -735,6 +735,334 @@ body {
     color: var(--md-sys-color-error);
 }
 
+/* User Management Page Styles */
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 32px;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.page-header-content h1 {
+    margin: 0;
+    color: var(--md-sys-color-on-surface);
+}
+
+.page-header-content p {
+    margin: 8px 0 0 0;
+    color: var(--md-sys-color-on-surface-variant, #666);
+}
+
+.user-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    margin-bottom: 32px;
+}
+
+.user-search-container {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-bottom: 24px;
+}
+
+.user-search-container .search-bar {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.filter-select {
+    min-width: 150px;
+    flex-shrink: 0;
+}
+
+/* User Dialog Styles */
+.user-form {
+    padding: 16px 0;
+}
+
+.user-form .form-section {
+    margin-bottom: 32px;
+}
+
+.user-form .section-title {
+    margin: 0 0 16px 0;
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--md-sys-color-primary);
+    border-bottom: 1px solid #E0E0E0;
+    padding-bottom: 8px;
+}
+
+.user-form .form-row {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 16px;
+    align-items: flex-start;
+}
+
+.user-form .form-field {
+    flex: 1;
+    min-width: 200px;
+}
+
+.user-form .form-field.full-width {
+    flex: 1;
+    width: 100%;
+}
+
+.password-options {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.password-reset-note {
+    font-size: 12px;
+    color: #666;
+    margin: 0;
+    font-style: italic;
+}
+
+/* Role Management Dialog Styles */
+#role-dialog .mdc-dialog__surface {
+    max-width: 900px;
+    max-height: 80vh;
+}
+
+.roles-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+    min-height: 400px;
+}
+
+.roles-list {
+    border-right: 1px solid #E0E0E0;
+    padding-right: 32px;
+}
+
+.role-details {
+    padding-left: 32px;
+}
+
+.role-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    margin-bottom: 8px;
+    border: 1px solid #E0E0E0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.role-item:hover {
+    background-color: #F5F5F5;
+    border-color: var(--md-sys-color-primary);
+}
+
+.role-item.selected {
+    background-color: rgba(0, 114, 206, 0.1);
+    border-color: var(--md-sys-color-primary);
+}
+
+.role-info h4 {
+    margin: 0 0 4px 0;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.role-info p {
+    margin: 0;
+    font-size: 12px;
+    color: #666;
+}
+
+.role-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.role-actions .mdc-icon-button {
+    width: 32px;
+    height: 32px;
+}
+
+.role-actions .mdc-icon-button .material-icons {
+    font-size: 16px;
+}
+
+.permissions-section {
+    margin-top: 24px;
+}
+
+.permissions-section h4 {
+    margin: 0 0 16px 0;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--md-sys-color-on-surface);
+}
+
+.permission-group {
+    margin-bottom: 20px;
+    border: 1px solid #E0E0E0;
+    border-radius: 8px;
+    padding: 16px;
+}
+
+.permission-group-title {
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 12px;
+    color: var(--md-sys-color-primary);
+    text-transform: capitalize;
+}
+
+.permission-checkboxes {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 12px;
+}
+
+.permission-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.permission-item label {
+    font-size: 12px;
+    color: #666;
+    text-transform: capitalize;
+    cursor: pointer;
+}
+
+/* User Status Badges */
+.user-status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 12px;
+    border-radius: 16px;
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.user-status-badge.active {
+    background-color: #E8F5E8;
+    color: #2E7D32;
+}
+
+.user-status-badge.inactive {
+    background-color: #FFEBEE;
+    color: #C62828;
+}
+
+/* Role Badge */
+.role-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    background-color: #E3F2FD;
+    color: var(--md-sys-color-primary);
+}
+
+.role-badge.super-admin {
+    background-color: #FFEBEE;
+    color: #C62828;
+}
+
+.role-badge.admin {
+    background-color: #FFF3E0;
+    color: #F57C00;
+}
+
+.role-badge.operator {
+    background-color: #E8F5E8;
+    color: #2E7D32;
+}
+
+.role-badge.viewer {
+    background-color: #F3E5F5;
+    color: #7B1FA2;
+}
+
+/* User Avatar */
+.user-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--md-sys-color-primary), #4A90E2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 500;
+    font-size: 14px;
+    margin-right: 12px;
+    flex-shrink: 0;
+}
+
+.user-info-cell {
+    display: flex;
+    align-items: center;
+}
+
+.user-details h4 {
+    margin: 0 0 2px 0;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.user-details p {
+    margin: 0;
+    font-size: 12px;
+    color: #666;
+}
+
+/* Enhanced Action Buttons */
+.user-actions {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+}
+
+.user-actions .mdc-icon-button {
+    width: 32px;
+    height: 32px;
+    padding: 4px;
+}
+
+.user-actions .mdc-icon-button .material-icons {
+    font-size: 16px;
+}
+
+.user-actions .edit-btn {
+    color: var(--md-sys-color-primary);
+}
+
+.user-actions .delete-btn {
+    color: var(--md-sys-color-error);
+}
+
+.user-actions .toggle-btn {
+    color: #F57C00;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     .main-content {
