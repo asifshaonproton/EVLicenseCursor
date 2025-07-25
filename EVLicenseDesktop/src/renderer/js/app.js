@@ -336,31 +336,19 @@ class EVLicenseApp {
     setupLicenseFormListeners() {
         console.log('📋 Setting up license form listeners...');
 
-        // City selector
-        const cityList = document.getElementById('city-list');
-        const citySelected = document.getElementById('city-selected');
-        if (cityList && citySelected) {
-            cityList.addEventListener('click', (e) => {
-                const listItem = e.target.closest('.mdc-deprecated-list-item');
-                if (listItem) {
-                    const value = listItem.dataset.value;
-                    citySelected.textContent = value;
-                    console.log('🏙️ City selected:', value);
-                }
+        // Simple dropdown listeners - no complex setup needed for <select> elements
+        const citySelect = document.getElementById('city-select');
+        const licenseTypeSelect = document.getElementById('license-type-select');
+        
+        if (citySelect) {
+            citySelect.addEventListener('change', (e) => {
+                console.log('🏙️ City selected:', e.target.value);
             });
         }
 
-        // License type selector
-        const licenseTypeList = document.getElementById('license-type-list');
-        const licenseTypeSelected = document.getElementById('license-type-selected');
-        if (licenseTypeList && licenseTypeSelected) {
-            licenseTypeList.addEventListener('click', (e) => {
-                const listItem = e.target.closest('.mdc-deprecated-list-item');
-                if (listItem) {
-                    const value = listItem.dataset.value;
-                    licenseTypeSelected.textContent = value;
-                    console.log('📄 License type selected:', value);
-                }
+        if (licenseTypeSelect) {
+            licenseTypeSelect.addEventListener('change', (e) => {
+                console.log('📄 License type selected:', e.target.value);
             });
         }
 
@@ -615,9 +603,11 @@ class EVLicenseApp {
             dataString += `ATR: ${cardData.atr.toString('hex')}\n`;
         }
         
-        // Show Android compatibility status
-        if (cardData.data && cardData.data.isAndroidCompatible) {
-            dataString += `✅ Android Compatible: YES\n`;
+        // Show format status
+        if (cardData.data && cardData.data.isPlainTextFormat) {
+            dataString += `✅ Format: Plain Text JSON\n`;
+        } else if (cardData.data && cardData.data.isAndroidCompatible) {
+            dataString += `✅ Format: Encrypted (Android Compatible)\n`;
         }
         
         // Priority 1: Use server-extracted and decrypted text
@@ -854,20 +844,10 @@ class EVLicenseApp {
     }
     
     collectLicenseData() {
-        // Get NFC card number from current card if available
-        const getCurrentCardNumber = async () => {
-            try {
-                const status = await window.electronAPI.nfc.getStatus();
-                return status.currentCard ? status.currentCard.uid : '';
-            } catch (error) {
-                return '';
-            }
-        };
-        
         const holderName = document.getElementById('holder-name-input')?.value?.trim() || '';
         const mobile = document.getElementById('mobile-input')?.value?.trim() || '';
-        const city = document.getElementById('city-selected')?.textContent?.trim() || '';
-        const licenseType = document.getElementById('license-type-selected')?.textContent?.trim() || '';
+        const city = document.getElementById('city-select')?.value?.trim() || '';
+        const licenseType = document.getElementById('license-type-select')?.value?.trim() || '';
         const licenseNumber = document.getElementById('license-number-input')?.value?.trim() || '';
         const validityDate = document.getElementById('validity-date-input')?.value?.trim() || '';
         
@@ -932,17 +912,17 @@ class EVLicenseApp {
         
         const holderNameInput = document.getElementById('holder-name-input');
         const mobileInput = document.getElementById('mobile-input');
+        const citySelect = document.getElementById('city-select');
+        const licenseTypeSelect = document.getElementById('license-type-select');
         const licenseNumberInput = document.getElementById('license-number-input');
         const validityDateInput = document.getElementById('validity-date-input');
-        const citySelected = document.getElementById('city-selected');
-        const licenseTypeSelected = document.getElementById('license-type-selected');
         
         if (holderNameInput) holderNameInput.value = '';
         if (mobileInput) mobileInput.value = '';
+        if (citySelect) citySelect.value = '';
+        if (licenseTypeSelect) licenseTypeSelect.value = '';
         if (licenseNumberInput) licenseNumberInput.value = '';
         if (validityDateInput) validityDateInput.value = '';
-        if (citySelected) citySelected.textContent = '';
-        if (licenseTypeSelected) licenseTypeSelected.textContent = '';
         
         console.log('✅ License form cleared');
     }

@@ -272,44 +272,36 @@ class NFCPCSCManager extends EventEmitter {
             
             if (allData.length === 0) return;
             
-            // Try to parse as NDEF message (Android compatible format)
-            console.log('🔍 Attempting to parse Android-compatible NDEF data...');
+            // Try to parse as NDEF message (plain JSON/text format)
+            console.log('🔍 Attempting to parse plain NDEF data...');
             console.log(`🔍 Raw data (${allData.length} bytes): ${allData.toString('hex')}`);
             
             try {
                 // Parse standard NDEF message
                 const ndefText = NdefUtils.parseNdefMessage(allData);
                 if (ndefText) {
-                    console.log('📋 Found NDEF text:', ndefText.substring(0, 100) + '...');
+                    console.log('📋 Found NDEF plain text:', ndefText.substring(0, 200) + '...');
                     
-                    // Try to decrypt the text (it should be encrypted license data)
+                    // Try to parse as license JSON (plain, no decryption)
                     try {
-                        const decryptedText = CryptoUtils.decrypt(ndefText);
-                        console.log('🔓 Successfully decrypted data:', decryptedText.substring(0, 100) + '...');
-                        
-                        // Try to parse as license JSON
-                        try {
-                            const licenseData = CryptoUtils.parseLicenseJson(decryptedText);
-                            cardData.extractedText = `📄 License Data (Decrypted):\n• Holder: ${licenseData.holderName}\n• Mobile: ${licenseData.mobile}\n• City: ${licenseData.city}\n• Type: ${licenseData.licenseType}\n• Number: ${licenseData.licenseNumber}\n• Card ID: ${licenseData.nfcCardNumber}\n• Valid Until: ${licenseData.validityDate}`;
+                        const licenseData = JSON.parse(ndefText);
+                        if (licenseData.holderName || licenseData.licenseNumber) {
+                            // Format license data nicely
+                            cardData.extractedText = `📄 LICENSE INFORMATION:\n\n• Holder Name: ${licenseData.holderName || 'N/A'}\n• Mobile: ${licenseData.mobile || 'N/A'}\n• City: ${licenseData.city || 'N/A'}\n• License Type: ${licenseData.licenseType || 'N/A'}\n• License Number: ${licenseData.licenseNumber || 'N/A'}\n• Card Number: ${licenseData.nfcCardNumber || 'N/A'}\n• Valid Until: ${licenseData.validityDate || 'N/A'}`;
                             cardData.licenseData = licenseData;
-                            cardData.isAndroidCompatible = true;
-                            console.log(`📄 Extracted Android-compatible license data for: ${licenseData.holderName}`);
-                            return;
-                        } catch (jsonError) {
-                            console.log('⚠️ Not license JSON, treating as plain text');
-                            // Not license JSON, but decrypted text is valid
-                            cardData.extractedText = `📝 Decrypted Text:\n"${decryptedText}"`;
-                            cardData.isAndroidCompatible = true;
-                            console.log(`📝 Extracted encrypted text: "${decryptedText}"`);
+                            cardData.isPlainTextFormat = true;
+                            console.log(`📄 Extracted plain license data for: ${licenseData.holderName}`);
                             return;
                         }
-                    } catch (decryptError) {
-                        console.log('⚠️ Decryption failed, treating as plain NDEF text');
-                        // Not encrypted, but NDEF text is valid
-                        cardData.extractedText = `📋 NDEF Text:\n"${ndefText}"`;
-                        console.log(`📋 Extracted plain NDEF text: "${ndefText}"`);
-                        return;
+                    } catch (jsonError) {
+                        console.log('⚠️ Not JSON, treating as plain text');
                     }
+                    
+                    // Not license JSON, display as plain text
+                    cardData.extractedText = `📝 PLAIN TEXT DATA:\n\n"${ndefText}"`;
+                    cardData.isPlainTextFormat = true;
+                    console.log(`📝 Extracted plain text: "${ndefText.substring(0, 100)}..."`);
+                    return;
                 } else {
                     console.log('⚠️ No text found in NDEF message');
                 }
@@ -409,7 +401,7 @@ class NFCPCSCManager extends EventEmitter {
             
             console.log('📝 Writing Android-compatible data to card:', data);
             
-            // Handle different data types
+            // Handle different data types - NO ENCRYPTION, PLAIN JSON/TEXT
             let finalData;
             if (typeof data === 'object' && data !== null) {
                 // If it's a license object, set the NFC card number from current card
@@ -421,18 +413,19 @@ class NFCPCSCManager extends EventEmitter {
                     console.log(`📇 Set NFC card number to: ${uidDecimal}`);
                 }
                 
-                const licenseJson = CryptoUtils.createLicenseJson(licenseData);
-                console.log('📄 License JSON:', licenseJson);
-                finalData = CryptoUtils.encrypt(licenseJson);
-                console.log('🔐 Encrypted data length:', finalData.length);
+                // Write plain JSON - NO ENCRYPTION
+                finalData = JSON.stringify(licenseData, null, 2);
+                console.log('📄 Plain License JSON:', finalData);
             } else if (typeof data === 'string') {
-                // For plain text, encrypt it directly
-                finalData = CryptoUtils.encrypt(data);
+                // For plain text, use as-is - NO ENCRYPTION
+                finalData = data;
+                console.log('📝 Plain text data:', finalData);
             } else {
                 finalData = String(data);
+                console.log('📝 Converted to string:', finalData);
             }
 
-            // Create NDEF message exactly like Android
+            // Create NDEF message with plain text
             const ndefMessage = NdefUtils.createNdefMessage(finalData);
             console.log(`📋 NDEF message length: ${ndefMessage.length} bytes`);
 
