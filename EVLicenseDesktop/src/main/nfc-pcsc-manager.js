@@ -175,7 +175,8 @@ class NFCPCSCManager extends EventEmitter {
                 atr: card.atr,
                 type: this.detectCardType(card.atr),
                 standard: card.standard || 'Unknown',
-                blocks: []
+                blocks: [],
+                extractedText: null // Will contain the clean extracted text
             };
 
             // Try to read blocks including data blocks (0-15 for typical MIFARE cards)
@@ -214,6 +215,9 @@ class NFCPCSCManager extends EventEmitter {
                 console.warn('⚠️ Block reading not supported:', readError.message);
             }
 
+            // Extract clean text from data blocks (4+)
+            this.extractCleanText(data);
+
             return data;
         } catch (error) {
             console.error('❌ Error reading card data:', error);
@@ -238,6 +242,48 @@ class NFCPCSCManager extends EventEmitter {
             return null;
         } catch (error) {
             return null;
+        }
+    }
+
+    extractCleanText(cardData) {
+        try {
+            if (!cardData.blocks || cardData.blocks.length === 0) return;
+            
+            // Get data blocks (4+) sorted by block number
+            const dataBlocks = cardData.blocks
+                .filter(block => block.block >= 4)
+                .sort((a, b) => a.block - b.block);
+            
+            if (dataBlocks.length === 0) return;
+            
+            // Concatenate all block data
+            let allData = Buffer.alloc(0);
+            for (const block of dataBlocks) {
+                try {
+                    const blockBuffer = Buffer.from(block.data, 'hex');
+                    allData = Buffer.concat([allData, blockBuffer]);
+                } catch (e) {
+                    console.warn(`⚠️ Could not process block ${block.block} for text extraction`);
+                    break;
+                }
+            }
+            
+            // Extract text, stopping at first null byte
+            if (allData.length > 0) {
+                const fullText = allData.toString('utf8');
+                const nullIndex = fullText.indexOf('\0');
+                const cleanText = nullIndex >= 0 ? fullText.substring(0, nullIndex) : fullText;
+                
+                // Remove any non-printable characters and trim
+                const finalText = cleanText.replace(/[^\x20-\x7E]/g, '').trim();
+                
+                if (finalText && finalText.length > 0) {
+                    cardData.extractedText = finalText;
+                    console.log(`📝 Extracted clean text: "${finalText}"`);
+                }
+            }
+        } catch (error) {
+            console.warn('⚠️ Error extracting clean text:', error);
         }
     }
 
