@@ -256,30 +256,45 @@ class NFCPCSCManager extends EventEmitter {
             
             if (dataBlocks.length === 0) return;
             
-            // Concatenate all block data
+            // Simple approach: just read from block 4 and extract text
+            const firstDataBlock = dataBlocks[0];
+            if (firstDataBlock && firstDataBlock.data) {
+                try {
+                    const blockBuffer = Buffer.from(firstDataBlock.data, 'hex');
+                    const text = blockBuffer.toString('utf8');
+                    
+                    // Remove padding spaces and any control characters
+                    const cleanText = text.replace(/[\x00-\x1F\x7F]/g, '').replace(/\s+$/, '');
+                    
+                    if (cleanText && cleanText.length > 0) {
+                        cardData.extractedText = cleanText;
+                        console.log(`📝 Extracted clean text: "${cleanText}"`);
+                        return;
+                    }
+                } catch (e) {
+                    console.warn(`⚠️ Could not extract text from block ${firstDataBlock.block}`);
+                }
+            }
+            
+            // Fallback: try to concatenate multiple blocks if needed
             let allData = Buffer.alloc(0);
-            for (const block of dataBlocks) {
+            for (const block of dataBlocks.slice(0, 4)) { // Only check first 4 data blocks
                 try {
                     const blockBuffer = Buffer.from(block.data, 'hex');
                     allData = Buffer.concat([allData, blockBuffer]);
                 } catch (e) {
-                    console.warn(`⚠️ Could not process block ${block.block} for text extraction`);
                     break;
                 }
             }
             
-            // Extract text, stopping at first null byte
             if (allData.length > 0) {
                 const fullText = allData.toString('utf8');
-                const nullIndex = fullText.indexOf('\0');
-                const cleanText = nullIndex >= 0 ? fullText.substring(0, nullIndex) : fullText;
+                // Remove padding and control characters
+                const cleanText = fullText.replace(/[\x00-\x1F\x7F]/g, '').replace(/\s+$/, '').trim();
                 
-                // Remove any non-printable characters and trim
-                const finalText = cleanText.replace(/[^\x20-\x7E]/g, '').trim();
-                
-                if (finalText && finalText.length > 0) {
-                    cardData.extractedText = finalText;
-                    console.log(`📝 Extracted clean text: "${finalText}"`);
+                if (cleanText && cleanText.length > 0) {
+                    cardData.extractedText = cleanText;
+                    console.log(`📝 Extracted clean text (multi-block): "${cleanText}"`);
                 }
             }
         } catch (error) {
@@ -355,15 +370,15 @@ class NFCPCSCManager extends EventEmitter {
             
             console.log('📝 Writing data to card:', data);
             
-            // Convert data to buffer if needed
+            // Convert data to buffer - pure plain text, no null terminators
             let buffer;
             if (typeof data === 'string') {
-                // Add a clear null terminator to mark end of text
-                buffer = Buffer.from(data + '\0', 'utf8');
+                // Write pure text without any null terminators
+                buffer = Buffer.from(data, 'utf8');
             } else if (Array.isArray(data)) {
                 buffer = Buffer.from(data);
             } else if (typeof data === 'object') {
-                buffer = Buffer.from(JSON.stringify(data) + '\0', 'utf8');
+                buffer = Buffer.from(JSON.stringify(data), 'utf8');
             } else {
                 buffer = data;
             }
@@ -387,9 +402,9 @@ class NFCPCSCManager extends EventEmitter {
                 
                 let blockData = buffer.slice(start, end);
                 
-                // Pad block to 16 bytes with zeros
+                // Pad block to 16 bytes with spaces (0x20) instead of zeros for better readability
                 if (blockData.length < maxBlockSize) {
-                    const padding = Buffer.alloc(maxBlockSize - blockData.length, 0);
+                    const padding = Buffer.alloc(maxBlockSize - blockData.length, 0x20);
                     blockData = Buffer.concat([blockData, padding]);
                 }
 
