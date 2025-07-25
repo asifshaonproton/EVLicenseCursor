@@ -5,8 +5,13 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('electronAPI', {
     // System operations
     system: {
-        getVersion: () => '1.0.0',
-        platform: process.platform
+        getVersion: async () => {
+            return await ipcRenderer.invoke('app-get-version');
+        },
+        platform: process.platform,
+        showMessageBox: async (options) => {
+            return await ipcRenderer.invoke('app-show-message-box', options);
+        }
     },
 
     // Menu event listeners
@@ -22,42 +27,25 @@ contextBridge.exposeInMainWorld('electronAPI', {
         }
     },
 
-    // Database operations (placeholder for now)
+    // Database operations
     database: {
         getLicenses: async () => {
-            // Sample data for demo
-            return [
-                {
-                    id: 1,
-                    license_number: 'EV001-2024',
-                    owner_name: 'John Smith',
-                    vehicle_make: 'Tesla',
-                    vehicle_model: 'Model 3',
-                    vehicle_year: 2023,
-                    status: 'Active',
-                    expiry_date: '2025-01-15',
-                    card_uid: null
-                },
-                {
-                    id: 2,
-                    license_number: 'EV002-2024',
-                    owner_name: 'Sarah Johnson',
-                    vehicle_make: 'Nissan',
-                    vehicle_model: 'Leaf',
-                    vehicle_year: 2022,
-                    status: 'Active',
-                    expiry_date: '2025-02-01',
-                    card_uid: 'AB123456'
-                }
-            ];
+            return await ipcRenderer.invoke('db-get-licenses');
+        },
+        addLicense: async (licenseData) => {
+            return await ipcRenderer.invoke('db-add-license', licenseData);
+        },
+        updateLicense: async (licenseData) => {
+            return await ipcRenderer.invoke('db-update-license', licenseData);
+        },
+        deleteLicense: async (licenseId) => {
+            return await ipcRenderer.invoke('db-delete-license', licenseId);
         },
         searchLicenses: async (searchTerm) => {
-            // Placeholder search functionality
-            const licenses = await electronAPI.database.getLicenses();
-            return licenses.filter(license => 
-                license.license_number.includes(searchTerm) || 
-                license.owner_name.toLowerCase().includes(searchTerm.toLowerCase())
-            );
+            return await ipcRenderer.invoke('db-search-licenses', searchTerm);
+        },
+        getDashboardStats: async () => {
+            return await ipcRenderer.invoke('db-get-dashboard-stats');
         }
     },
 
