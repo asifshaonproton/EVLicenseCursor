@@ -4,15 +4,18 @@ const { contextBridge, ipcRenderer } = require('electron');
 // the ipcRenderer without exposing the entire object
 contextBridge.exposeInMainWorld('electronAPI', {
     // System operations
-    system: {
-        getVersion: async () => {
-            return await ipcRenderer.invoke('app-get-version');
+            system: {
+            getVersion: async () => {
+                return await ipcRenderer.invoke('app-get-version');
+            },
+            platform: process.platform,
+            showMessageBox: async (options) => {
+                return await ipcRenderer.invoke('app-show-message-box', options);
+            },
+            redirectToMainApp: async () => {
+                return await ipcRenderer.invoke('window-open-main-app');
+            }
         },
-        platform: process.platform,
-        showMessageBox: async (options) => {
-            return await ipcRenderer.invoke('app-show-message-box', options);
-        }
-    },
 
     // Menu event listeners
     menu: {
@@ -46,6 +49,45 @@ contextBridge.exposeInMainWorld('electronAPI', {
         },
         getDashboardStats: async () => {
             return await ipcRenderer.invoke('db-get-dashboard-stats');
+        }
+    },
+
+    // Authentication operations
+    auth: {
+        login: async (username, password) => {
+            return await ipcRenderer.invoke('auth-login', username, password);
+        },
+        validateSession: async (sessionToken) => {
+            return await ipcRenderer.invoke('auth-validate-session', sessionToken);
+        },
+        logout: async (sessionToken) => {
+            return await ipcRenderer.invoke('auth-logout', sessionToken);
+        },
+        changePassword: async (userId, oldPassword, newPassword) => {
+            return await ipcRenderer.invoke('auth-change-password', userId, oldPassword, newPassword);
+        }
+    },
+
+    // User management operations
+    users: {
+        getAll: async () => {
+            return await ipcRenderer.invoke('users-get-all');
+        },
+        create: async (userData, createdBy) => {
+            return await ipcRenderer.invoke('users-create', userData, createdBy);
+        },
+        update: async (userId, userData, updatedBy) => {
+            return await ipcRenderer.invoke('users-update', userId, userData, updatedBy);
+        },
+        delete: async (userId, deletedBy) => {
+            return await ipcRenderer.invoke('users-delete', userId, deletedBy);
+        }
+    },
+
+    // Role management operations
+    roles: {
+        getAll: async () => {
+            return await ipcRenderer.invoke('roles-get-all');
         }
     },
 
