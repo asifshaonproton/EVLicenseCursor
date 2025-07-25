@@ -555,29 +555,52 @@ class EVLicenseApp {
         
         if (cardData.data && cardData.data.blocks && cardData.data.blocks.length > 0) {
             // Look for text data starting from block 4 (typical write location)
-            const dataBlocks = cardData.data.blocks.filter(block => block.block >= 4);
+            const dataBlocks = cardData.data.blocks.filter(block => block.block >= 4).sort((a, b) => a.block - b.block);
             
+            // Concatenate all text from sequential blocks until we hit empty/garbage data
+            let fullText = '';
             for (const block of dataBlocks) {
+                let blockText = '';
+                
                 // First check if server already extracted text
                 if (block.textContent && block.textContent.length > 0) {
-                    readableText += block.textContent;
-                    textBlocks.push(block);
+                    blockText = block.textContent;
                 } else {
                     // Fallback: try to extract text manually
                     try {
                         // Convert hex to buffer and then to text
                         const buffer = Buffer.from(block.data, 'hex');
-                        // Remove null bytes and get readable text
-                        const text = buffer.toString('utf8').replace(/\0/g, '').trim();
-                        // Only include printable ASCII characters
-                        if (text && text.length > 0 && /^[\x20-\x7E]+$/.test(text)) {
-                            readableText += text;
-                            textBlocks.push({...block, textContent: text});
+                        // Stop at first null byte (end of text)
+                        const fullBlockText = buffer.toString('utf8');
+                        const nullIndex = fullBlockText.indexOf('\0');
+                        blockText = nullIndex >= 0 ? fullBlockText.substring(0, nullIndex) : fullBlockText;
+                        
+                        // Only include if it's printable ASCII
+                        if (!blockText || !/^[\x20-\x7E]*$/.test(blockText)) {
+                            blockText = '';
                         }
                     } catch (e) {
-                        // Skip blocks that can't be converted to text
+                        blockText = '';
                     }
                 }
+                
+                // If we found text in this block, add it
+                if (blockText && blockText.length > 0) {
+                    fullText += blockText;
+                    textBlocks.push({...block, textContent: blockText});
+                } else {
+                    // If this block has no text, stop reading (end of written data)
+                    break;
+                }
+            }
+            
+            // Clean up the final text - remove any trailing garbage
+            readableText = fullText.trim();
+            
+            // Additional validation: if text looks like garbage, truncate it
+            const validTextMatch = readableText.match(/^[\x20-\x7E]+/);
+            if (validTextMatch) {
+                readableText = validTextMatch[0];
             }
         }
         
