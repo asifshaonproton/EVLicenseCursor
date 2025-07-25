@@ -58,6 +58,11 @@
                     <i class="material-icons mdc-deprecated-list-item__graphic">card_membership</i>
                     <span class="mdc-deprecated-list-item__text">Licenses</span>
                 </a>
+                <a class="mdc-deprecated-list-item" href="#" data-page="settings">
+                    <span class="mdc-deprecated-list-item__ripple"></span>
+                    <i class="material-icons mdc-deprecated-list-item__graphic">settings</i>
+                    <span class="mdc-deprecated-list-item__text">Settings</span>
+                </a>
                 <a class="mdc-deprecated-list-item" href="#" data-page="about">
                     <span class="mdc-deprecated-list-item__ripple"></span>
                     <i class="material-icons mdc-deprecated-list-item__graphic">info</i>
@@ -313,6 +318,220 @@
                 </div>
             </div>
 
+            <!-- Settings Page -->
+            <div class="page" id="settings-page" style="display: none;">
+                <div class="page-header">
+                    <h1 class="mdc-typography--headline4">Settings</h1>
+                    <p class="mdc-typography--body1">Configure application preferences and system options</p>
+                </div>
+
+                <!-- Settings Sections -->
+                <div class="settings-container">
+                    <!-- NFC Settings -->
+                    <div class="mdc-card settings-section">
+                        <div class="mdc-card__content">
+                            <h2 class="mdc-typography--headline6">NFC Reader Settings</h2>
+                            
+                            <div class="setting-item">
+                                <div class="setting-info">
+                                    <label class="setting-label">NFC Polling Interval</label>
+                                    <p class="setting-description">How often to check for NFC cards (in milliseconds)</p>
+                                </div>
+                                <div class="mdc-text-field mdc-text-field--outlined setting-control">
+                                    <input type="number" id="nfc-polling-interval" class="mdc-text-field__input" min="100" max="10000" step="100" value="1000">
+                                    <div class="mdc-notched-outline">
+                                        <div class="mdc-notched-outline__leading"></div>
+                                        <div class="mdc-notched-outline__notch">
+                                            <label for="nfc-polling-interval" class="mdc-floating-label">Interval (ms)</label>
+                                        </div>
+                                        <div class="mdc-notched-outline__trailing"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="setting-item">
+                                <div class="setting-info">
+                                    <label class="setting-label">Auto-connect NFC Reader</label>
+                                    <p class="setting-description">Automatically connect to ACR122U when detected</p>
+                                </div>
+                                <div class="mdc-switch setting-control">
+                                    <div class="mdc-switch__track"></div>
+                                    <div class="mdc-switch__handle-track">
+                                        <div class="mdc-switch__handle">
+                                            <div class="mdc-switch__shadow">
+                                                <div class="mdc-elevation-overlay"></div>
+                                            </div>
+                                            <div class="mdc-switch__ripple"></div>
+                                        </div>
+                                    </div>
+                                    <input type="checkbox" id="nfc-auto-connect" class="mdc-switch__native-control" checked>
+                                </div>
+                            </div>
+
+                            <div class="setting-item">
+                                <div class="setting-info">
+                                    <label class="setting-label">NFC Status</label>
+                                    <p class="setting-description">Current NFC reader connection status</p>
+                                </div>
+                                <div class="nfc-status-display">
+                                    <span class="status-indicator" id="nfc-status-indicator">Disconnected</span>
+                                    <button class="mdc-button mdc-button--outlined" id="nfc-test-connection">
+                                        <span class="mdc-button__ripple"></span>
+                                        <span class="mdc-button__label">Test Connection</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Database Settings -->
+                    <div class="mdc-card settings-section">
+                        <div class="mdc-card__content">
+                            <h2 class="mdc-typography--headline6">Database Management</h2>
+                            
+                            <div class="setting-item">
+                                <div class="setting-info">
+                                    <label class="setting-label">Auto Backup</label>
+                                    <p class="setting-description">Automatically backup database daily</p>
+                                </div>
+                                <div class="mdc-switch setting-control">
+                                    <div class="mdc-switch__track"></div>
+                                    <div class="mdc-switch__handle-track">
+                                        <div class="mdc-switch__handle">
+                                            <div class="mdc-switch__shadow">
+                                                <div class="mdc-elevation-overlay"></div>
+                                            </div>
+                                            <div class="mdc-switch__ripple"></div>
+                                        </div>
+                                    </div>
+                                    <input type="checkbox" id="auto-backup" class="mdc-switch__native-control" checked>
+                                </div>
+                            </div>
+
+                            <div class="setting-item">
+                                <div class="setting-info">
+                                    <label class="setting-label">Database Actions</label>
+                                    <p class="setting-description">Backup, restore, or optimize database</p>
+                                </div>
+                                <div class="database-actions">
+                                    <button class="mdc-button mdc-button--outlined" id="backup-database">
+                                        <span class="mdc-button__ripple"></span>
+                                        <i class="material-icons mdc-button__icon">backup</i>
+                                        <span class="mdc-button__label">Backup Now</span>
+                                    </button>
+                                    <button class="mdc-button mdc-button--outlined" id="optimize-database">
+                                        <span class="mdc-button__ripple"></span>
+                                        <i class="material-icons mdc-button__icon">tune</i>
+                                        <span class="mdc-button__label">Optimize</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="setting-item">
+                                <div class="setting-info">
+                                    <label class="setting-label">Database Statistics</label>
+                                    <p class="setting-description">Current database information</p>
+                                </div>
+                                <div class="database-stats">
+                                    <div class="stat-item">
+                                        <span class="stat-label">Total Licenses:</span>
+                                        <span class="stat-value" id="db-license-count">-</span>
+                                    </div>
+                                    <div class="stat-item">
+                                        <span class="stat-label">Database Size:</span>
+                                        <span class="stat-value" id="db-size">-</span>
+                                    </div>
+                                    <div class="stat-item">
+                                        <span class="stat-label">Last Backup:</span>
+                                        <span class="stat-value" id="last-backup">Never</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Application Settings -->
+                    <div class="mdc-card settings-section">
+                        <div class="mdc-card__content">
+                            <h2 class="mdc-typography--headline6">Application Preferences</h2>
+                            
+                            <div class="setting-item">
+                                <div class="setting-info">
+                                    <label class="setting-label">Theme</label>
+                                    <p class="setting-description">Choose application color theme</p>
+                                </div>
+                                <div class="mdc-select mdc-select--outlined setting-control">
+                                    <div class="mdc-select__anchor">
+                                        <span class="mdc-notched-outline">
+                                            <span class="mdc-notched-outline__leading"></span>
+                                            <span class="mdc-notched-outline__notch">
+                                                <span class="mdc-floating-label">Theme</span>
+                                            </span>
+                                            <span class="mdc-notched-outline__trailing"></span>
+                                        </span>
+                                        <span class="mdc-select__selected-text-container">
+                                            <span class="mdc-select__selected-text"></span>
+                                        </span>
+                                        <span class="mdc-select__dropdown-icon">
+                                            <svg class="mdc-select__dropdown-icon-graphic" viewBox="7 10 10 5">
+                                                <polygon class="mdc-select__dropdown-icon-inactive" stroke="none" fill-rule="evenodd" points="7 10 12 15 17 10"></polygon>
+                                                <polygon class="mdc-select__dropdown-icon-active" stroke="none" fill-rule="evenodd" points="7 15 12 10 17 15"></polygon>
+                                            </svg>
+                                        </span>
+                                    </div>
+                                    <div class="mdc-select__menu mdc-menu mdc-menu-surface mdc-menu-surface--fullwidth">
+                                        <ul class="mdc-deprecated-list">
+                                            <li class="mdc-deprecated-list-item mdc-deprecated-list-item--selected" data-value="default">
+                                                <span class="mdc-deprecated-list-item__ripple"></span>
+                                                <span class="mdc-deprecated-list-item__text">Default Blue</span>
+                                            </li>
+                                            <li class="mdc-deprecated-list-item" data-value="dark">
+                                                <span class="mdc-deprecated-list-item__ripple"></span>
+                                                <span class="mdc-deprecated-list-item__text">Dark Mode</span>
+                                            </li>
+                                            <li class="mdc-deprecated-list-item" data-value="green">
+                                                <span class="mdc-deprecated-list-item__ripple"></span>
+                                                <span class="mdc-deprecated-list-item__text">Green Theme</span>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="setting-item">
+                                <div class="setting-info">
+                                    <label class="setting-label">Startup Behavior</label>
+                                    <p class="setting-description">What to do when application starts</p>
+                                </div>
+                                <div class="mdc-switch setting-control">
+                                    <div class="mdc-switch__track"></div>
+                                    <div class="mdc-switch__handle-track">
+                                        <div class="mdc-switch__handle">
+                                            <div class="mdc-switch__shadow">
+                                                <div class="mdc-elevation-overlay"></div>
+                                            </div>
+                                            <div class="mdc-switch__ripple"></div>
+                                        </div>
+                                    </div>
+                                    <input type="checkbox" id="auto-start-nfc" class="mdc-switch__native-control" checked>
+                                </div>
+                            </div>
+
+                            <div class="setting-actions">
+                                <button class="mdc-button mdc-button--raised" id="save-settings">
+                                    <span class="mdc-button__ripple"></span>
+                                    <span class="mdc-button__label">Save Settings</span>
+                                </button>
+                                <button class="mdc-button mdc-button--outlined" id="reset-settings">
+                                    <span class="mdc-button__ripple"></span>
+                                    <span class="mdc-button__label">Reset to Defaults</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- About Page -->
             <div class="page" id="about-page" style="display: none;">
                 <div class="page-header">
@@ -561,6 +780,108 @@
                     <button type="button" class="mdc-button mdc-button--raised mdc-dialog__button" data-mdc-dialog-action="save">
                         <div class="mdc-button__ripple"></div>
                         <span class="mdc-button__label">Save License</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="mdc-dialog__scrim"></div>
+    </div>
+
+    <!-- CSV Import Dialog -->
+    <div class="mdc-dialog" id="import-dialog">
+        <div class="mdc-dialog__container">
+            <div class="mdc-dialog__surface">
+                <!-- Dialog Header -->
+                <div class="mdc-dialog__header">
+                    <h2 class="mdc-dialog__title">Import Licenses from CSV</h2>
+                </div>
+                
+                <!-- Dialog Content -->
+                <div class="mdc-dialog__content">
+                    <div class="import-dialog-content">
+                        <!-- File Drop Zone -->
+                        <div class="file-drop-zone" id="file-drop-zone">
+                            <div class="material-icons">cloud_upload</div>
+                            <div class="drop-text">Drag and drop your CSV file here</div>
+                            <div class="drop-subtext">or click to select a file</div>
+                            <input type="file" id="csv-file-input" accept=".csv" style="display: none;">
+                        </div>
+
+                        <!-- Import Options -->
+                        <div class="import-options" id="import-options" style="display: none;">
+                            <div class="import-option">
+                                <div class="mdc-checkbox">
+                                    <input type="checkbox" class="mdc-checkbox__native-control" id="skip-duplicates" checked>
+                                    <div class="mdc-checkbox__background">
+                                        <svg class="mdc-checkbox__checkmark" viewBox="0 0 24 24">
+                                            <path class="mdc-checkbox__checkmark-path" fill="none" d="M1.73,12.91 8.1,19.28 22.79,4.59"></path>
+                                        </svg>
+                                        <div class="mdc-checkbox__mixedmark"></div>
+                                    </div>
+                                    <div class="mdc-checkbox__ripple"></div>
+                                </div>
+                                <label for="skip-duplicates">Skip duplicate license numbers</label>
+                            </div>
+
+                            <div class="import-option">
+                                <div class="mdc-checkbox">
+                                    <input type="checkbox" class="mdc-checkbox__native-control" id="validate-data" checked>
+                                    <div class="mdc-checkbox__background">
+                                        <svg class="mdc-checkbox__checkmark" viewBox="0 0 24 24">
+                                            <path class="mdc-checkbox__checkmark-path" fill="none" d="M1.73,12.91 8.1,19.28 22.79,4.59"></path>
+                                        </svg>
+                                        <div class="mdc-checkbox__mixedmark"></div>
+                                    </div>
+                                    <div class="mdc-checkbox__ripple"></div>
+                                </div>
+                                <label for="validate-data">Validate data before import</label>
+                            </div>
+
+                            <div class="import-option">
+                                <div class="mdc-checkbox">
+                                    <input type="checkbox" class="mdc-checkbox__native-control" id="backup-before-import">
+                                    <div class="mdc-checkbox__background">
+                                        <svg class="mdc-checkbox__checkmark" viewBox="0 0 24 24">
+                                            <path class="mdc-checkbox__checkmark-path" fill="none" d="M1.73,12.91 8.1,19.28 22.79,4.59"></path>
+                                        </svg>
+                                        <div class="mdc-checkbox__mixedmark"></div>
+                                    </div>
+                                    <div class="mdc-checkbox__ripple"></div>
+                                </div>
+                                <label for="backup-before-import">Backup database before import</label>
+                            </div>
+                        </div>
+
+                        <!-- Import Preview -->
+                        <div class="import-preview" id="import-preview" style="display: none;">
+                            <table>
+                                <thead id="preview-header"></thead>
+                                <tbody id="preview-body"></tbody>
+                            </table>
+                        </div>
+
+                        <!-- Import Progress -->
+                        <div class="import-progress" id="import-progress" style="display: none;">
+                            <div class="progress-info">
+                                <span id="progress-text">Importing licenses...</span>
+                                <span id="progress-count">0 / 0</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="progress-fill"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Dialog Actions -->
+                <div class="mdc-dialog__actions">
+                    <button type="button" class="mdc-button mdc-dialog__button" data-mdc-dialog-action="cancel">
+                        <div class="mdc-button__ripple"></div>
+                        <span class="mdc-button__label">Cancel</span>
+                    </button>
+                    <button type="button" class="mdc-button mdc-button--raised mdc-dialog__button" id="start-import-btn" data-mdc-dialog-action="import" disabled>
+                        <div class="mdc-button__ripple"></div>
+                        <span class="mdc-button__label">Import Licenses</span>
                     </button>
                 </div>
             </div>

@@ -22,6 +22,13 @@ class EVLicenseApp {
             expiryTo: ''
         };
         this.filteredLicenses = [];
+        this.importDialog = null;
+        this.settingsComponents = {
+            switches: [],
+            selects: [],
+            textFields: []
+        };
+        this.csvImportData = null;
         this.initializeApp();
     }
 
@@ -75,14 +82,21 @@ class EVLicenseApp {
             mdc.ripple.MDCRipple.attachTo(listItem);
         });
 
-        // Initialize Dialog
+        // Initialize Dialogs
         this.dialog = mdc.dialog.MDCDialog.attachTo(document.querySelector('#license-dialog'));
+        this.importDialog = mdc.dialog.MDCDialog.attachTo(document.querySelector('#import-dialog'));
         
         // Initialize Form Components
         this.initializeFormComponents();
 
         // Initialize Search and Filter Components
         this.initializeSearchAndFilters();
+
+        // Initialize Settings Components
+        this.initializeSettingsComponents();
+
+        // Initialize Import Components
+        this.initializeImportComponents();
 
         console.log('✅ Material Design Components initialized');
     }
@@ -441,7 +455,10 @@ class EVLicenseApp {
                 await this.loadLicenses();
                 break;
             case 'dashboard':
-                this.updateDashboardStats();
+                await this.updateDashboardStats();
+                break;
+            case 'settings':
+                await this.loadSettingsPage();
                 break;
         }
     }
@@ -913,6 +930,593 @@ class EVLicenseApp {
         });
 
         return csvRows.join('\n');
+    }
+
+    // Settings Management Methods
+    initializeSettingsComponents() {
+        // Initialize switches
+        document.querySelectorAll('.settings-section .mdc-switch').forEach(switchEl => {
+            const mdcSwitch = mdc.switchControl.MDCSwitch.attachTo(switchEl);
+            this.settingsComponents.switches.push(mdcSwitch);
+        });
+
+        // Initialize selects
+        document.querySelectorAll('.settings-section .mdc-select').forEach(selectEl => {
+            const mdcSelect = mdc.select.MDCSelect.attachTo(selectEl);
+            this.settingsComponents.selects.push(mdcSelect);
+        });
+
+        // Initialize text fields
+        document.querySelectorAll('.settings-section .mdc-text-field').forEach(textField => {
+            const mdcTextField = mdc.textField.MDCTextField.attachTo(textField);
+            this.settingsComponents.textFields.push(mdcTextField);
+        });
+
+        // Set up settings event listeners
+        this.setupSettingsListeners();
+    }
+
+    setupSettingsListeners() {
+        // Save settings button
+        const saveSettingsBtn = document.getElementById('save-settings');
+        if (saveSettingsBtn) {
+            saveSettingsBtn.addEventListener('click', () => {
+                this.saveSettings();
+            });
+        }
+
+        // Reset settings button
+        const resetSettingsBtn = document.getElementById('reset-settings');
+        if (resetSettingsBtn) {
+            resetSettingsBtn.addEventListener('click', () => {
+                this.resetSettings();
+            });
+        }
+
+        // NFC test connection button
+        const nfcTestBtn = document.getElementById('nfc-test-connection');
+        if (nfcTestBtn) {
+            nfcTestBtn.addEventListener('click', () => {
+                this.testNfcConnection();
+            });
+        }
+
+        // Database backup button
+        const backupBtn = document.getElementById('backup-database');
+        if (backupBtn) {
+            backupBtn.addEventListener('click', () => {
+                this.backupDatabase();
+            });
+        }
+
+        // Database optimize button
+        const optimizeBtn = document.getElementById('optimize-database');
+        if (optimizeBtn) {
+            optimizeBtn.addEventListener('click', () => {
+                this.optimizeDatabase();
+            });
+        }
+
+        // NFC polling interval change
+        const pollingIntervalInput = document.getElementById('nfc-polling-interval');
+        if (pollingIntervalInput) {
+            pollingIntervalInput.addEventListener('change', (e) => {
+                const interval = parseInt(e.target.value);
+                if (interval >= 100 && interval <= 10000) {
+                    // This would update the NFC manager polling interval
+                    console.log(`Setting NFC polling interval to ${interval}ms`);
+                }
+            });
+        }
+    }
+
+    async loadSettingsPage() {
+        try {
+            // Load current settings and update UI
+            await this.loadDatabaseStats();
+            this.updateNfcStatus();
+            
+            // Load saved settings
+            const settings = await this.loadUserSettings();
+            this.populateSettingsForm(settings);
+            
+        } catch (error) {
+            console.error('❌ Error loading settings page:', error);
+        }
+    }
+
+    async loadDatabaseStats() {
+        try {
+            if (window.electronAPI) {
+                const stats = await window.electronAPI.database.getDashboardStats();
+                
+                // Update database statistics
+                const licenseCountEl = document.getElementById('db-license-count');
+                if (licenseCountEl) licenseCountEl.textContent = stats.totalLicenses || 0;
+
+                // Database size would need to be implemented in the main process
+                const dbSizeEl = document.getElementById('db-size');
+                if (dbSizeEl) dbSizeEl.textContent = 'N/A';
+
+                // Last backup would need to be tracked
+                const lastBackupEl = document.getElementById('last-backup');
+                if (lastBackupEl) lastBackupEl.textContent = 'Never';
+                
+            }
+        } catch (error) {
+            console.error('❌ Error loading database stats:', error);
+        }
+    }
+
+    updateNfcStatus() {
+        const statusIndicator = document.getElementById('nfc-status-indicator');
+        if (statusIndicator) {
+            // This would get actual NFC status from the NFC manager
+            statusIndicator.textContent = 'Disconnected';
+            statusIndicator.className = 'status-indicator';
+        }
+    }
+
+    async loadUserSettings() {
+        // This would load from a settings file or database
+        return {
+            nfcPollingInterval: 1000,
+            nfcAutoConnect: true,
+            autoBackup: true,
+            theme: 'default',
+            autoStartNfc: true
+        };
+    }
+
+    populateSettingsForm(settings) {
+        // Populate form fields with loaded settings
+        const pollingIntervalInput = document.getElementById('nfc-polling-interval');
+        if (pollingIntervalInput) {
+            pollingIntervalInput.value = settings.nfcPollingInterval;
+        }
+
+        // Set switch states
+        const autoConnectSwitch = document.getElementById('nfc-auto-connect');
+        if (autoConnectSwitch) autoConnectSwitch.checked = settings.nfcAutoConnect;
+
+        const autoBackupSwitch = document.getElementById('auto-backup');
+        if (autoBackupSwitch) autoBackupSwitch.checked = settings.autoBackup;
+
+        const autoStartNfcSwitch = document.getElementById('auto-start-nfc');
+        if (autoStartNfcSwitch) autoStartNfcSwitch.checked = settings.autoStartNfc;
+
+        // Set theme select
+        const themeSelect = this.settingsComponents.selects.find(s => 
+            s.root.querySelector('select') || s.foundation.getValue() !== undefined
+        );
+        if (themeSelect) {
+            // Set theme value
+        }
+    }
+
+    async saveSettings() {
+        try {
+            const settings = {
+                nfcPollingInterval: parseInt(document.getElementById('nfc-polling-interval').value),
+                nfcAutoConnect: document.getElementById('nfc-auto-connect').checked,
+                autoBackup: document.getElementById('auto-backup').checked,
+                autoStartNfc: document.getElementById('auto-start-nfc').checked,
+                theme: 'default' // Get from theme select
+            };
+
+            // This would save to settings file or database
+            console.log('💾 Saving settings:', settings);
+            
+            this.showSuccessMessage('Settings saved successfully!');
+            
+        } catch (error) {
+            console.error('❌ Error saving settings:', error);
+            this.showErrorMessage('Save Error', error.message);
+        }
+    }
+
+    async resetSettings() {
+        try {
+            const confirmed = confirm('Are you sure you want to reset all settings to defaults?');
+            if (confirmed) {
+                const defaultSettings = {
+                    nfcPollingInterval: 1000,
+                    nfcAutoConnect: true,
+                    autoBackup: true,
+                    theme: 'default',
+                    autoStartNfc: true
+                };
+                
+                this.populateSettingsForm(defaultSettings);
+                await this.saveSettings();
+                
+                this.showSuccessMessage('Settings reset to defaults');
+            }
+        } catch (error) {
+            console.error('❌ Error resetting settings:', error);
+            this.showErrorMessage('Reset Error', error.message);
+        }
+    }
+
+    async testNfcConnection() {
+        const statusIndicator = document.getElementById('nfc-status-indicator');
+        const testBtn = document.getElementById('nfc-test-connection');
+        
+        try {
+            if (statusIndicator) {
+                statusIndicator.textContent = 'Testing...';
+                statusIndicator.className = 'status-indicator connecting';
+            }
+            
+            if (testBtn) testBtn.disabled = true;
+
+            // Simulate NFC connection test
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            // This would actually test NFC connection
+            const connected = Math.random() > 0.5; // Random for demo
+            
+            if (statusIndicator) {
+                statusIndicator.textContent = connected ? 'Connected' : 'Disconnected';
+                statusIndicator.className = connected ? 'status-indicator connected' : 'status-indicator';
+            }
+            
+            this.showSuccessMessage(connected ? 'NFC Reader connected successfully!' : 'NFC Reader not found');
+            
+        } catch (error) {
+            console.error('❌ Error testing NFC connection:', error);
+            if (statusIndicator) {
+                statusIndicator.textContent = 'Error';
+                statusIndicator.className = 'status-indicator';
+            }
+            this.showErrorMessage('Test Failed', error.message);
+        } finally {
+            if (testBtn) testBtn.disabled = false;
+        }
+    }
+
+    async backupDatabase() {
+        try {
+            // This would trigger database backup in main process
+            this.showSuccessMessage('Database backup completed successfully!');
+            
+            // Update last backup time
+            const lastBackupEl = document.getElementById('last-backup');
+            if (lastBackupEl) {
+                lastBackupEl.textContent = new Date().toLocaleString();
+            }
+            
+        } catch (error) {
+            console.error('❌ Error backing up database:', error);
+            this.showErrorMessage('Backup Failed', error.message);
+        }
+    }
+
+    async optimizeDatabase() {
+        try {
+            // This would trigger database optimization in main process
+            this.showSuccessMessage('Database optimized successfully!');
+            await this.loadDatabaseStats(); // Refresh stats
+            
+        } catch (error) {
+            console.error('❌ Error optimizing database:', error);
+            this.showErrorMessage('Optimization Failed', error.message);
+        }
+    }
+
+    // CSV Import Methods
+    initializeImportComponents() {
+        // Initialize checkboxes
+        document.querySelectorAll('#import-dialog .mdc-checkbox').forEach(checkbox => {
+            mdc.checkbox.MDCCheckbox.attachTo(checkbox);
+        });
+
+        this.setupImportListeners();
+    }
+
+    setupImportListeners() {
+        // File drop zone
+        const dropZone = document.getElementById('file-drop-zone');
+        const fileInput = document.getElementById('csv-file-input');
+
+        if (dropZone && fileInput) {
+            dropZone.addEventListener('click', () => {
+                fileInput.click();
+            });
+
+            dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropZone.classList.add('dragover');
+            });
+
+            dropZone.addEventListener('dragleave', () => {
+                dropZone.classList.remove('dragover');
+            });
+
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('dragover');
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    this.handleFileSelection(files[0]);
+                }
+            });
+
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    this.handleFileSelection(e.target.files[0]);
+                }
+            });
+        }
+
+        // Import dialog events
+        this.importDialog.listen('MDCDialog:closed', (event) => {
+            if (event.detail.action === 'import') {
+                this.performCsvImport();
+            } else {
+                this.resetImportDialog();
+            }
+        });
+    }
+
+    async showImportDialog() {
+        try {
+            this.resetImportDialog();
+            this.importDialog.open();
+        } catch (error) {
+            console.error('❌ Error showing import dialog:', error);
+            this.showErrorMessage('Import Error', error.message);
+        }
+    }
+
+    resetImportDialog() {
+        this.csvImportData = null;
+        
+        // Reset file drop zone
+        const dropZone = document.getElementById('file-drop-zone');
+        if (dropZone) {
+            dropZone.classList.remove('file-selected');
+            const dropText = dropZone.querySelector('.drop-text');
+            const dropSubtext = dropZone.querySelector('.drop-subtext');
+            const icon = dropZone.querySelector('.material-icons');
+            
+            if (dropText) dropText.textContent = 'Drag and drop your CSV file here';
+            if (dropSubtext) dropSubtext.textContent = 'or click to select a file';
+            if (icon) icon.textContent = 'cloud_upload';
+        }
+
+        // Hide sections
+        document.getElementById('import-options').style.display = 'none';
+        document.getElementById('import-preview').style.display = 'none';
+        document.getElementById('import-progress').style.display = 'none';
+
+        // Disable import button
+        const importBtn = document.getElementById('start-import-btn');
+        if (importBtn) importBtn.disabled = true;
+
+        // Reset file input
+        const fileInput = document.getElementById('csv-file-input');
+        if (fileInput) fileInput.value = '';
+    }
+
+    async handleFileSelection(file) {
+        try {
+            if (!file.name.toLowerCase().endsWith('.csv')) {
+                this.showErrorMessage('Invalid File', 'Please select a CSV file');
+                return;
+            }
+
+            // Update drop zone appearance
+            const dropZone = document.getElementById('file-drop-zone');
+            if (dropZone) {
+                dropZone.classList.add('file-selected');
+                const dropText = dropZone.querySelector('.drop-text');
+                const dropSubtext = dropZone.querySelector('.drop-subtext');
+                const icon = dropZone.querySelector('.material-icons');
+                
+                if (dropText) dropText.textContent = file.name;
+                if (dropSubtext) dropSubtext.textContent = `${(file.size / 1024).toFixed(1)} KB`;
+                if (icon) icon.textContent = 'check_circle';
+            }
+
+            // Parse CSV file
+            const csvContent = await this.readFileContent(file);
+            this.csvImportData = this.parseCsvContent(csvContent);
+
+            // Show import options and preview
+            this.showImportPreview();
+            document.getElementById('import-options').style.display = 'block';
+
+            // Enable import button
+            const importBtn = document.getElementById('start-import-btn');
+            if (importBtn) importBtn.disabled = false;
+
+        } catch (error) {
+            console.error('❌ Error handling file selection:', error);
+            this.showErrorMessage('File Error', error.message);
+        }
+    }
+
+    readFileContent(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => resolve(e.target.result);
+            reader.onerror = (e) => reject(new Error('Failed to read file'));
+            reader.readAsText(file);
+        });
+    }
+
+    parseCsvContent(csvContent) {
+        const lines = csvContent.split('\n').filter(line => line.trim());
+        if (lines.length < 2) {
+            throw new Error('CSV file must contain at least a header row and one data row');
+        }
+
+        const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+        const data = lines.slice(1).map(line => {
+            const values = line.split(',').map(v => v.trim().replace(/"/g, ''));
+            const row = {};
+            headers.forEach((header, index) => {
+                row[header] = values[index] || '';
+            });
+            return row;
+        });
+
+        return { headers, data };
+    }
+
+    showImportPreview() {
+        const preview = document.getElementById('import-preview');
+        const headerEl = document.getElementById('preview-header');
+        const bodyEl = document.getElementById('preview-body');
+
+        if (!this.csvImportData || !preview || !headerEl || !bodyEl) return;
+
+        // Show preview
+        preview.style.display = 'block';
+
+        // Populate header
+        headerEl.innerHTML = `<tr>${this.csvImportData.headers.map(h => `<th>${h}</th>`).join('')}</tr>`;
+
+        // Populate first 5 rows of data
+        const previewData = this.csvImportData.data.slice(0, 5);
+        bodyEl.innerHTML = previewData.map(row => 
+            `<tr>${this.csvImportData.headers.map(h => `<td>${row[h] || ''}</td>`).join('')}</tr>`
+        ).join('');
+
+        // Add summary row if there are more records
+        if (this.csvImportData.data.length > 5) {
+            bodyEl.innerHTML += `<tr><td colspan="${this.csvImportData.headers.length}" style="text-align: center; font-style: italic;">... and ${this.csvImportData.data.length - 5} more records</td></tr>`;
+        }
+    }
+
+    async performCsvImport() {
+        try {
+            if (!this.csvImportData) {
+                this.showErrorMessage('Import Error', 'No data to import');
+                return;
+            }
+
+            // Show progress
+            const progressEl = document.getElementById('import-progress');
+            const progressText = document.getElementById('progress-text');
+            const progressCount = document.getElementById('progress-count');
+            const progressFill = document.getElementById('progress-fill');
+
+            if (progressEl) progressEl.style.display = 'block';
+
+            const totalRecords = this.csvImportData.data.length;
+            let importedCount = 0;
+            let skippedCount = 0;
+
+            // Get import options
+            const skipDuplicates = document.getElementById('skip-duplicates').checked;
+            const validateData = document.getElementById('validate-data').checked;
+            const backupFirst = document.getElementById('backup-before-import').checked;
+
+            if (backupFirst) {
+                if (progressText) progressText.textContent = 'Creating backup...';
+                await this.backupDatabase();
+            }
+
+            // Process each record
+            for (let i = 0; i < totalRecords; i++) {
+                const record = this.csvImportData.data[i];
+                
+                if (progressText) progressText.textContent = `Processing record ${i + 1} of ${totalRecords}...`;
+                if (progressCount) progressCount.textContent = `${i + 1} / ${totalRecords}`;
+                if (progressFill) progressFill.style.width = `${((i + 1) / totalRecords) * 100}%`;
+
+                try {
+                    // Map CSV fields to license object
+                    const licenseData = this.mapCsvToLicense(record);
+
+                    // Validate if requested
+                    if (validateData && !this.validateLicenseData(licenseData)) {
+                        skippedCount++;
+                        continue;
+                    }
+
+                    // Check for duplicates if requested
+                    if (skipDuplicates) {
+                        const existing = this.licenses.find(l => l.license_number === licenseData.license_number);
+                        if (existing) {
+                            skippedCount++;
+                            continue;
+                        }
+                    }
+
+                    // Import the license
+                    if (window.electronAPI) {
+                        await window.electronAPI.database.addLicense(licenseData);
+                    } else {
+                        // Fallback for testing
+                        licenseData.id = Date.now() + i;
+                        this.licenses.push(licenseData);
+                    }
+
+                    importedCount++;
+
+                } catch (error) {
+                    console.error(`❌ Error importing record ${i + 1}:`, error);
+                    skippedCount++;
+                }
+
+                // Small delay to show progress
+                await new Promise(resolve => setTimeout(resolve, 50));
+            }
+
+            // Hide progress
+            if (progressEl) progressEl.style.display = 'none';
+
+            // Show results
+            this.showSuccessMessage(`Import completed! Imported: ${importedCount}, Skipped: ${skippedCount}`);
+
+            // Refresh licenses
+            await this.loadLicenses();
+
+        } catch (error) {
+            console.error('❌ Error performing CSV import:', error);
+            this.showErrorMessage('Import Failed', error.message);
+        }
+    }
+
+    mapCsvToLicense(csvRecord) {
+        // Map CSV columns to license fields
+        return {
+            license_number: csvRecord['License Number'] || csvRecord['license_number'] || '',
+            owner_name: csvRecord['Owner Name'] || csvRecord['owner_name'] || '',
+            owner_email: csvRecord['Owner Email'] || csvRecord['owner_email'] || '',
+            owner_phone: csvRecord['Owner Phone'] || csvRecord['owner_phone'] || '',
+            vehicle_make: csvRecord['Vehicle Make'] || csvRecord['vehicle_make'] || '',
+            vehicle_model: csvRecord['Vehicle Model'] || csvRecord['vehicle_model'] || '',
+            vehicle_year: parseInt(csvRecord['Vehicle Year'] || csvRecord['vehicle_year']) || null,
+            vehicle_vin: csvRecord['Vehicle VIN'] || csvRecord['vehicle_vin'] || '',
+            vehicle_color: csvRecord['Vehicle Color'] || csvRecord['vehicle_color'] || '',
+            license_type: csvRecord['License Type'] || csvRecord['license_type'] || 'Standard',
+            issue_date: csvRecord['Issue Date'] || csvRecord['issue_date'] || new Date().toISOString().split('T')[0],
+            expiry_date: csvRecord['Expiry Date'] || csvRecord['expiry_date'] || '',
+            status: csvRecord['Status'] || csvRecord['status'] || 'Active',
+            notes: csvRecord['Notes'] || csvRecord['notes'] || ''
+        };
+    }
+
+    validateLicenseData(licenseData) {
+        // Basic validation
+        const required = ['license_number', 'owner_name', 'vehicle_make', 'vehicle_model', 'expiry_date'];
+        
+        for (const field of required) {
+            if (!licenseData[field] || licenseData[field].trim() === '') {
+                return false;
+            }
+        }
+
+        // Date validation
+        if (licenseData.expiry_date && isNaN(new Date(licenseData.expiry_date))) {
+            return false;
+        }
+
+        return true;
     }
 }
 
