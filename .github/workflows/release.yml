@@ -1,0 +1,209 @@
+name: Release Electron App
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., v1.0.0)'
+        required: true
+        type: string
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    outputs:
+      release_id: ${{ steps.create_release.outputs.id }}
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get version
+        id: get_version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.get_version.outputs.VERSION }}
+          release_name: EV License Desktop ${{ steps.get_version.outputs.VERSION }}
+          body: |
+            ## What's New in ${{ steps.get_version.outputs.VERSION }}
+            
+            ### Features
+            - Cross-platform desktop application for EV License Management
+            - ACR122U NFC Reader support
+            - SQLite database integration
+            - Express server with Socket.IO
+            
+            ### Downloads
+            - **Windows**: Download the `.exe` installer below
+            - **macOS**: Download the `.dmg` file below
+            - **Linux**: Download the `.AppImage` file below
+            
+            ### System Requirements
+            - **Windows**: Windows 10 or later
+            - **macOS**: macOS 10.14 or later
+            - **Linux**: Most modern distributions
+            
+            ### Installation Notes
+            - For Windows: Run the installer as administrator if needed
+            - For macOS: You may need to allow the app in Security & Privacy settings
+            - For Linux: Make the AppImage executable: `chmod +x *.AppImage`
+          draft: false
+          prerelease: false
+
+  build-windows:
+    needs: create-release
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: EVLicenseDesktop/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          cd EVLicenseDesktop
+          npm ci
+
+      - name: Build Windows app
+        run: |
+          cd EVLicenseDesktop
+          npm run dist-win
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: EVLicenseDesktop/dist/EV License Desktop Setup *.exe
+          asset_name: EV-License-Desktop-Windows-Setup.exe
+          asset_content_type: application/octet-stream
+
+      - name: Upload Windows portable
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: EVLicenseDesktop/dist/EV License Desktop *.exe
+          asset_name: EV-License-Desktop-Windows-Portable.exe
+          asset_content_type: application/octet-stream
+
+  build-macos:
+    needs: create-release
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: EVLicenseDesktop/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          cd EVLicenseDesktop
+          npm ci
+
+      - name: Build macOS app
+        run: |
+          cd EVLicenseDesktop
+          npm run dist-mac
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Uncomment and configure these for code signing
+          # CSC_LINK: ${{ secrets.MAC_CERTIFICATE_P12 }}
+          # CSC_KEY_PASSWORD: ${{ secrets.MAC_CERTIFICATE_PASSWORD }}
+          # APPLE_ID: ${{ secrets.APPLE_ID }}
+          # APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
+          # APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+
+      - name: Upload macOS DMG
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: EVLicenseDesktop/dist/EV License Desktop-*.dmg
+          asset_name: EV-License-Desktop-macOS.dmg
+          asset_content_type: application/octet-stream
+
+      - name: Upload macOS ZIP
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: EVLicenseDesktop/dist/EV License Desktop-*.zip
+          asset_name: EV-License-Desktop-macOS.zip
+          asset_content_type: application/zip
+
+  build-linux:
+    needs: create-release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: EVLicenseDesktop/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          cd EVLicenseDesktop
+          npm ci
+
+      - name: Build Linux app
+        run: |
+          cd EVLicenseDesktop
+          npm run dist-linux
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Linux AppImage
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: EVLicenseDesktop/dist/EV License Desktop-*.AppImage
+          asset_name: EV-License-Desktop-Linux.AppImage
+          asset_content_type: application/octet-stream
+
+      - name: Upload Linux DEB
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: EVLicenseDesktop/dist/EV License Desktop-*.deb
+          asset_name: EV-License-Desktop-Linux.deb
+          asset_content_type: application/octet-stream

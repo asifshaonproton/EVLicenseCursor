@@ -1,0 +1,15 @@
+# Icon File: icon.icns (macOS Icon)
+# This file should contain a macOS ICNS icon for the EV License Desktop application
+# For production, replace this with an actual ICNS icon file
+#
+# ICNS Requirements:
+# - Multiple sizes: 16x16, 32x32, 64x64, 128x128, 256x256, 512x512, 1024x1024
+# - Retina versions (@2x) for each size
+# - Use tools like iconutil (macOS), Image2icon, or online converters
+#
+# To create:
+# 1. Start with the 512x512 PNG icon
+# 2. Create an iconset directory with all required sizes
+# 3. Use macOS iconutil: iconutil -c icns icon.iconset
+# 4. Or use third-party tools to convert PNG to ICNS
+# 5. Replace this file with the actual ICNS binary

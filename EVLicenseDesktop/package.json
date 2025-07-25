@@ -10,9 +10,28 @@
     "build-win": "electron-builder --win",
     "build-mac": "electron-builder --mac",
     "build-linux": "electron-builder --linux",
+    "dist": "npm run build",
+    "dist-win": "npm run build-win",
+    "dist-mac": "npm run build-mac",
+    "dist-linux": "npm run build-linux",
+    "release": "electron-builder --publish=always",
+    "release-win": "electron-builder --win --publish=always",
+    "release-mac": "electron-builder --mac --publish=always",
+    "release-linux": "electron-builder --linux --publish=always",
+    "pack": "electron-builder --dir",
+    "prerelease": "npm run build",
+    "build-script": "node scripts/build-release.js",
+    "build-all": "node scripts/build-release.js --all --clean",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": ["electron", "nfc", "acr122u", "license", "desktop", "crossplatform"],
+  "keywords": [
+    "electron",
+    "nfc",
+    "acr122u",
+    "license",
+    "desktop",
+    "crossplatform"
+  ],
   "author": "Talukdar & Son's, Software Eng. Asif Hossain",
   "license": "MIT",
   "devDependencies": {
@@ -20,30 +39,117 @@
     "electron-builder": "^25.1.8"
   },
   "dependencies": {
-    "node-hid": "^3.1.0",
-    "sqlite3": "^5.1.7",
+    "electron-updater": "^6.6.2",
     "express": "^4.21.2",
-    "socket.io": "^4.8.1"
+    "node-hid": "^3.1.0",
+    "socket.io": "^4.8.1",
+    "sqlite3": "^5.1.7"
   },
   "build": {
     "appId": "com.ektai.evlicense-desktop",
     "productName": "EV License Desktop",
+    "copyright": "Copyright © 2024 Talukdar & Son's",
     "directories": {
-      "output": "dist"
+      "output": "dist",
+      "buildResources": "build"
     },
     "files": [
       "src/**/*",
       "assets/**/*",
-      "node_modules/**/*"
+      "node_modules/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "assets/",
+        "to": "assets/",
+        "filter": [
+          "**/*"
+        ]
+      }
     ],
     "mac": {
-      "category": "public.app-category.business"
+      "category": "public.app-category.business",
+      "icon": "build/icon.icns",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist"
     },
     "win": {
-      "target": "nsis"
+      "icon": "build/icon.ico",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64",
+            "ia32"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64",
+            "ia32"
+          ]
+        }
+      ],
+      "publisherName": "Talukdar & Son's",
+      "verifyUpdateCodeSignature": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "deleteAppDataOnUninstall": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "EV License Desktop"
     },
     "linux": {
-      "target": "AppImage"
+      "icon": "build/icon.png",
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "deb",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "rpm",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "category": "Office"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "your-github-username",
+      "repo": "your-repo-name"
     }
   }
 }
