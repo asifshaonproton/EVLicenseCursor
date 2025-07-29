@@ -136,26 +136,40 @@ class EVLicenseApp {
     }
 
     setupNfcEventListeners() {
-        // NFC device events
-        window.electronAPI.nfc.onDeviceConnected((deviceInfo) => {
+        // NFC reader events
+        window.electronAPI.nfc.onReaderConnected((readerInfo) => {
+            console.log('📱 NFC reader connected in UI:', readerInfo);
             this.nfcStatus.connected = true;
-            this.nfcStatus.deviceInfo = deviceInfo;
+            this.nfcStatus.deviceInfo = readerInfo;
             this.updateNfcStatus();
-            this.showNotification('NFC device connected', `${deviceInfo.device.product} is ready`, 'success');
+            this.showNotification('NFC reader connected', `${readerInfo.name} is ready`, 'success');
         });
 
-        window.electronAPI.nfc.onDeviceDisconnected((info) => {
+        window.electronAPI.nfc.onReaderDisconnected((info) => {
+            console.log('📱 NFC reader disconnected in UI:', info);
             this.nfcStatus.connected = false;
             this.nfcStatus.deviceInfo = null;
             this.updateNfcStatus();
-            this.showNotification('NFC device disconnected', 'Please check your ACR122U connection', 'warning');
+            this.showNotification('NFC reader disconnected', 'Please check your ACR122U connection', 'warning');
         });
 
         window.electronAPI.nfc.onCardDetected((cardData) => {
+            console.log('💳 Card detected in UI:', cardData);
             this.handleCardDetected(cardData);
         });
 
+        window.electronAPI.nfc.onCardRemoved((info) => {
+            console.log('📤 Card removed in UI:', info);
+            this.showNotification('NFC card removed', 'Card has been removed from reader', 'info');
+        });
+
+        window.electronAPI.nfc.onNfcInitialized(() => {
+            console.log('✅ NFC initialized in UI');
+            this.showNotification('NFC system ready', 'NFC system has been initialized', 'success');
+        });
+
         window.electronAPI.nfc.onError((error) => {
+            console.error('🚨 NFC error in UI:', error);
             this.showError('NFC Error', error.message || error);
         });
 
@@ -333,60 +347,58 @@ class EVLicenseApp {
             const indicator = document.getElementById('nfcStatus');
             const deviceInfo = document.getElementById('nfcDeviceInfo');
 
-            if (status.connected && status.deviceInfo) {
-                const device = status.deviceInfo;
+            console.log('📊 NFC Status:', status);
+
+            if (status.readers && status.readers.length > 0) {
+                const reader = status.readers[0]; // Get the first reader
+                this.nfcStatus.connected = true;
+                this.nfcStatus.deviceInfo = reader;
+                
                 indicator.className = 'nfc-status-indicator connected';
-                indicator.querySelector('.status-text').textContent = device.product || device.deviceType?.name || 'NFC Device';
+                indicator.querySelector('.status-text').textContent = reader.name || 'NFC Reader';
                 
                 // Enhanced device information display
-                const firmwareInfo = status.firmwareVersion ? `Firmware: ${status.firmwareVersion}` : 'Firmware: Unknown';
-                const pollingStatus = status.polling ? 'Polling Active' : 'Polling Inactive';
                 const lastCard = status.lastCardUID ? `Last Card: ${status.lastCardUID}` : 'No card detected';
+                const hasCard = status.hasActiveCard ? 'Card Present' : 'No Card';
                 
                 deviceInfo.innerHTML = `
                     <div class="device-status enhanced">
                         <div class="device-header">
                             <span class="status-indicator online"></span>
-                            <span class="device-name">${device.product || device.deviceType?.name || 'NFC Reader'}</span>
-                            <span class="device-type">${device.deviceType?.type || 'USB NFC Reader'}</span>
+                            <span class="device-name">${reader.name || 'NFC Reader'}</span>
+                            <span class="device-type">PC/SC NFC Reader</span>
                         </div>
                         <div class="device-details">
                             <div class="detail-row">
-                                <span class="detail-label">Serial:</span>
-                                <span class="detail-value">${device.serialNumber || 'Unknown'}</span>
-                            </div>
-                            <div class="detail-row">
-                                <span class="detail-label">Vendor ID:</span>
-                                <span class="detail-value">0x${device.vendorId?.toString(16).toUpperCase().padStart(4, '0') || 'Unknown'}</span>
-                            </div>
-                            <div class="detail-row">
-                                <span class="detail-label">Product ID:</span>
-                                <span class="detail-value">0x${device.productId?.toString(16).toUpperCase().padStart(4, '0') || 'Unknown'}</span>
-                            </div>
-                            <div class="detail-row">
                                 <span class="detail-label">Status:</span>
-                                <span class="detail-value status-${status.polling ? 'active' : 'inactive'}">${pollingStatus}</span>
+                                <span class="detail-value status-${reader.connected ? 'active' : 'inactive'}">${reader.connected ? 'Connected' : 'Disconnected'}</span>
                             </div>
                             <div class="detail-row">
-                                <span class="detail-label">${firmwareInfo}</span>
+                                <span class="detail-label">Card Status:</span>
+                                <span class="detail-value status-${reader.hasCard ? 'active' : 'inactive'}">${hasCard}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Last Seen:</span>
+                                <span class="detail-value">${reader.lastSeen ? new Date(reader.lastSeen).toLocaleString() : 'Unknown'}</span>
                             </div>
                             <div class="detail-row last-card">
                                 <span class="detail-label">${lastCard}</span>
                             </div>
                         </div>
-                        ${device.capabilities ? `
+                        ${reader.capabilities ? `
                         <div class="device-capabilities">
                             <div class="capabilities-header">Capabilities:</div>
                             <div class="capabilities-list">
-                                <div class="capability-item">Protocols: ${device.capabilities.supportedProtocols?.join(', ') || 'ISO14443-A/B'}</div>
-                                <div class="capability-item">Data Rate: ${device.capabilities.maxDataRate || '424 kbps'}</div>
-                                <div class="capability-item">Range: ${device.capabilities.workingDistance || '~5cm'}</div>
-                                <div class="capability-item">Cards: ${device.capabilities.supportedCards?.join(', ') || 'MIFARE, NTAG'}</div>
+                                <div class="capability-item">Protocols: ${reader.capabilities.iso14443a ? 'ISO14443-A' : ''} ${reader.capabilities.iso14443b ? 'ISO14443-B' : ''} ${reader.capabilities.iso15693 ? 'ISO15693' : ''}</div>
+                                <div class="capability-item">Cards: ${reader.capabilities.mifare ? 'MIFARE' : ''} ${reader.capabilities.desfire ? 'DESFire' : ''} ${reader.capabilities.felica ? 'FeliCa' : ''}</div>
                             </div>
                         </div>` : ''}
                     </div>
                 `;
             } else {
+                this.nfcStatus.connected = false;
+                this.nfcStatus.deviceInfo = null;
+                
                 indicator.className = 'nfc-status-indicator';
                 indicator.querySelector('.status-text').textContent = 'No Device';
                 

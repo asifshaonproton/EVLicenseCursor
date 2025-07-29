@@ -18,16 +18,23 @@ contextBridge.exposeInMainWorld('electronAPI', {
         getStatus: () => ipcRenderer.invoke('nfc-get-status'),
         readCard: () => ipcRenderer.invoke('nfc-read-card'),
         writeCard: (data) => ipcRenderer.invoke('nfc-write-card', data),
+        refreshDevices: () => ipcRenderer.invoke('nfc-refresh-devices'),
         
         // Event listeners for NFC events
-        onDeviceConnected: (callback) => {
-            ipcRenderer.on('nfc-device-connected', (event, data) => callback(data));
+        onReaderConnected: (callback) => {
+            ipcRenderer.on('nfc-reader-connected', (event, data) => callback(data));
         },
-        onDeviceDisconnected: (callback) => {
-            ipcRenderer.on('nfc-device-disconnected', (event, data) => callback(data));
+        onReaderDisconnected: (callback) => {
+            ipcRenderer.on('nfc-reader-disconnected', (event, data) => callback(data));
         },
         onCardDetected: (callback) => {
             ipcRenderer.on('nfc-card-detected', (event, data) => callback(data));
+        },
+        onCardRemoved: (callback) => {
+            ipcRenderer.on('nfc-card-removed', (event, data) => callback(data));
+        },
+        onNfcInitialized: (callback) => {
+            ipcRenderer.on('nfc-initialized', (event, data) => callback(data));
         },
         onError: (callback) => {
             ipcRenderer.on('nfc-error', (event, data) => callback(data));

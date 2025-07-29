@@ -244,6 +244,15 @@ class EVLicenseDesktop {
             }
         });
 
+        ipcMain.handle('nfc-refresh-devices', async () => {
+            try {
+                return await this.nfcManager.refreshReaders();
+            } catch (error) {
+                console.error('Error refreshing NFC devices:', error);
+                throw error;
+            }
+        });
+
         // System operations
         ipcMain.handle('app-get-version', () => {
             return app.getVersion();
