@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "ndef": "^0.2.0"
+  }
+}
