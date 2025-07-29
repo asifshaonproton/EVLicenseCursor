@@ -200,48 +200,119 @@ class NFCPCSCManager extends EventEmitter {
                 type: this.detectCardType(card.atr),
                 standard: card.standard || 'Unknown',
                 blocks: [],
-                extractedText: null // Will contain the clean extracted text
+                extractedText: null,
+                ndefMessage: null
             };
 
-            // Try to read blocks including data blocks (0-15 for typical MIFARE cards)
-            try {
-                // Read blocks 0-15 to capture both header and data blocks
-                for (let block = 0; block < 16; block++) {
+            console.log(`📖 Reading card data for ${card.type} with UID: ${card.uid}`);
+
+            // For MIFARE Classic cards, try to authenticate and read
+            if (card.type.includes('MIFARE Classic')) {
+                try {
+                    // Try to read block 0 (manufacturer data) - this should be readable without auth
+                    const block0 = await reader.read(0, 16);
+                    data.blocks.push({
+                        block: 0,
+                        data: block0.toString('hex'),
+                        length: block0.length,
+                        textContent: null
+                    });
+                    console.log(`📊 Read block 0: ${block0.toString('hex')}`);
+
+                    // Try to read block 1 (UID) - this should also be readable
+                    const block1 = await reader.read(1, 16);
+                    data.blocks.push({
+                        block: 1,
+                        data: block1.toString('hex'),
+                        length: block1.length,
+                        textContent: null
+                    });
+                    console.log(`📊 Read block 1: ${block1.toString('hex')}`);
+
+                    // For MIFARE Classic, try to read NDEF data from block 4 onwards
+                    // First, try to read block 4 to see if it contains NDEF TLV
                     try {
-                        const blockData = await reader.read(block, 16);
+                        const block4 = await reader.read(4, 16);
                         data.blocks.push({
-                            block: block,
-                            data: blockData.toString('hex'),
-                            length: blockData.length,
-                            // Try to extract readable text for data blocks (4+)
-                            textContent: block >= 4 ? this.extractTextFromBlock(blockData) : null
+                            block: 4,
+                            data: block4.toString('hex'),
+                            length: block4.length,
+                            textContent: this.extractTextFromBlock(block4)
                         });
-                        console.log(`📊 Read block ${block}: ${blockData.toString('hex')}`);
-                    } catch (blockError) {
-                        // Some blocks may not be readable (especially sector trailers)
-                        console.warn(`⚠️ Could not read block ${block}:`, blockError.message);
-                        
-                        // For MIFARE Classic, skip sector trailer blocks (3, 7, 11, 15)
-                        // but continue reading other blocks
-                        if (block % 4 === 3) {
-                            console.log(`ℹ️ Skipping sector trailer block ${block}`);
-                            continue;
+                        console.log(`📊 Read block 4: ${block4.toString('hex')}`);
+
+                        // Check if block 4 starts with NDEF TLV (0x03)
+                        if (block4[0] === 0x03) {
+                            console.log('🔍 Detected NDEF TLV format in block 4');
+                            const ndefLength = block4[1];
+                            if (ndefLength > 0 && ndefLength <= 14) { // 14 bytes available after TLV header
+                                const ndefData = block4.slice(2, 2 + ndefLength);
+                                try {
+                                    const NdefUtils = require('./ndef-utils');
+                                    const extractedText = NdefUtils.parseNdefMessage(ndefData);
+                                    if (extractedText) {
+                                        data.extractedText = extractedText;
+                                        data.ndefMessage = extractedText;
+                                        console.log(`📝 Extracted NDEF text: "${extractedText}"`);
+                                    }
+                                } catch (ndefError) {
+                                    console.log('⚠️ NDEF parsing failed:', ndefError.message);
+                                }
+                            }
                         }
-                        
-                        // If we can't read multiple consecutive blocks, stop
-                        if (block > 3) {
-                            console.log(`ℹ️ Stopping read at block ${block} due to access restrictions`);
+
+                        // Try to read a few more blocks for additional data
+                        for (let block = 5; block < 8; block++) {
+                            try {
+                                const blockData = await reader.read(block, 16);
+                                data.blocks.push({
+                                    block: block,
+                                    data: blockData.toString('hex'),
+                                    length: blockData.length,
+                                    textContent: this.extractTextFromBlock(blockData)
+                                });
+                                console.log(`📊 Read block ${block}: ${blockData.toString('hex')}`);
+                            } catch (blockError) {
+                                console.log(`⚠️ Could not read block ${block}: ${blockError.message}`);
+                                break;
+                            }
+                        }
+                    } catch (block4Error) {
+                        console.log('⚠️ Could not read block 4:', block4Error.message);
+                    }
+
+                } catch (authError) {
+                    console.log('⚠️ MIFARE Classic authentication/reading failed:', authError.message);
+                }
+            } else {
+                // For other card types, try direct reading
+                try {
+                    for (let block = 0; block < 8; block++) {
+                        try {
+                            const blockData = await reader.read(block, 16);
+                            data.blocks.push({
+                                block: block,
+                                data: blockData.toString('hex'),
+                                length: blockData.length,
+                                textContent: this.extractTextFromBlock(blockData)
+                            });
+                            console.log(`📊 Read block ${block}: ${blockData.toString('hex')}`);
+                        } catch (blockError) {
+                            console.log(`⚠️ Could not read block ${block}: ${blockError.message}`);
                             break;
                         }
                     }
+                } catch (readError) {
+                    console.log('⚠️ Block reading not supported:', readError.message);
                 }
-            } catch (readError) {
-                console.warn('⚠️ Block reading not supported:', readError.message);
             }
 
-            // Extract clean text from data blocks (4+)
-            this.extractCleanText(data);
+            // If no NDEF text was extracted, try to extract from raw blocks
+            if (!data.extractedText) {
+                this.extractCleanText(data);
+            }
 
+            console.log(`✅ Card reading completed. Extracted text: "${data.extractedText}"`);
             return data;
         } catch (error) {
             console.error('❌ Error reading card data:', error);
@@ -629,7 +700,20 @@ class NFCPCSCManager extends EventEmitter {
             throw new Error('No card present to read');
         }
         
-        return this.currentCard;
+        // Find the reader that has the current card
+        const reader = Array.from(this.readers.values()).find(r => r.card && r.card.uid === this.currentCard.uid);
+        
+        if (!reader) {
+            throw new Error('Reader not found for current card');
+        }
+        
+        // Read the card data
+        const cardData = await this.readCardData(reader, this.currentCard);
+        
+        return {
+            ...this.currentCard,
+            ...cardData
+        };
     }
 }
 

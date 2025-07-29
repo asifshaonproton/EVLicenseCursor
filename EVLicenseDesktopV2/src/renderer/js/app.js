@@ -561,31 +561,42 @@ class EVLicenseApp {
         const section = document.getElementById('cardDataSection');
         const container = document.getElementById('cardData');
         
+        console.log('📊 Displaying card data:', cardData);
+        
         // Enhanced card data display with comprehensive information
         const capabilities = cardData.capabilities ? cardData.capabilities.join(', ') : 'Unknown';
-        const sectors = cardData.sectors > 0 ? cardData.sectors : 'Unknown';
-        const technology = cardData.technology || 'Unknown';
-        const atr = cardData.atr || 'Not available';
+        const technology = cardData.standard || 'Unknown';
+        const atr = cardData.atr ? cardData.atr.toString('hex') : 'Not available';
+        const extractedText = cardData.extractedText || cardData.ndefMessage || 'No text content';
         
-        let sectorsInfo = '';
-        if (cardData.sectors && cardData.sectors.length > 0) {
-            sectorsInfo = `
-                <div class="sectors-info">
-                    <h4>Sector Data:</h4>
-                    ${cardData.sectors.map(sector => `
-                        <div class="sector-item ${sector.readable ? 'readable' : 'unreadable'}">
-                            <strong>Sector ${sector.sector}:</strong> 
-                            ${sector.readable ? 
-                                `<span class="data-hex">${Array.from(sector.data).map(b => b.toString(16).padStart(2, '0').toUpperCase()).join(' ')}</span>` : 
-                                `<span class="error-text">${sector.error || 'Not readable'}</span>`
-                            }
+        // Display blocks information
+        let blocksInfo = '';
+        if (cardData.blocks && cardData.blocks.length > 0) {
+            blocksInfo = `
+                <div class="blocks-info">
+                    <h4>Block Data:</h4>
+                    ${cardData.blocks.map(block => `
+                        <div class="block-item">
+                            <strong>Block ${block.block}:</strong> 
+                            <span class="data-hex">${block.data}</span>
+                            ${block.textContent ? `<br><span class="text-content">Text: "${block.textContent}"</span>` : ''}
                         </div>
                     `).join('')}
-                    <div class="read-summary">
-                        <strong>Total Data Read:</strong> ${cardData.totalDataRead || 0} bytes
-                        ${cardData.readErrors && cardData.readErrors.length > 0 ? 
-                            `<br><strong>Read Errors:</strong> ${cardData.readErrors.length}` : ''
-                        }
+                </div>
+            `;
+        }
+        
+        // Display extracted text information
+        let textInfo = '';
+        if (extractedText && extractedText !== 'No text content') {
+            textInfo = `
+                <div class="text-info">
+                    <h4>Extracted Text:</h4>
+                    <div class="text-content">
+                        <strong>Content:</strong> "${extractedText}"
+                    </div>
+                    <div class="text-meta">
+                        <strong>Source:</strong> ${cardData.ndefMessage ? 'NDEF Message' : 'Raw Data'}
                     </div>
                 </div>
             `;
@@ -645,16 +656,16 @@ class EVLicenseApp {
                 <div class="card-properties">
                     <div class="property-grid">
                         <div class="property-item">
-                            <span class="property-label">Size:</span>
-                            <span class="property-value">${cardData.size || 'Unknown'}</span>
+                            <span class="property-label">Type:</span>
+                            <span class="property-value">${cardData.type || 'Unknown'}</span>
                         </div>
                         <div class="property-item">
-                            <span class="property-label">Sectors:</span>
-                            <span class="property-value">${sectors}</span>
-                        </div>
-                        <div class="property-item">
-                            <span class="property-label">Technology:</span>
+                            <span class="property-label">Standard:</span>
                             <span class="property-value">${technology}</span>
+                        </div>
+                        <div class="property-item">
+                            <span class="property-label">ATR:</span>
+                            <span class="property-value">${atr}</span>
                         </div>
                         <div class="property-item">
                             <span class="property-label">Capabilities:</span>
@@ -670,7 +681,7 @@ class EVLicenseApp {
                             <strong>ATR:</strong> <span class="data-hex">${atr}</span>
                         </div>
                         <div class="data-row">
-                            <strong>Detected:</strong> ${this.formatDateTime(cardData.timestamp)}
+                            <strong>Detected:</strong> ${this.formatDateTime(cardData.detectedAt)}
                         </div>
                         ${cardData.readTimestamp ? `
                         <div class="data-row">
@@ -679,8 +690,9 @@ class EVLicenseApp {
                     </div>
                 </div>
                 
+                ${textInfo}
+                ${blocksInfo}
                 ${additionalDataInfo}
-                ${sectorsInfo}
                 ${readerInfo}
                 
                 <div class="card-actions">
