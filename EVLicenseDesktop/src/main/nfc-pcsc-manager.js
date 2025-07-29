@@ -36,6 +36,16 @@ class NFCPCSCManager extends EventEmitter {
                 this.handleReaderConnection(reader);
             });
 
+            // Wait a short time to see if any readers are detected
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            if (this.readers.size === 0) {
+                const supportUrl = 'https://www.acs.com.hk/en/products/3/acr122u-usb-nfc-reader/';
+                const driverUrl = 'https://www.acs.com.hk/en/products/3/acr122u-usb-nfc-reader/#tab_download';
+                const msg = `No NFC reader detected.\n\nIf you are using an ACS ACR122U, please ensure the official PC/SC driver is installed.\n\nDownload: ${driverUrl}`;
+                console.error(msg);
+                this.emit('error', new Error(msg));
+            }
+
             this.isInitialized = true;
             console.log('✅ NFC-PCSC Manager initialized successfully');
             
@@ -415,13 +425,18 @@ class NFCPCSCManager extends EventEmitter {
                 writeBuffer = ndefMessage;
             }
 
-            // --- Write to card (block 4 onwards) ---
-            const maxBlockSize = 16;
+            // --- Write to card (block 4 onwards for Classic, block 4 for Ultralight/NTAG) ---
+            let maxBlockSize = 16;
+            let blockStart = 4;
+            if (this.currentCard.type && (this.currentCard.type.includes('Ultralight') || this.currentCard.type.includes('NTAG'))) {
+                maxBlockSize = 4;
+                blockStart = 4; // For NTAG/Ultralight, NDEF usually starts at page 4 (block 4)
+            }
             const blocks = [];
             let totalBytesWritten = 0;
             const totalBlocks = Math.ceil(writeBuffer.length / maxBlockSize);
             for (let i = 0; i < totalBlocks; i++) {
-                const blockNumber = 4 + i;
+                const blockNumber = blockStart + i;
                 const start = i * maxBlockSize;
                 const end = Math.min(start + maxBlockSize, writeBuffer.length);
                 let blockData = writeBuffer.slice(start, end);
