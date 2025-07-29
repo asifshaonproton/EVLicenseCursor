@@ -1,90 +1,192 @@
-# TaskFlow: Structured Project Workflow System
+# 🔥 EV License Management System
 
-TaskFlow is a comprehensive workflow management system for software projects that combines task-based management with state-driven workflows in a file-based approach.
+A comprehensive cross-platform license management system with NFC support, featuring both desktop and mobile applications.
 
-## Overview
-
-TaskFlow provides a structured approach to project planning, task tracking, and development processes by:
-
-- Organizing projects using a consistent directory structure
-- Tracking project state and progress through markdown files
-- Breaking down requirements into manageable tasks
-- Integrating with AI assistants for enhanced productivity
-
-## Key Features
-
-- **File-Based Workflow**: All project state stored in markdown files for easy version control
-- **Phase-Based Development**: Clearly defined workflow phases (Planning, Development, Testing, Deployment)
-- **Task Management**: Structured task creation, tracking, and dependency management
-- **AI Integration**: Designed to work with Claude Desktop and Cursor AI
-- **Blueprint Approach**: Transform TaskFlow into a specific project using a project blueprint
-
-## Directory Structure
+## 📁 Project Structure
 
 ```
-project-name/
-├── README.md                    # Project overview
-├── .cursor/                     # Cursor IDE integration
-│   ├── rules/                   # Rules for Cursor AI
-│   │   └── task_workflow.mdc    # AI assistant rules
-│   └── setup/                   # Cursor setup files
-│       └── setup.md             # Setup instructions for Cursor
-├── .tf/                         # TaskFlow infrastructure
-│   ├── docs/                    # Project documentation
-│   │   ├── prd.md               # Product Requirements Document
-│   │   └── project_config.md    # Project configuration
-│   ├── init/                    # Project initialization files
-│   │   ├── blueprint.md         # Blueprint template
-│   │   ├── process.md           # Processing instructions
-│   │   ├── examples/            # Example projects
-│   │   └── README.md            # Initialization documentation
-│   └── workflow/                # Workflow management
-│       ├── workflow_state.md    # Current project state
-│       └── templates/           # File templates
-│           ├── task_template.md # Task template
-│           └── ...              # Additional templates
-└── tasks/                       # Individual task files
-    ├── task_001.md              # Task example
-    └── ...                      # Additional tasks
+EVLicenseCursor/
+├── EVLicenseDesktop/          # Desktop App V1 (Original)
+│   ├── src/main/             # Main process files
+│   ├── src/renderer/         # Renderer process files
+│   └── package.json          # V1 dependencies
+├── EVLicenseDesktopV2/       # Desktop App V2 (Enhanced)
+│   ├── src/main/             # Main process files (nfc-pcsc)
+│   ├── src/renderer/         # Renderer process files
+│   └── package.json          # V2 dependencies
+├── EVLicenseApp/             # Android Mobile App
+│   ├── app/src/main/         # Android source code
+│   └── build.gradle          # Android build config
+├── assets/                   # Shared assets
+├── tasks/                    # Development tasks
+└── package.json              # Workspace configuration
 ```
 
-## Getting Started
+## 🚀 Quick Start
 
-The recommended way to use TaskFlow is with the Blueprint approach:
+### Prerequisites
+- Node.js >= 18.0.0
+- npm >= 8.0.0
+- Android Studio (for mobile app)
+- ACR122U NFC Reader (for desktop apps)
 
-1. **Download TaskFlow**: Download and rename the TaskFlow folder to your project name
-2. **Create Blueprint**: Create a project blueprint using the template in `.tf/init/blueprint.md`
-3. **Process with Claude**: Have Claude Desktop process your blueprint using the guide in `.tf/init/process.md`
-4. **Complete Setup**: Open in Cursor and run the setup command
+### Installation
 
-For detailed instructions, see the [Initialization Guide](.tf/init/README.md).
+```bash
+# Install all dependencies
+npm run install:all
 
-## Core Components
+# Or install individually
+npm install
+cd EVLicenseDesktop && npm install
+cd EVLicenseDesktopV2 && npm install
+```
 
-- **Product Requirements Document** (`.tf/docs/prd.md`): Project requirements and specifications
-- **Project Configuration** (`.tf/docs/project_config.md`): Technical details and team information
-- **Workflow State** (`.tf/workflow/workflow_state.md`): Current phase, active tasks, and progress
-- **Task Files** (`tasks/task_XXX.md`): Individual task details, steps, and acceptance criteria
-- **Blueprint** (`.tf/init/blueprint.md`): Template for defining project parameters
+### Running Applications
 
-## Workflow Process
+#### Desktop V1 (Original - node-hid based)
+```bash
+npm run start:v1
+# or
+cd EVLicenseDesktop && npm start
+```
 
-TaskFlow projects progress through four phases:
+#### Desktop V2 (Enhanced - nfc-pcsc based) ⭐ **Recommended**
+```bash
+npm run start:v2
+# or
+cd EVLicenseDesktopV2 && npm start
+```
 
-1. **Planning Phase**: Create PRD, project configuration, and initial tasks
-2. **Development Phase**: Implement tasks in priority order, tracking progress
-3. **Testing Phase**: Verify implementations against acceptance criteria
-4. **Deployment Phase**: Release and monitor the implementation
+#### Development Mode
+```bash
+npm run dev:v1    # V1 development mode
+npm run dev:v2    # V2 development mode
+```
 
-## Claude Desktop and Cursor Integration
+## 🔧 Key Features
 
-TaskFlow is designed to work seamlessly with AI assistants:
+### Desktop Applications
+- **V1**: Original implementation using `node-hid`
+- **V2**: Enhanced implementation using `nfc-pcsc` with better compatibility
+- Cross-platform support (Windows, macOS, Linux)
+- Real-time NFC card detection and management
+- License data encryption and secure storage
+- SQLite database for local data management
 
-- **Claude Desktop**: Used for initial project preparation and blueprint processing
-- **Cursor**: Used for development assistance and project setup completion
+### Mobile Application (Android)
+- Built-in NFC support
+- External ACR122U reader support via USB OTG
+- Material Design 3 UI
+- Offline-first architecture
+- Secure data storage
 
-This integration creates a powerful workflow where Claude handles planning and research while Cursor assists with implementation.
+## 📋 Technology Stack
 
-## License
+### Desktop V1
+- **Electron.js**: Cross-platform desktop framework
+- **node-hid**: USB HID device communication
+- **SQLite**: Local database engine
+- **Material Design**: UI/UX inspiration
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+### Desktop V2 ⭐ **Enhanced**
+- **Electron.js**: Cross-platform desktop framework
+- **nfc-pcsc**: PC/SC NFC reader communication (industry standard)
+- **ndef**: Proper NDEF message handling
+- **SQLite**: Local database engine
+- **Material Design**: UI/UX inspiration
+
+### Mobile
+- **Android**: Native Android development
+- **Kotlin**: Programming language
+- **Material Design 3**: Modern UI components
+- **Room Database**: Local data persistence
+
+## 🔄 Migration from V1 to V2
+
+The V2 desktop application includes several improvements:
+
+1. **Industry Standard NFC**: Uses PC/SC protocol instead of direct USB HID
+2. **Better Compatibility**: Works with more NFC readers and systems
+3. **Enhanced NDEF Support**: Proper text record handling with TLV format
+4. **Multi-Reader Support**: Can handle multiple NFC readers simultaneously
+5. **Improved Error Handling**: More robust error detection and recovery
+
+## 🛠️ Development
+
+### Building Applications
+
+```bash
+# Build V1
+npm run build:v1
+
+# Build V2
+npm run build:v2
+
+# Build both
+npm run build:v1 && npm run build:v2
+```
+
+### Rebuilding Native Modules
+
+```bash
+# Rebuild V1
+npm run rebuild:v1
+
+# Rebuild V2
+npm run rebuild:v2
+```
+
+### Cleaning
+
+```bash
+# Clean all node_modules
+npm run clean
+```
+
+## 📱 NFC Reader Setup
+
+### Desktop Applications
+1. Connect ACR122U reader via USB
+2. Install PC/SC drivers from [ACS website](https://www.acs.com.hk/en/products/3/acr122u-usb-nfc-reader/#tab_download)
+3. Restart the application
+4. The reader should be automatically detected
+
+### Mobile Application
+1. Enable NFC in device settings
+2. For external readers, connect via USB OTG
+3. Grant necessary permissions when prompted
+
+## 🔐 Security Features
+
+- License data encryption
+- Secure NFC communication
+- Local data storage
+- Permission-based access control
+
+## 📄 License
+
+MIT License - see [LICENSE](LICENSE) file for details.
+
+## 👨‍💻 Author
+
+**Talukdar & Son's, Software Eng. Asif Hossain**
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
+
+## 📞 Support
+
+For support and questions:
+- Check the documentation in each application folder
+- Review the migration guide in `NFC_PCSC_MIGRATION_SUMMARY.md`
+- Open an issue on GitHub
+
+---
+
+**Note**: V2 is the recommended version for new deployments due to its enhanced NFC support and better compatibility.

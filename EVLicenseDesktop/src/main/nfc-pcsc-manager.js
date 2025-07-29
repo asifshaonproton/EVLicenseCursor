@@ -36,14 +36,26 @@ class NFCPCSCManager extends EventEmitter {
                 this.handleReaderConnection(reader);
             });
 
-            // Wait a short time to see if any readers are detected
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            // Wait longer for readers to be detected (up to 5 seconds)
+            console.log('⏳ Waiting for NFC readers to be detected...');
+            let waitTime = 0;
+            const maxWaitTime = 5000; // 5 seconds
+            const checkInterval = 500; // Check every 500ms
+            
+            while (this.readers.size === 0 && waitTime < maxWaitTime) {
+                await new Promise(resolve => setTimeout(resolve, checkInterval));
+                waitTime += checkInterval;
+                console.log(`⏳ Still waiting... (${waitTime}ms elapsed)`);
+            }
+            
             if (this.readers.size === 0) {
                 const supportUrl = 'https://www.acs.com.hk/en/products/3/acr122u-usb-nfc-reader/';
                 const driverUrl = 'https://www.acs.com.hk/en/products/3/acr122u-usb-nfc-reader/#tab_download';
-                const msg = `No NFC reader detected.\n\nIf you are using an ACS ACR122U, please ensure the official PC/SC driver is installed.\n\nDownload: ${driverUrl}`;
+                const msg = `No NFC reader detected after ${maxWaitTime}ms.\n\nIf you are using an ACS ACR122U, please ensure the official PC/SC driver is installed.\n\nDownload: ${driverUrl}`;
                 console.error(msg);
                 this.emit('error', new Error(msg));
+            } else {
+                console.log(`✅ Found ${this.readers.size} NFC reader(s)`);
             }
 
             this.isInitialized = true;

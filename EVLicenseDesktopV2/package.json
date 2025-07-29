@@ -1,0 +1,36 @@
+{
+  "name": "evlicense-desktop-v2",
+  "version": "2.0.0",
+  "description": "EV License Management System with NFC Support - Version 2",
+  "main": "src/main/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "build": "electron-builder",
+    "rebuild": "@electron/rebuild",
+    "postinstall": "@electron/rebuild",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "electron",
+    "nfc",
+    "license",
+    "desktop"
+  ],
+  "author": "Talukdar & Son's, Software Eng. Asif Hossain",
+  "license": "MIT",
+  "devDependencies": {
+    "@electron/rebuild": "^4.0.1",
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8",
+    "electron-rebuild": "^3.2.9"
+  },
+  "dependencies": {
+    "electron-updater": "^6.6.2",
+    "express": "^4.21.2",
+    "ndef": "^0.2.0",
+    "nfc-pcsc": "^0.8.1",
+    "socket.io": "^4.8.1",
+    "sqlite3": "^5.1.7"
+  }
+}

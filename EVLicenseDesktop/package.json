@@ -22,6 +22,8 @@
     "prerelease": "npm run build",
     "build-script": "node scripts/build-release.js",
     "build-all": "node scripts/build-release.js --all --clean",
+    "rebuild": "@electron/rebuild",
+    "postinstall": "@electron/rebuild",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
@@ -35,6 +37,7 @@
   "author": "Talukdar & Son's, Software Eng. Asif Hossain",
   "license": "MIT",
   "devDependencies": {
+    "@electron/rebuild": "^4.0.1",
     "electron": "^33.2.1",
     "electron-builder": "^25.1.8"
   },
