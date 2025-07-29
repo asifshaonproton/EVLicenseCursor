@@ -258,178 +258,63 @@ class NFCPCSCManager extends EventEmitter {
             
             if (dataBlocks.length === 0) return;
             
-            // Concatenate block data to reconstruct plain text, but only use actual data length  
+            // Concatenate all block data to reconstruct NDEF record
             let allData = Buffer.alloc(0);
             for (const block of dataBlocks) {
                 try {
                     const blockBuffer = Buffer.from(block.data, 'hex');
-                    
-                    // Stop at first completely empty block (all zeros) to avoid including old data
-                    if (blockBuffer.every(byte => byte === 0x00)) {
-                        console.log(`🛑 Stopping at empty block ${block.block}`);
-                        break;
-                    }
-                    
                     allData = Buffer.concat([allData, blockBuffer]);
-                    console.log(`🔗 Added block ${block.block} (${blockBuffer.length} bytes): "${blockBuffer.toString('utf8').replace(/\0/g, '·')}"`);
                 } catch (e) {
-                    console.warn(`⚠️ Could not process block ${block.block}:`, e);
+                    console.warn(`⚠️ Could not process block ${block.block}`);
                     break;
                 }
             }
             
             if (allData.length === 0) return;
             
-            // Try to parse as plain text data (no NDEF)
-            console.log('🔍 Attempting to parse plain text data...');
+            // Try to parse as NDEF message (Android compatible format)
+            console.log('🔍 Attempting to parse Android-compatible NDEF data...');
             console.log(`🔍 Raw data (${allData.length} bytes): ${allData.toString('hex')}`);
             
             try {
-                // Debug: log each block's contribution
-                console.log('🔍 Debug: Examining individual blocks...');
-                for (const block of dataBlocks) {
-                    const blockBuffer = Buffer.from(block.data, 'hex');
-                    const blockText = blockBuffer.toString('utf8');
-                    console.log(`🔍 Block ${block.block}: "${blockText}"`);
-                    console.log(`🔍 Block ${block.block} hex: ${block.data}`);
-                }
-                
-                // Convert raw data to string and clean it
-                let plainText = allData.toString('utf8');
-                console.log('🔍 Raw UTF-8 text (first 300 chars):', JSON.stringify(plainText.substring(0, 300)));
-                
-                // Clean the text (remove null bytes and control characters)
-                let cleanedText = plainText.replace(/\0+/g, '').replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, '').trim();
-                console.log('📋 Cleaned text for parsing:', JSON.stringify(cleanedText.substring(0, 300)));
-                
-                if (cleanedText && cleanedText.length > 0) {
-                    // Try to extract fields using regex to handle corruption better
-                    console.log('🔍 Attempting field extraction from corrupted text...');
+                // Parse standard NDEF message
+                const ndefText = NdefUtils.parseNdefMessage(allData);
+                if (ndefText) {
+                    console.log('📋 Found NDEF text:', ndefText.substring(0, 100) + '...');
                     
-                    const licenseData = {};
-                    let hasLicenseFields = false;
-                    
-                    // Use regex to find field patterns even in corrupted text
-                    const fieldPatterns = [
-                        { field: 'holderName', pattern: /NAME:([^:\n]+?)(?:MOBILE|$)/i },
-                        { field: 'mobile', pattern: /MOBILE:([^:\n]+?)(?:CITY|$)/i },
-                        { field: 'city', pattern: /CITY:([^:\n]+?)(?:TYPE|$)/i },
-                        { field: 'licenseType', pattern: /TYPE:([^:\n]+?)(?:NUMBER|$)/i },
-                        { field: 'licenseNumber', pattern: /NUMBER:([^:\n]+?)(?:CARD|$)/i },
-                        { field: 'nfcCardNumber', pattern: /CARD:([^:\n]+?)(?:EXPIRY|$)/i },
-                        { field: 'validityDate', pattern: /EXPIRY:([^:\n]*?)(?:$)/i }
-                    ];
-                    
-                    for (const { field, pattern } of fieldPatterns) {
-                        const match = cleanedText.match(pattern);
-                        if (match && match[1]) {
-                            let value = match[1].trim();
-                            // Clean up any corruption artifacts
-                            value = value.replace(/[^\w\s\-\/\@\.\(\)]/g, '').trim();
-                            if (value && value.length > 0) {
-                                licenseData[field] = value;
-                                hasLicenseFields = true;
-                                console.log(`✅ Extracted ${field}: "${value}"`);
-                            }
-                        } else {
-                            console.log(`❌ Could not extract ${field} from text`);
-                        }
-                    }
-                    
-                    // Fallback: try line-by-line parsing for clean data
-                    if (!hasLicenseFields) {
-                        console.log('🔍 Trying line-by-line parsing...');
-                        const lines = cleanedText.split('\n').filter(line => line.trim().length > 0);
+                    // Try to decrypt the text (it should be encrypted license data)
+                    try {
+                        const decryptedText = CryptoUtils.decrypt(ndefText);
+                        console.log('🔓 Successfully decrypted data:', decryptedText.substring(0, 100) + '...');
                         
-                        for (const line of lines) {
-                            const colonIndex = line.indexOf(':');
-                            if (colonIndex > 0) {
-                                const field = line.substring(0, colonIndex).trim();
-                                const value = line.substring(colonIndex + 1).trim();
-                                
-                                console.log(`🔍 Line Field: "${field}" = "${value}"`);
-                                
-                                // Map field names to license data
-                                switch (field.toUpperCase()) {
-                                    case 'NAME':
-                                        licenseData.holderName = value;
-                                        hasLicenseFields = true;
-                                        break;
-                                    case 'MOBILE':
-                                        licenseData.mobile = value;
-                                        hasLicenseFields = true;
-                                        break;
-                                    case 'CITY':
-                                        licenseData.city = value;
-                                        hasLicenseFields = true;
-                                        break;
-                                    case 'TYPE':
-                                        licenseData.licenseType = value;
-                                        hasLicenseFields = true;
-                                        break;
-                                    case 'NUMBER':
-                                        licenseData.licenseNumber = value;
-                                        hasLicenseFields = true;
-                                        break;
-                                    case 'CARD':
-                                        licenseData.nfcCardNumber = value;
-                                        hasLicenseFields = true;
-                                        break;
-                                    case 'EXPIRY':
-                                        licenseData.validityDate = value;
-                                        hasLicenseFields = true;
-                                        break;
-                                    case 'TEXT':
-                                        // Plain text data
-                                        cardData.extractedText = `📝 PLAIN TEXT DATA:\n\n"${value}"`;
-                                        cardData.isPlainTextFormat = true;
-                                        console.log(`📝 Extracted plain text: "${value}"`);
-                                        return;
-                                }
-                            }
-                        }
-                    }
-                        
-                        if (hasLicenseFields) {
-                            // Format license data nicely
-                            cardData.extractedText = `📄 LICENSE INFORMATION:\n\n• Holder Name: ${licenseData.holderName || 'N/A'}\n• Mobile: ${licenseData.mobile || 'N/A'}\n• City: ${licenseData.city || 'N/A'}\n• License Type: ${licenseData.licenseType || 'N/A'}\n• License Number: ${licenseData.licenseNumber || 'N/A'}\n• Card Number: ${licenseData.nfcCardNumber || 'N/A'}\n• Valid Until: ${licenseData.validityDate || 'N/A'}`;
+                        // Try to parse as license JSON
+                        try {
+                            const licenseData = CryptoUtils.parseLicenseJson(decryptedText);
+                            cardData.extractedText = `📄 License Data (Decrypted):\n• Holder: ${licenseData.holderName}\n• Mobile: ${licenseData.mobile}\n• City: ${licenseData.city}\n• Type: ${licenseData.licenseType}\n• Number: ${licenseData.licenseNumber}\n• Card ID: ${licenseData.nfcCardNumber}\n• Valid Until: ${licenseData.validityDate}`;
                             cardData.licenseData = licenseData;
-                            cardData.isPlainTextFormat = false;
-                            console.log('✅ Extracted license data from fields:', licenseData);
+                            cardData.isAndroidCompatible = true;
+                            console.log(`📄 Extracted Android-compatible license data for: ${licenseData.holderName}`);
+                            return;
+                        } catch (jsonError) {
+                            console.log('⚠️ Not license JSON, treating as plain text');
+                            // Not license JSON, but decrypted text is valid
+                            cardData.extractedText = `📝 Decrypted Text:\n"${decryptedText}"`;
+                            cardData.isAndroidCompatible = true;
+                            console.log(`📝 Extracted encrypted text: "${decryptedText}"`);
                             return;
                         }
-                    } catch (fieldError) {
-                        console.log('📋 Not field:value format, trying JSON fallback');
+                    } catch (decryptError) {
+                        console.log('⚠️ Decryption failed, treating as plain NDEF text');
+                        // Not encrypted, but NDEF text is valid
+                        cardData.extractedText = `📋 NDEF Text:\n"${ndefText}"`;
+                        console.log(`📋 Extracted plain NDEF text: "${ndefText}"`);
+                        return;
                     }
-                    
-                    // Fallback: try JSON parsing for backward compatibility
-                    try {
-                        const jsonMatch = cleanedText.match(/\{[\s\S]*\}/);
-                        if (jsonMatch) {
-                            const licenseData = JSON.parse(jsonMatch[0]);
-                            if (licenseData.holderName || licenseData.licenseNumber) {
-                                // Format license data nicely
-                                cardData.extractedText = `📄 LICENSE INFORMATION:\n\n• Holder Name: ${licenseData.holderName || 'N/A'}\n• Mobile: ${licenseData.mobile || 'N/A'}\n• City: ${licenseData.city || 'N/A'}\n• License Type: ${licenseData.licenseType || 'N/A'}\n• License Number: ${licenseData.licenseNumber || 'N/A'}\n• Card Number: ${licenseData.nfcCardNumber || 'N/A'}\n• Valid Until: ${licenseData.validityDate || 'N/A'}`;
-                                cardData.licenseData = licenseData;
-                                cardData.isPlainTextFormat = false;
-                                console.log('✅ Extracted license data from JSON:', licenseData);
-                                return;
-                            }
-                        }
-                    } catch (jsonError) {
-                        console.log('📋 Not valid JSON either');
-                    }
-                    
-                    // Not license data, display as plain text
-                    cardData.extractedText = `📝 PLAIN TEXT DATA:\n\n"${cleanedText}"`;
-                    cardData.isPlainTextFormat = true;
-                    console.log(`📝 Extracted plain text: "${cleanedText.substring(0, 100)}..."`);
-                    return;
                 } else {
-                    console.log('⚠️ No readable text found in data');
+                    console.log('⚠️ No text found in NDEF message');
                 }
-            } catch (textError) {
-                console.warn('⚠️ Plain text parsing failed:', textError.message);
+            } catch (ndefError) {
+                console.warn('⚠️ NDEF parsing failed:', ndefError.message);
             }
             
             // Fallback: try simple text extraction (legacy format)
@@ -524,7 +409,7 @@ class NFCPCSCManager extends EventEmitter {
             
             console.log('📝 Writing Android-compatible data to card:', data);
             
-            // Handle different data types - USE FIELD:VALUE FORMAT INSTEAD OF JSON
+            // Handle different data types
             let finalData;
             if (typeof data === 'object' && data !== null) {
                 // If it's a license object, set the NFC card number from current card
@@ -536,84 +421,52 @@ class NFCPCSCManager extends EventEmitter {
                     console.log(`📇 Set NFC card number to: ${uidDecimal}`);
                 }
                 
-                // Write as field:value pairs separated by newlines (avoids JSON corruption)
-                const fields = [
-                    `NAME:${licenseData.holderName || ''}`,
-                    `MOBILE:${licenseData.mobile || ''}`,
-                    `CITY:${licenseData.city || ''}`,
-                    `TYPE:${licenseData.licenseType || ''}`,
-                    `NUMBER:${licenseData.licenseNumber || ''}`,
-                    `CARD:${licenseData.nfcCardNumber || ''}`,
-                    `EXPIRY:${licenseData.validityDate || ''}`
-                ];
-                finalData = fields.join('\n');
-                console.log('📄 License field data:', finalData);
+                const licenseJson = CryptoUtils.createLicenseJson(licenseData);
+                console.log('📄 License JSON:', licenseJson);
+                finalData = CryptoUtils.encrypt(licenseJson);
+                console.log('🔐 Encrypted data length:', finalData.length);
             } else if (typeof data === 'string') {
-                // For plain text, use as-is - NO ENCRYPTION
-                finalData = `TEXT:${data}`;
-                console.log('📝 Plain text data:', finalData);
+                // For plain text, encrypt it directly
+                finalData = CryptoUtils.encrypt(data);
             } else {
-                finalData = `TEXT:${String(data)}`;
-                console.log('📝 Converted to string:', finalData);
+                finalData = String(data);
             }
 
-            // Write plain text directly to blocks (no NDEF wrapping)
-            const dataBuffer = Buffer.from(finalData, 'utf8');
-            console.log(`📋 Plain data buffer length: ${dataBuffer.length} bytes`);
-            console.log(`📋 Data to write: "${finalData}"`);
-            console.log(`📋 Data buffer hex: ${dataBuffer.toString('hex')}`);
+            // Create NDEF message exactly like Android
+            const ndefMessage = NdefUtils.createNdefMessage(finalData);
+            console.log(`📋 NDEF message length: ${ndefMessage.length} bytes`);
 
             // Write directly to blocks starting from block 4 (data blocks)
             const maxBlockSize = 16;
             const blocks = [];
             let totalBytesWritten = 0;
             
-            // Calculate how many blocks we need (add extra blocks to clear old data)
-            const minBlocks = Math.ceil(dataBuffer.length / maxBlockSize);
-            const totalBlocks = Math.max(minBlocks, 8); // Clear at least 8 blocks to erase old data
-            console.log(`📦 Will write ${minBlocks} data blocks + clear ${totalBlocks - minBlocks} extra blocks starting from block 4`);
+            // Calculate how many blocks we need
+            const totalBlocks = Math.ceil(ndefMessage.length / maxBlockSize);
+            console.log(`📦 Will write ${totalBlocks} blocks starting from block 4`);
 
-            // First, clear all data blocks to prevent old data interference
-            console.log('🧹 Clearing old data from blocks 4-15...');
-            for (let i = 0; i < 12; i++) { // Clear blocks 4-15
-                const blockNumber = 4 + i;
-                const emptyBlock = Buffer.alloc(16, 0x00);
-                try {
-                    await reader.write(blockNumber, emptyBlock);
-                    console.log(`🧹 Cleared block ${blockNumber}`);
-                } catch (clearError) {
-                    console.warn(`⚠️ Could not clear block ${blockNumber}: ${clearError.message}`);
-                    // Continue anyway - might be protected
-                }
-            }
-
-            console.log('📝 Writing actual data...');
-            // Write plain data across multiple blocks starting from block 4
-            for (let i = 0; i < minBlocks; i++) {
+            // Write NDEF message across multiple blocks starting from block 4
+            for (let i = 0; i < totalBlocks; i++) {
                 const blockNumber = 4 + i; // Start from block 4 (first data block)
                 const start = i * maxBlockSize;
-                const end = Math.min(start + maxBlockSize, dataBuffer.length);
+                const end = Math.min(start + maxBlockSize, ndefMessage.length);
                 
-                let blockData = dataBuffer.slice(start, end);
+                let blockData = ndefMessage.slice(start, end);
                 
-                // Pad block to 16 bytes with zeros
+                // Pad block to 16 bytes with zeros (standard for MIFARE)
                 if (blockData.length < maxBlockSize) {
                     const padding = Buffer.alloc(maxBlockSize - blockData.length, 0x00);
                     blockData = Buffer.concat([blockData, padding]);
                 }
 
-                console.log(`📝 Block ${blockNumber} - Data slice: "${finalData.substring(start, end)}"`);
-                console.log(`📝 Block ${blockNumber} - Buffer: ${blockData.toString('hex')}`);
-                console.log(`📝 Block ${blockNumber} - Text: "${blockData.toString('utf8')}"`);
-
                 try {
-                    console.log(`📝 Writing block ${blockNumber}: "${blockData.slice(0, end-start).toString('utf8')}" (${blockData.toString('hex')})`);
+                    console.log(`📝 Writing block ${blockNumber}: ${blockData.toString('hex')}`);
                     await reader.write(blockNumber, blockData);
                     totalBytesWritten += (end - start);
                     blocks.push({
                         block: blockNumber,
                         hexData: blockData.toString('hex'),
-                        originalData: dataBuffer.slice(start, end),
+                        originalData: ndefMessage.slice(start, end),
                         bytesWritten: end - start
                     });
                     console.log(`✅ Block ${blockNumber} written successfully (${end - start} bytes)`);
@@ -623,34 +476,34 @@ class NFCPCSCManager extends EventEmitter {
                 }
             }
 
-            console.log(`✅ Plain text writing completed. Total: ${totalBytesWritten} bytes across ${blocks.length} blocks`);
+            console.log(`✅ Android-compatible writing completed. Total: ${totalBytesWritten} bytes across ${blocks.length} blocks`);
             
             // Emit write success event
             this.emit('card-written', {
                 uid: this.currentCard.uid,
                 originalData: data,
-                plainTextData: finalData,
-                dataBuffer: dataBuffer.toString('hex'),
+                encryptedData: finalData,
+                ndefMessage: ndefMessage.toString('hex'),
                 blocks: blocks,
                 totalBytesWritten: totalBytesWritten,
-                isPlainTextFormat: true,
+                isAndroidCompatible: true,
                 timestamp: new Date()
             });
 
             return {
                 success: true,
-                message: `Successfully wrote ${totalBytesWritten} bytes to ${blocks.length} blocks (Plain Text)`,
+                message: `Successfully wrote ${totalBytesWritten} bytes to ${blocks.length} blocks (Android compatible)`,
                 originalData: data,
-                plainTextData: finalData,
+                encryptedData: finalData,
                 blocks: blocks,
                 totalBytesWritten: totalBytesWritten,
                 startBlock: 4,
                 endBlock: 4 + blocks.length - 1,
-                isPlainTextFormat: true
+                isAndroidCompatible: true
             };
 
         } catch (error) {
-            console.error('❌ Error writing plain text data to card:', error);
+            console.error('❌ Error writing Android-compatible data to card:', error);
             this.emit('card-write-error', {
                 error: error.message,
                 uid: this.currentCard ? this.currentCard.uid : null,
