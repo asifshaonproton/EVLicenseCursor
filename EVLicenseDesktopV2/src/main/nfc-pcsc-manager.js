@@ -136,7 +136,8 @@ class NFCPCSCManager extends EventEmitter {
                 type: this.detectCardType(card.atr),
                 reader: reader.name,
                 detectedAt: new Date(),
-                standard: card.standard || 'Unknown'
+                standard: card.standard || 'Unknown',
+                card: card // Store the actual card object for reading operations
             };
 
             console.log('🏷️ Card details:', cardData);
@@ -209,44 +210,56 @@ class NFCPCSCManager extends EventEmitter {
             // For MIFARE Classic cards, try to authenticate and read
             if (card.type.includes('MIFARE Classic')) {
                 try {
-                    // Try to read block 0 (manufacturer data) - this should be readable without auth
-                    const block0 = await reader.read(0, 16);
-                    data.blocks.push({
-                        block: 0,
-                        data: block0.toString('hex'),
-                        length: block0.length,
-                        textContent: null
-                    });
-                    console.log(`📊 Read block 0: ${block0.toString('hex')}`);
+                    // Use the reader's transmit method to send APDU commands
+                    // First, try to read block 0 (manufacturer data) - this should be readable without auth
+                    const block0Command = Buffer.from([0xFF, 0xCA, 0x00, 0x00, 0x04]); // GET UID command
+                    const block0Response = await reader.transmit(block0Command, 16);
+                    
+                    if (block0Response && block0Response.length >= 4) {
+                        data.blocks.push({
+                            block: 0,
+                            data: block0Response.toString('hex'),
+                            length: block0Response.length,
+                            textContent: null
+                        });
+                        console.log(`📊 Read block 0: ${block0Response.toString('hex')}`);
+                    }
 
-                    // Try to read block 1 (UID) - this should also be readable
-                    const block1 = await reader.read(1, 16);
-                    data.blocks.push({
-                        block: 1,
-                        data: block1.toString('hex'),
-                        length: block1.length,
-                        textContent: null
-                    });
-                    console.log(`📊 Read block 1: ${block1.toString('hex')}`);
+                    // Try to read block 1 (UID) using READ BINARY command
+                    const block1Command = Buffer.from([0xFF, 0xB0, 0x00, 0x01, 0x10]); // READ BINARY command
+                    try {
+                        const block1Response = await reader.transmit(block1Command, 16);
+                        data.blocks.push({
+                            block: 1,
+                            data: block1Response.toString('hex'),
+                            length: block1Response.length,
+                            textContent: null
+                        });
+                        console.log(`📊 Read block 1: ${block1Response.toString('hex')}`);
+                    } catch (block1Error) {
+                        console.log(`⚠️ Could not read block 1: ${block1Error.message}`);
+                    }
 
                     // For MIFARE Classic, try to read NDEF data from block 4 onwards
                     // First, try to read block 4 to see if it contains NDEF TLV
                     try {
-                        const block4 = await reader.read(4, 16);
+                        const block4Command = Buffer.from([0xFF, 0xB0, 0x00, 0x04, 0x10]); // READ BINARY command
+                        const block4Response = await reader.transmit(block4Command, 16);
+                        
                         data.blocks.push({
                             block: 4,
-                            data: block4.toString('hex'),
-                            length: block4.length,
-                            textContent: this.extractTextFromBlock(block4)
+                            data: block4Response.toString('hex'),
+                            length: block4Response.length,
+                            textContent: this.extractTextFromBlock(block4Response)
                         });
-                        console.log(`📊 Read block 4: ${block4.toString('hex')}`);
+                        console.log(`📊 Read block 4: ${block4Response.toString('hex')}`);
 
                         // Check if block 4 starts with NDEF TLV (0x03)
-                        if (block4[0] === 0x03) {
+                        if (block4Response[0] === 0x03) {
                             console.log('🔍 Detected NDEF TLV format in block 4');
-                            const ndefLength = block4[1];
+                            const ndefLength = block4Response[1];
                             if (ndefLength > 0 && ndefLength <= 14) { // 14 bytes available after TLV header
-                                const ndefData = block4.slice(2, 2 + ndefLength);
+                                const ndefData = block4Response.slice(2, 2 + ndefLength);
                                 try {
                                     const NdefUtils = require('./ndef-utils');
                                     const extractedText = NdefUtils.parseNdefMessage(ndefData);
@@ -264,14 +277,15 @@ class NFCPCSCManager extends EventEmitter {
                         // Try to read a few more blocks for additional data
                         for (let block = 5; block < 8; block++) {
                             try {
-                                const blockData = await reader.read(block, 16);
+                                const blockCommand = Buffer.from([0xFF, 0xB0, 0x00, block, 0x10]); // READ BINARY command
+                                const blockResponse = await reader.transmit(blockCommand, 16);
                                 data.blocks.push({
                                     block: block,
-                                    data: blockData.toString('hex'),
-                                    length: blockData.length,
-                                    textContent: this.extractTextFromBlock(blockData)
+                                    data: blockResponse.toString('hex'),
+                                    length: blockResponse.length,
+                                    textContent: this.extractTextFromBlock(blockResponse)
                                 });
-                                console.log(`📊 Read block ${block}: ${blockData.toString('hex')}`);
+                                console.log(`📊 Read block ${block}: ${blockResponse.toString('hex')}`);
                             } catch (blockError) {
                                 console.log(`⚠️ Could not read block ${block}: ${blockError.message}`);
                                 break;
@@ -289,14 +303,15 @@ class NFCPCSCManager extends EventEmitter {
                 try {
                     for (let block = 0; block < 8; block++) {
                         try {
-                            const blockData = await reader.read(block, 16);
+                            const blockCommand = Buffer.from([0xFF, 0xB0, 0x00, block, 0x10]); // READ BINARY command
+                            const blockResponse = await reader.transmit(blockCommand, 16);
                             data.blocks.push({
                                 block: block,
-                                data: blockData.toString('hex'),
-                                length: blockData.length,
-                                textContent: this.extractTextFromBlock(blockData)
+                                data: blockResponse.toString('hex'),
+                                length: blockResponse.length,
+                                textContent: this.extractTextFromBlock(blockResponse)
                             });
-                            console.log(`📊 Read block ${block}: ${blockData.toString('hex')}`);
+                            console.log(`📊 Read block ${block}: ${blockResponse.toString('hex')}`);
                         } catch (blockError) {
                             console.log(`⚠️ Could not read block ${block}: ${blockError.message}`);
                             break;
@@ -701,14 +716,17 @@ class NFCPCSCManager extends EventEmitter {
         }
         
         // Find the reader that has the current card
-        const reader = Array.from(this.readers.values()).find(r => r.card && r.card.uid === this.currentCard.uid);
+        const readerInfo = Array.from(this.readers.values()).find(r => r.card && r.card.uid === this.currentCard.uid);
         
-        if (!reader) {
+        if (!readerInfo) {
             throw new Error('Reader not found for current card');
         }
         
+        // Get the actual card object from the current card data
+        const card = this.currentCard.card || this.currentCard;
+        
         // Read the card data
-        const cardData = await this.readCardData(reader, this.currentCard);
+        const cardData = await this.readCardData(readerInfo.reader, card);
         
         return {
             ...this.currentCard,

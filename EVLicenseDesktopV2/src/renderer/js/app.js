@@ -521,8 +521,8 @@ class EVLicenseApp {
             return;
         }
 
-        // Show write dialog (simplified for now)
-        const data = prompt('Enter data to write to card:');
+        // Show write dialog using a simple input dialog
+        const data = await this.showInputDialog('Enter data to write to card:', 'Write NFC Card');
         if (!data) return;
 
         try {
@@ -537,6 +537,76 @@ class EVLicenseApp {
         } finally {
             this.showLoading(false);
         }
+    }
+
+    showInputDialog(message, title = 'Input') {
+        return new Promise((resolve) => {
+            // Create a simple modal dialog
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0,0,0,0.5);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 10000;
+            `;
+            
+            const dialog = document.createElement('div');
+            dialog.style.cssText = `
+                background: white;
+                padding: 20px;
+                border-radius: 8px;
+                min-width: 300px;
+                box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            `;
+            
+            dialog.innerHTML = `
+                <h3 style="margin: 0 0 15px 0;">${title}</h3>
+                <p style="margin: 0 0 15px 0;">${message}</p>
+                <input type="text" id="inputField" style="width: 100%; padding: 8px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px;">
+                <div style="text-align: right;">
+                    <button id="cancelBtn" style="margin-right: 10px; padding: 8px 16px; border: 1px solid #ccc; background: #f5f5f5; border-radius: 4px; cursor: pointer;">Cancel</button>
+                    <button id="okBtn" style="padding: 8px 16px; border: none; background: #007bff; color: white; border-radius: 4px; cursor: pointer;">OK</button>
+                </div>
+            `;
+            
+            modal.appendChild(dialog);
+            document.body.appendChild(modal);
+            
+            const inputField = dialog.querySelector('#inputField');
+            const okBtn = dialog.querySelector('#okBtn');
+            const cancelBtn = dialog.querySelector('#cancelBtn');
+            
+            inputField.focus();
+            
+            const cleanup = () => {
+                document.body.removeChild(modal);
+            };
+            
+            okBtn.onclick = () => {
+                const value = inputField.value.trim();
+                cleanup();
+                resolve(value);
+            };
+            
+            cancelBtn.onclick = () => {
+                cleanup();
+                resolve(null);
+            };
+            
+            inputField.onkeypress = (e) => {
+                if (e.key === 'Enter') {
+                    okBtn.click();
+                } else if (e.key === 'Escape') {
+                    cancelBtn.click();
+                }
+            };
+        });
     }
 
     async refreshNfcDevices() {
