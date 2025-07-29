@@ -36,6 +36,16 @@ class NFCPCSCManager extends EventEmitter {
                 this.handleReaderConnection(reader);
             });
 
+            // Wait a short time to see if any readers are detected
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            if (this.readers.size === 0) {
+                const supportUrl = 'https://www.acs.com.hk/en/products/3/acr122u-usb-nfc-reader/';
+                const driverUrl = 'https://www.acs.com.hk/en/products/3/acr122u-usb-nfc-reader/#tab_download';
+                const msg = `No NFC reader detected.\n\nIf you are using an ACS ACR122U, please ensure the official PC/SC driver is installed.\n\nDownload: ${driverUrl}`;
+                console.error(msg);
+                this.emit('error', new Error(msg));
+            }
+
             this.isInitialized = true;
             console.log('✅ NFC-PCSC Manager initialized successfully');
             
@@ -250,14 +260,11 @@ class NFCPCSCManager extends EventEmitter {
     extractCleanText(cardData) {
         try {
             if (!cardData.blocks || cardData.blocks.length === 0) return;
-            
             // Get data blocks (4+) sorted by block number
             const dataBlocks = cardData.blocks
                 .filter(block => block.block >= 4)
                 .sort((a, b) => a.block - b.block);
-            
             if (dataBlocks.length === 0) return;
-            
             // Concatenate all block data to reconstruct NDEF record
             let allData = Buffer.alloc(0);
             for (const block of dataBlocks) {
@@ -265,79 +272,47 @@ class NFCPCSCManager extends EventEmitter {
                     const blockBuffer = Buffer.from(block.data, 'hex');
                     allData = Buffer.concat([allData, blockBuffer]);
                 } catch (e) {
-                    console.warn(`⚠️ Could not process block ${block.block}`);
                     break;
                 }
             }
-            
             if (allData.length === 0) return;
-            
-            // Try to parse as NDEF message (Android compatible format)
-            console.log('🔍 Attempting to parse Android-compatible NDEF data...');
-            console.log(`🔍 Raw data (${allData.length} bytes): ${allData.toString('hex')}`);
-            
-            try {
-                // Parse standard NDEF message
+            // --- Use ndef npm library for NDEF parsing ---
+            // If block 4 starts with 0x03, treat as TLV and extract NDEF
+            if (allData[0] === 0x03) {
+                // TLV format: 0x03, length, NDEF, 0xFE
+                // Extract NDEF message from TLV
+                const tlvLen = allData[1];
+                const ndefMsg = allData.slice(2, 2 + tlvLen);
+                const ndefText = NdefUtils.parseNdefMessage(ndefMsg);
+                if (ndefText) {
+                    cardData.extractedText = ndefText;
+                    cardData.isAndroidCompatible = true;
+                    return;
+                }
+            } else {
+                // Try to parse as NDEF message directly
                 const ndefText = NdefUtils.parseNdefMessage(allData);
                 if (ndefText) {
-                    console.log('📋 Found NDEF text:', ndefText.substring(0, 100) + '...');
-                    
-                    // Try to decrypt the text (it should be encrypted license data)
-                    try {
-                        const decryptedText = CryptoUtils.decrypt(ndefText);
-                        console.log('🔓 Successfully decrypted data:', decryptedText.substring(0, 100) + '...');
-                        
-                        // Try to parse as license JSON
-                        try {
-                            const licenseData = CryptoUtils.parseLicenseJson(decryptedText);
-                            cardData.extractedText = `📄 License Data (Decrypted):\n• Holder: ${licenseData.holderName}\n• Mobile: ${licenseData.mobile}\n• City: ${licenseData.city}\n• Type: ${licenseData.licenseType}\n• Number: ${licenseData.licenseNumber}\n• Card ID: ${licenseData.nfcCardNumber}\n• Valid Until: ${licenseData.validityDate}`;
-                            cardData.licenseData = licenseData;
-                            cardData.isAndroidCompatible = true;
-                            console.log(`📄 Extracted Android-compatible license data for: ${licenseData.holderName}`);
-                            return;
-                        } catch (jsonError) {
-                            console.log('⚠️ Not license JSON, treating as plain text');
-                            // Not license JSON, but decrypted text is valid
-                            cardData.extractedText = `📝 Decrypted Text:\n"${decryptedText}"`;
-                            cardData.isAndroidCompatible = true;
-                            console.log(`📝 Extracted encrypted text: "${decryptedText}"`);
-                            return;
-                        }
-                    } catch (decryptError) {
-                        console.log('⚠️ Decryption failed, treating as plain NDEF text');
-                        // Not encrypted, but NDEF text is valid
-                        cardData.extractedText = `📋 NDEF Text:\n"${ndefText}"`;
-                        console.log(`📋 Extracted plain NDEF text: "${ndefText}"`);
-                        return;
-                    }
-                } else {
-                    console.log('⚠️ No text found in NDEF message');
+                    cardData.extractedText = ndefText;
+                    cardData.isAndroidCompatible = true;
+                    return;
                 }
-            } catch (ndefError) {
-                console.warn('⚠️ NDEF parsing failed:', ndefError.message);
             }
-            
             // Fallback: try simple text extraction (legacy format)
             try {
                 const simpleText = NdefUtils.parseSimpleTextRecord(allData);
                 if (simpleText) {
                     cardData.extractedText = `Simple Text: "${simpleText}"`;
-                    console.log(`📝 Extracted simple text: "${simpleText}"`);
                     return;
                 }
-            } catch (simpleError) {
-                console.warn('⚠️ Not a simple text record either');
-            }
-            
+            } catch (simpleError) {}
             // Last resort: raw text extraction
             const rawText = allData.toString('utf8').replace(/[\x00-\x1F\x7F]/g, '').trim();
             if (rawText && rawText.length > 0) {
                 cardData.extractedText = `Raw Text: "${rawText}"`;
-                console.log(`📝 Extracted raw text: "${rawText}"`);
             }
-            
         } catch (error) {
-            console.warn('⚠️ Error extracting Android-compatible text:', error);
+            // ignore
         }
     }
 
@@ -400,85 +375,89 @@ class NFCPCSCManager extends EventEmitter {
 
             const readerInfo = Array.from(this.readers.values())
                 .find(r => r.card && r.card.uid === this.currentCard.uid);
-            
             if (!readerInfo) {
                 throw new Error('Reader with current card not found');
             }
-
             const reader = readerInfo.reader;
-            
-            console.log('📝 Writing Android-compatible data to card:', data);
-            
-            // Handle different data types
+
+            // --- Authenticate for MIFARE Classic before write ---
+            if (this.currentCard.type && this.currentCard.type.includes('MIFARE Classic')) {
+                // Authenticate with Key A (default key)
+                const keyType = 0x60; // Key A
+                const key = Buffer.from([0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]);
+                try {
+                    await reader.authenticate(4, keyType, key, this.currentCard.uid);
+                    console.log('🔑 MIFARE Classic authenticated for block 4');
+                } catch (authErr) {
+                    throw new Error('Authentication failed for MIFARE Classic: ' + authErr.message);
+                }
+            }
+
+            // --- Prepare NDEF message using ndef library ---
             let finalData;
             if (typeof data === 'object' && data !== null) {
-                // If it's a license object, set the NFC card number from current card
                 const licenseData = { ...data };
                 if (this.currentCard && this.currentCard.uid) {
-                    // Convert UID to decimal string like Android
                     const uidDecimal = this.currentCard.uid.replace(/:/g, '');
                     licenseData.nfcCardNumber = uidDecimal;
-                    console.log(`📇 Set NFC card number to: ${uidDecimal}`);
                 }
-                
                 const licenseJson = CryptoUtils.createLicenseJson(licenseData);
-                console.log('📄 License JSON:', licenseJson);
                 finalData = CryptoUtils.encrypt(licenseJson);
-                console.log('🔐 Encrypted data length:', finalData.length);
             } else if (typeof data === 'string') {
-                // For plain text, encrypt it directly
                 finalData = CryptoUtils.encrypt(data);
             } else {
                 finalData = String(data);
             }
 
-            // Create NDEF message exactly like Android
-            const ndefMessage = NdefUtils.createNdefMessage(finalData);
-            console.log(`📋 NDEF message length: ${ndefMessage.length} bytes`);
+            // --- Create NDEF message and wrap in TLV if needed ---
+            let ndefMessage = NdefUtils.createNdefMessage(finalData);
+            let writeBuffer;
+            // Check if tag is already NDEF formatted (simple check: block 4 starts with 0x03)
+            let isNdefFormatted = false;
+            try {
+                const block4 = await reader.read(4, 16);
+                if (block4[0] === 0x03) isNdefFormatted = true;
+            } catch (e) {}
+            if (!isNdefFormatted) {
+                writeBuffer = NdefUtils.wrapNdefInTlv(ndefMessage);
+                console.log('📝 Tag not NDEF formatted, writing TLV structure');
+            } else {
+                writeBuffer = ndefMessage;
+            }
 
-            // Write directly to blocks starting from block 4 (data blocks)
-            const maxBlockSize = 16;
+            // --- Write to card (block 4 onwards for Classic, block 4 for Ultralight/NTAG) ---
+            let maxBlockSize = 16;
+            let blockStart = 4;
+            if (this.currentCard.type && (this.currentCard.type.includes('Ultralight') || this.currentCard.type.includes('NTAG'))) {
+                maxBlockSize = 4;
+                blockStart = 4; // For NTAG/Ultralight, NDEF usually starts at page 4 (block 4)
+            }
             const blocks = [];
             let totalBytesWritten = 0;
-            
-            // Calculate how many blocks we need
-            const totalBlocks = Math.ceil(ndefMessage.length / maxBlockSize);
-            console.log(`📦 Will write ${totalBlocks} blocks starting from block 4`);
-
-            // Write NDEF message across multiple blocks starting from block 4
+            const totalBlocks = Math.ceil(writeBuffer.length / maxBlockSize);
             for (let i = 0; i < totalBlocks; i++) {
-                const blockNumber = 4 + i; // Start from block 4 (first data block)
+                const blockNumber = blockStart + i;
                 const start = i * maxBlockSize;
-                const end = Math.min(start + maxBlockSize, ndefMessage.length);
-                
-                let blockData = ndefMessage.slice(start, end);
-                
-                // Pad block to 16 bytes with zeros (standard for MIFARE)
+                const end = Math.min(start + maxBlockSize, writeBuffer.length);
+                let blockData = writeBuffer.slice(start, end);
                 if (blockData.length < maxBlockSize) {
                     const padding = Buffer.alloc(maxBlockSize - blockData.length, 0x00);
                     blockData = Buffer.concat([blockData, padding]);
                 }
-
                 try {
-                    console.log(`📝 Writing block ${blockNumber}: ${blockData.toString('hex')}`);
                     await reader.write(blockNumber, blockData);
                     totalBytesWritten += (end - start);
                     blocks.push({
                         block: blockNumber,
                         hexData: blockData.toString('hex'),
-                        originalData: ndefMessage.slice(start, end),
+                        originalData: writeBuffer.slice(start, end),
                         bytesWritten: end - start
                     });
-                    console.log(`✅ Block ${blockNumber} written successfully (${end - start} bytes)`);
                 } catch (blockError) {
-                    console.error(`❌ Error writing block ${blockNumber}:`, blockError);
                     throw new Error(`Failed to write block ${blockNumber}: ${blockError.message}`);
                 }
             }
 
-            console.log(`✅ Android-compatible writing completed. Total: ${totalBytesWritten} bytes across ${blocks.length} blocks`);
-            
-            // Emit write success event
             this.emit('card-written', {
                 uid: this.currentCard.uid,
                 originalData: data,
@@ -492,23 +471,11 @@ class NFCPCSCManager extends EventEmitter {
 
             return {
                 success: true,
-                message: `Successfully wrote ${totalBytesWritten} bytes to ${blocks.length} blocks (Android compatible)`,
-                originalData: data,
-                encryptedData: finalData,
-                blocks: blocks,
-                totalBytesWritten: totalBytesWritten,
-                startBlock: 4,
-                endBlock: 4 + blocks.length - 1,
-                isAndroidCompatible: true
+                totalBytesWritten,
+                blocks
             };
-
         } catch (error) {
-            console.error('❌ Error writing Android-compatible data to card:', error);
-            this.emit('card-write-error', {
-                error: error.message,
-                uid: this.currentCard ? this.currentCard.uid : null,
-                timestamp: new Date()
-            });
+            console.error('❌ Error writing to card:', error);
             throw error;
         }
     }
