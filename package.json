@@ -1,5 +1,32 @@
 {
+  "name": "evlicense-cursor",
+  "version": "1.0.0",
+  "description": "EV License Management System with NFC Support",
+  "main": "src/main/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "build": "electron-builder",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "electron",
+    "nfc",
+    "license",
+    "desktop"
+  ],
+  "author": "Talukdar & Son's, Software Eng. Asif Hossain",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8"
+  },
   "dependencies": {
-    "ndef": "^0.2.0"
+    "electron-updater": "^6.6.2",
+    "express": "^4.21.2",
+    "nfc-pcsc": "^0.8.1",
+    "ndef": "^0.2.0",
+    "socket.io": "^4.8.1",
+    "sqlite3": "^5.1.7"
   }
 }

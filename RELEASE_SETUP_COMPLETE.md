@@ -165,7 +165,7 @@ git push origin main --tags
 
 ## 🎯 Notes on Native Dependencies
 
-The current setup includes `node-hid` and `sqlite3` which are native modules. For production builds:
+The current setup includes `nfc-pcsc` and `sqlite3` which are native modules. For production builds:
 
 1. **Windows**: Requires Visual Studio Build Tools
 2. **macOS**: Requires Xcode Command Line Tools  

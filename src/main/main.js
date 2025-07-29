@@ -1,17 +1,16 @@
 const { app, BrowserWindow, ipcMain, Menu, dialog } = require('electron');
 const path = require('path');
-const HID = require('node-hid');
 const sqlite3 = require('sqlite3').verbose();
 const fs = require('fs');
 
 // Import our custom modules
-const Acr122uManager = require('./acr122u-manager');
+const NFCPCSCManager = require('./nfc-pcsc-manager');
 const DatabaseManager = require('./database-manager');
 
 class EVLicenseDesktop {
     constructor() {
         this.mainWindow = null;
-        this.acr122uManager = null;
+        this.nfcManager = null;
         this.databaseManager = null;
         this.isDev = process.argv.includes('--dev');
         
@@ -94,26 +93,12 @@ class EVLicenseDesktop {
             this.databaseManager = new DatabaseManager();
             await this.databaseManager.initialize();
             
-            // Initialize ACR122U manager
-            this.acr122uManager = new Acr122uManager();
-            await this.acr122uManager.initialize();
+            // Initialize NFC-PCSC manager
+            this.nfcManager = new NFCPCSCManager();
+            await this.nfcManager.initialize();
             
-            // Set up NFC event listeners
-            this.acr122uManager.on('deviceConnected', (deviceInfo) => {
-                this.sendToRenderer('nfc-device-connected', deviceInfo);
-            });
-            
-            this.acr122uManager.on('deviceDisconnected', (deviceInfo) => {
-                this.sendToRenderer('nfc-device-disconnected', deviceInfo);
-            });
-            
-            this.acr122uManager.on('cardDetected', (cardData) => {
-                this.sendToRenderer('nfc-card-detected', cardData);
-            });
-            
-            this.acr122uManager.on('error', (error) => {
-                this.sendToRenderer('nfc-error', error);
-            });
+            // Set up NFC event handlers
+            this.setupNFCEventHandlers();
 
             console.log('✅ Services initialized successfully');
             
@@ -122,6 +107,57 @@ class EVLicenseDesktop {
             this.showErrorDialog('Initialization Error', 
                 'Failed to initialize application services. Some features may not work correctly.');
         }
+    }
+
+    setupNFCEventHandlers() {
+        if (!this.nfcManager) return;
+        
+        console.log('🔗 Setting up NFC-PCSC event handlers...');
+        
+        // Reader connection events
+        this.nfcManager.on('reader-connected', (readerInfo) => {
+            console.log('📱 NFC reader connected:', readerInfo.name);
+            if (this.mainWindow) {
+                this.mainWindow.webContents.send('nfc-reader-connected', readerInfo);
+            }
+        });
+        
+        this.nfcManager.on('reader-disconnected', (info) => {
+            console.log('📱 NFC reader disconnected:', info.name);
+            if (this.mainWindow) {
+                this.mainWindow.webContents.send('nfc-reader-disconnected', info);
+            }
+        });
+        
+        // Card events
+        this.nfcManager.on('card-detected', (cardData) => {
+            console.log('💳 NFC card detected:', cardData.uid);
+            if (this.mainWindow) {
+                this.mainWindow.webContents.send('nfc-card-detected', cardData);
+            }
+        });
+        
+        this.nfcManager.on('card-removed', (info) => {
+            console.log('📤 NFC card removed');
+            if (this.mainWindow) {
+                this.mainWindow.webContents.send('nfc-card-removed', info);
+            }
+        });
+        
+        // Initialization and status events
+        this.nfcManager.on('initialized', () => {
+            console.log('✅ NFC-PCSC Manager initialized');
+            if (this.mainWindow) {
+                this.mainWindow.webContents.send('nfc-initialized');
+            }
+        });
+        
+        this.nfcManager.on('error', (error) => {
+            console.error('🚨 NFC Error:', error);
+            if (this.mainWindow) {
+                this.mainWindow.webContents.send('nfc-error', error);
+            }
+        });
     }
 
     setupIpcHandlers() {
@@ -174,7 +210,7 @@ class EVLicenseDesktop {
         // NFC operations
         ipcMain.handle('nfc-get-status', async () => {
             try {
-                return await this.acr122uManager.getStatus();
+                return await this.nfcManager.getStatus();
             } catch (error) {
                 console.error('Error getting NFC status:', error);
                 throw error;
@@ -183,7 +219,7 @@ class EVLicenseDesktop {
 
         ipcMain.handle('nfc-read-card', async () => {
             try {
-                return await this.acr122uManager.readCard();
+                return await this.nfcManager.readCard();
             } catch (error) {
                 console.error('Error reading NFC card:', error);
                 throw error;
@@ -192,7 +228,7 @@ class EVLicenseDesktop {
 
         ipcMain.handle('nfc-write-card', async (event, data) => {
             try {
-                return await this.acr122uManager.writeCard(data);
+                return await this.nfcManager.writeCard(data);
             } catch (error) {
                 console.error('Error writing NFC card:', error);
                 throw error;
@@ -310,9 +346,9 @@ class EVLicenseDesktop {
                     },
                     { type: 'separator' },
                     {
-                        label: 'Refresh Devices',
+                        label: 'Refresh Readers',
                         click: () => {
-                            this.acr122uManager.refreshDevices();
+                            this.nfcManager.refreshReaders();
                         }
                     }
                 ]
@@ -368,8 +404,8 @@ class EVLicenseDesktop {
 
     cleanup() {
         try {
-            if (this.acr122uManager) {
-                this.acr122uManager.cleanup();
+            if (this.nfcManager) {
+                this.nfcManager.cleanup();
             }
             if (this.databaseManager) {
                 this.databaseManager.cleanup();

@@ -2,7 +2,7 @@
 
 ## ✅ **Comprehensive NFC Integration Successfully Implemented**
 
-Your Electron.js desktop app now has **enterprise-grade NFC functionality** using enhanced `node-hid` implementation with comprehensive device detection and card management capabilities!
+Your Electron.js desktop app now has **enterprise-grade NFC functionality** using enhanced `nfc-pcsc` implementation with comprehensive device detection and card management capabilities!
 
 ## 📋 **What Has Been Implemented**
 

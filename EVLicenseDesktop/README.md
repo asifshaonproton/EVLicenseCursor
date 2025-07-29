@@ -300,7 +300,7 @@ This project is licensed under the MIT License - see the [LICENSE](../LICENSE) f
 ## 🙏 Acknowledgments
 
 - **Electron.js**: Cross-platform desktop framework
-- **node-hid**: USB HID device communication
+- **nfc-pcsc**: PC/SC NFC reader communication
 - **SQLite**: Local database engine
 - **Material Design**: UI/UX inspiration
 - **ACR122U Community**: NFC development resources
