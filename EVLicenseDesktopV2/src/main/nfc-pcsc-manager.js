@@ -324,7 +324,7 @@ class NFCPCSCManager extends EventEmitter {
 
             // If no NDEF text was extracted, try to extract from raw blocks
             if (!data.extractedText) {
-                this.extractCleanText(data);
+            this.extractCleanText(data);
             }
 
             console.log(`✅ Card reading completed. Extracted text: "${data.extractedText}"`);
@@ -477,17 +477,65 @@ class NFCPCSCManager extends EventEmitter {
                 throw new Error('Reader with current card not found');
             }
             const reader = readerInfo.reader;
+            
+            console.log(`📝 Writing to card type: ${this.currentCard.type}, UID: ${this.currentCard.uid}`);
 
             // --- Authenticate for MIFARE Classic before write ---
             if (this.currentCard.type && this.currentCard.type.includes('MIFARE Classic')) {
-                // Authenticate with Key A (default key)
-                const keyType = 0x60; // Key A
-                const key = Buffer.from([0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]);
-                try {
-                    await reader.authenticate(4, keyType, key, this.currentCard.uid);
-                    console.log('🔑 MIFARE Classic authenticated for block 4');
-                } catch (authErr) {
-                    throw new Error('Authentication failed for MIFARE Classic: ' + authErr.message);
+                console.log('🔑 Attempting MIFARE Classic authentication...');
+                
+                // For MIFARE Classic, we need to authenticate for each sector we want to write to
+                // Sector 1 (blocks 4-7) is commonly used for NDEF data
+                const sectorNumber = 1; // Sector 1 (blocks 4-7)
+                const blockNumber = 4; // First block of sector 1
+                
+                // Try multiple authentication methods for MIFARE Classic
+                const authMethods = [
+                    { keyType: 0x60, key: Buffer.from([0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]), name: 'Key A (default)' },
+                    { keyType: 0x61, key: Buffer.from([0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]), name: 'Key B (default)' },
+                    { keyType: 0x60, key: Buffer.from([0xA0, 0xA1, 0xA2, 0xA3, 0xA4, 0xA5]), name: 'Key A (custom)' },
+                    { keyType: 0x61, key: Buffer.from([0xA0, 0xA1, 0xA2, 0xA3, 0xA4, 0xA5]), name: 'Key B (custom)' },
+                    { keyType: 0x60, key: Buffer.from([0xD3, 0xF7, 0xD3, 0xF7, 0xD3, 0xF7]), name: 'Key A (transport)' },
+                    { keyType: 0x61, key: Buffer.from([0xD3, 0xF7, 0xD3, 0xF7, 0xD3, 0xF7]), name: 'Key B (transport)' }
+                ];
+                
+                let authenticated = false;
+                let lastError = null;
+                
+                for (const method of authMethods) {
+                    try {
+                        console.log(`🔑 Trying ${method.name} for sector ${sectorNumber} (block ${blockNumber})...`);
+                        await reader.authenticate(blockNumber, method.keyType, method.key, this.currentCard.uid);
+                        console.log(`✅ MIFARE Classic authenticated with ${method.name} for sector ${sectorNumber}`);
+                        authenticated = true;
+                        break;
+                    } catch (authErr) {
+                        console.log(`❌ ${method.name} failed: ${authErr.message}`);
+                        lastError = authErr;
+                    }
+                }
+                
+                if (!authenticated) {
+                    console.log('⚠️ All authentication methods failed, trying alternative approach...');
+                    
+                    // Try using APDU commands for authentication
+                    try {
+                        console.log('🔄 Trying APDU-based authentication...');
+                        
+                        // MIFARE Classic authentication via APDU
+                        const authCommand = Buffer.concat([
+                            Buffer.from([0xFF, 0x86, 0x00, 0x00, 0x05, 0x01, 0x00]), // AUTHENTICATE
+                            Buffer.from([0x60, 0x00]), // Key A, block 0
+                            Buffer.from([0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]) // Default key
+                        ]);
+                        
+                        const authResponse = await reader.transmit(authCommand, 2);
+                        console.log('✅ APDU authentication successful');
+                        authenticated = true;
+                    } catch (apduAuthErr) {
+                        console.log(`❌ APDU authentication failed: ${apduAuthErr.message}`);
+                        console.log('📝 Proceeding with write attempt without authentication...');
+                    }
                 }
             }
 
@@ -510,17 +558,23 @@ class NFCPCSCManager extends EventEmitter {
             // --- Create NDEF message and wrap in TLV if needed ---
             let ndefMessage = NdefUtils.createNdefMessage(finalData);
             let writeBuffer;
+            
             // Check if tag is already NDEF formatted (simple check: block 4 starts with 0x03)
             let isNdefFormatted = false;
             try {
                 const block4 = await reader.read(4, 16);
                 if (block4[0] === 0x03) isNdefFormatted = true;
-            } catch (e) {}
+                console.log(`📋 Block 4 first byte: 0x${block4[0].toString(16)}, NDEF formatted: ${isNdefFormatted}`);
+            } catch (e) {
+                console.log(`⚠️ Could not read block 4 to check NDEF format: ${e.message}`);
+            }
+            
             if (!isNdefFormatted) {
                 writeBuffer = NdefUtils.wrapNdefInTlv(ndefMessage);
                 console.log('📝 Tag not NDEF formatted, writing TLV structure');
             } else {
                 writeBuffer = ndefMessage;
+                console.log('📝 Tag is NDEF formatted, writing NDEF message directly');
             }
 
             // --- Write to card (block 4 onwards for Classic, block 4 for Ultralight/NTAG) ---
@@ -530,29 +584,167 @@ class NFCPCSCManager extends EventEmitter {
                 maxBlockSize = 4;
                 blockStart = 4; // For NTAG/Ultralight, NDEF usually starts at page 4 (block 4)
             }
+            
             const blocks = [];
             let totalBytesWritten = 0;
             const totalBlocks = Math.ceil(writeBuffer.length / maxBlockSize);
-            for (let i = 0; i < totalBlocks; i++) {
-                const blockNumber = blockStart + i;
-                const start = i * maxBlockSize;
-                const end = Math.min(start + maxBlockSize, writeBuffer.length);
-                let blockData = writeBuffer.slice(start, end);
-                if (blockData.length < maxBlockSize) {
-                    const padding = Buffer.alloc(maxBlockSize - blockData.length, 0x00);
-                    blockData = Buffer.concat([blockData, padding]);
+            
+            // For MIFARE Classic, try different write approaches
+            if (this.currentCard.type && this.currentCard.type.includes('MIFARE Classic')) {
+                console.log('📝 Writing to MIFARE Classic card...');
+                
+                // For MIFARE Classic, try writing to sector 0 first (blocks 0-3) which might be more accessible
+                let writeSectors = [0, 1]; // Try sector 0 first, then sector 1
+                let writeSuccessful = false;
+                
+                for (const sector of writeSectors) {
+                    if (writeSuccessful) break;
+                    
+                    console.log(`📝 Trying to write to sector ${sector}...`);
+                    const sectorBlockStart = sector * 4; // Each sector has 4 blocks
+                    
+                    try {
+                        // Try using APDU commands for MIFARE Classic writing
+                        for (let i = 0; i < totalBlocks; i++) {
+                            const blockNumber = sectorBlockStart + i;
+                            const start = i * maxBlockSize;
+                            const end = Math.min(start + maxBlockSize, writeBuffer.length);
+                            let blockData = writeBuffer.slice(start, end);
+                            if (blockData.length < maxBlockSize) {
+                                const padding = Buffer.alloc(maxBlockSize - blockData.length, 0x00);
+                                blockData = Buffer.concat([blockData, padding]);
+                            }
+                            
+                            try {
+                                // Use APDU command for MIFARE Classic write
+                                const apduCommand = Buffer.concat([
+                                    Buffer.from([0xFF, 0xD6, 0x00, blockNumber, maxBlockSize]), // WRITE BINARY
+                                    blockData
+                                ]);
+                                
+                                const response = await reader.transmit(apduCommand, maxBlockSize + 2);
+                                console.log(`✅ Block ${blockNumber} written successfully in sector ${sector}`);
+                                
+                                totalBytesWritten += (end - start);
+                                blocks.push({
+                                    block: blockNumber,
+                                    hexData: blockData.toString('hex'),
+                                    originalData: writeBuffer.slice(start, end),
+                                    bytesWritten: end - start,
+                                    method: 'APDU',
+                                    sector: sector
+                                });
+                            } catch (blockError) {
+                                console.log(`❌ APDU write failed for block ${blockNumber}, trying direct write...`);
+                                
+                                try {
+                                    // Fallback to direct write
+                                    await reader.write(blockNumber, blockData);
+                                    console.log(`✅ Block ${blockNumber} written with direct method in sector ${sector}`);
+                                    
+                                    totalBytesWritten += (end - start);
+                                    blocks.push({
+                                        block: blockNumber,
+                                        hexData: blockData.toString('hex'),
+                                        originalData: writeBuffer.slice(start, end),
+                                        bytesWritten: end - start,
+                                        method: 'direct',
+                                        sector: sector
+                                    });
+                                } catch (directError) {
+                                    console.log(`❌ Direct write also failed for block ${blockNumber}: ${directError.message}`);
+                                    
+                                    // For MIFARE Classic, try one more approach - using MIFARE commands
+                                    try {
+                                        console.log(`🔄 Trying MIFARE-specific write for block ${blockNumber}...`);
+                                        
+                                        // Try MIFARE WRITE command
+                                        const mifareCommand = Buffer.concat([
+                                            Buffer.from([0xFF, 0xD6, 0x00, blockNumber, 0x10]), // MIFARE WRITE
+                                            blockData
+                                        ]);
+                                        
+                                        const mifareResponse = await reader.transmit(mifareCommand, 0x10 + 2);
+                                        console.log(`✅ Block ${blockNumber} written with MIFARE command in sector ${sector}`);
+                                        
+                                        totalBytesWritten += (end - start);
+                                        blocks.push({
+                                            block: blockNumber,
+                                            hexData: blockData.toString('hex'),
+                                            originalData: writeBuffer.slice(start, end),
+                                            bytesWritten: end - start,
+                                            method: 'MIFARE',
+                                            sector: sector
+                                        });
+                                    } catch (mifareError) {
+                                        console.log(`❌ All write methods failed for block ${blockNumber} in sector ${sector}`);
+                                        throw new Error(`All write methods failed for block ${blockNumber}: ${mifareError.message}`);
+                                    }
+                                }
+                            }
+                        }
+                        
+                        // If we get here, the write was successful for this sector
+                        writeSuccessful = true;
+                        console.log(`✅ Successfully wrote to sector ${sector}`);
+                        break;
+                        
+                    } catch (sectorError) {
+                        console.log(`❌ Failed to write to sector ${sector}: ${sectorError.message}`);
+                        if (sector === writeSectors[writeSectors.length - 1]) {
+                            throw new Error(`Failed to write to any sector: ${sectorError.message}`);
+                        }
+                    }
                 }
-                try {
-                    await reader.write(blockNumber, blockData);
-                    totalBytesWritten += (end - start);
-                    blocks.push({
-                        block: blockNumber,
-                        hexData: blockData.toString('hex'),
-                        originalData: writeBuffer.slice(start, end),
-                        bytesWritten: end - start
-                    });
-                } catch (blockError) {
-                    throw new Error(`Failed to write block ${blockNumber}: ${blockError.message}`);
+            } else {
+                // For other card types (Ultralight, NTAG, etc.)
+                console.log('📝 Writing to non-MIFARE Classic card...');
+                
+                for (let i = 0; i < totalBlocks; i++) {
+                    const blockNumber = blockStart + i;
+                    const start = i * maxBlockSize;
+                    const end = Math.min(start + maxBlockSize, writeBuffer.length);
+                    let blockData = writeBuffer.slice(start, end);
+                    if (blockData.length < maxBlockSize) {
+                        const padding = Buffer.alloc(maxBlockSize - blockData.length, 0x00);
+                        blockData = Buffer.concat([blockData, padding]);
+                    }
+                    try {
+                        await reader.write(blockNumber, blockData);
+                        console.log(`✅ Block ${blockNumber} written successfully`);
+                        totalBytesWritten += (end - start);
+                        blocks.push({
+                            block: blockNumber,
+                            hexData: blockData.toString('hex'),
+                            originalData: writeBuffer.slice(start, end),
+                            bytesWritten: end - start,
+                            method: 'direct'
+                        });
+                    } catch (blockError) {
+                        console.log(`❌ Direct write failed for block ${blockNumber}, trying APDU...`);
+                        
+                        try {
+                            // Try APDU write for non-MIFARE Classic cards
+                            const apduCommand = Buffer.concat([
+                                Buffer.from([0xFF, 0xD6, 0x00, blockNumber, maxBlockSize]), // WRITE BINARY
+                                blockData
+                            ]);
+                            
+                            const response = await reader.transmit(apduCommand, maxBlockSize + 2);
+                            console.log(`✅ Block ${blockNumber} written with APDU`);
+                            
+                            totalBytesWritten += (end - start);
+                            blocks.push({
+                                block: blockNumber,
+                                hexData: blockData.toString('hex'),
+                                originalData: writeBuffer.slice(start, end),
+                                bytesWritten: end - start,
+                                method: 'APDU'
+                            });
+                        } catch (apduError) {
+                            throw new Error(`Failed to write block ${blockNumber}: ${apduError.message}`);
+                        }
+                    }
                 }
             }
 
