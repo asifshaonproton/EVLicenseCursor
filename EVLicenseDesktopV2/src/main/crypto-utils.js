@@ -44,7 +44,16 @@ class CryptoUtils {
             licenseType: licenseData.licenseType || '',
             licenseNumber: licenseData.licenseNumber || '',
             nfcCardNumber: licenseData.nfcCardNumber || '',
-            validityDate: licenseData.validityDate || ''
+            validityDate: licenseData.validityDate || '',
+            email: licenseData.email || '',
+            vehicleMake: licenseData.vehicleMake || '',
+            vehicleModel: licenseData.vehicleModel || '',
+            vehicleYear: licenseData.vehicleYear || 0,
+            vehicleColor: licenseData.vehicleColor || '',
+            vehicleVin: licenseData.vehicleVin || '',
+            status: licenseData.status || 'Active',
+            issueDate: licenseData.issueDate || '',
+            notes: licenseData.notes || ''
         });
     }
     
@@ -58,7 +67,16 @@ class CryptoUtils {
                 licenseType: json.licenseType || 'N/A',
                 licenseNumber: json.licenseNumber || 'N/A',
                 nfcCardNumber: json.nfcCardNumber || 'N/A',
-                validityDate: json.validityDate || 'N/A'
+                validityDate: json.validityDate || 'N/A',
+                email: json.email || 'N/A',
+                vehicleMake: json.vehicleMake || 'N/A',
+                vehicleModel: json.vehicleModel || 'N/A',
+                vehicleYear: json.vehicleYear || 0,
+                vehicleColor: json.vehicleColor || 'N/A',
+                vehicleVin: json.vehicleVin || 'N/A',
+                status: json.status || 'N/A',
+                issueDate: json.issueDate || 'N/A',
+                notes: json.notes || 'N/A'
             };
         } catch (error) {
             console.error('❌ JSON parsing error:', error);

@@ -54,6 +54,16 @@ class LicenseNFCDetailFragment : Fragment() {
         var city = "N/A"
         var licenseType = "N/A"
         var validityDate = "N/A"
+        // New fields for cross-platform compatibility
+        var email = "N/A"
+        var vehicleMake = "N/A"
+        var vehicleModel = "N/A"
+        var vehicleYear = "N/A"
+        var vehicleColor = "N/A"
+        var vehicleVin = "N/A"
+        var status = "N/A"
+        var issueDate = "N/A"
+        var notes = "N/A"
         val key = "YourSuperLongSecretKeyForNFCEncryption2024!@#"
 
         var ndefFound = false
@@ -69,12 +79,23 @@ class LicenseNFCDetailFragment : Fragment() {
                     try {
                         val decrypted = CryptoUtils.decrypt(jsonData, key)
                         val json = JSONObject(decrypted)
+                        // Core fields
                         holderName = json.optString("holderName", "N/A")
                         mobile = json.optString("mobile", "N/A")
                         city = json.optString("city", "N/A")
                         licenseType = json.optString("licenseType", "N/A")
                         licenseNumberJson = json.optString("licenseNumber", "N/A")
                         validityDate = json.optString("validityDate", "N/A")
+                        // New fields for cross-platform compatibility
+                        email = json.optString("email", "N/A")
+                        vehicleMake = json.optString("vehicleMake", "N/A")
+                        vehicleModel = json.optString("vehicleModel", "N/A")
+                        vehicleYear = json.optInt("vehicleYear", 0).toString()
+                        vehicleColor = json.optString("vehicleColor", "N/A")
+                        vehicleVin = json.optString("vehicleVin", "N/A")
+                        status = json.optString("status", "N/A")
+                        issueDate = json.optString("issueDate", "N/A")
+                        notes = json.optString("notes", "N/A")
                     } catch (e: Exception) {
                         android.util.Log.e("LicenseNFCDetailFragment", "Error decrypting/parsing JSON", e)
                         licenseNumberJson = "[DECRYPT ERROR]"

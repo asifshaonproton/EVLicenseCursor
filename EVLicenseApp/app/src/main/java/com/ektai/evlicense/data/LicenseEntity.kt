@@ -12,5 +12,17 @@ data class LicenseEntity(
     val licenseType: String,
     val licenseNumber: String,
     val nfcCardNumber: String,
-    val validityDate: String
+    val validityDate: String,
+    // New fields for cross-platform compatibility
+    val email: String? = null,
+    val vehicleMake: String? = null,
+    val vehicleModel: String? = null,
+    val vehicleYear: Int? = null,
+    val vehicleColor: String? = null,
+    val vehicleVin: String? = null,
+    val status: String = "Active",
+    val issueDate: String? = null,
+    val notes: String? = null,
+    val createdAt: String? = null,
+    val updatedAt: String? = null
 ) : Parcelable 

@@ -77,7 +77,19 @@ class LicenseRepository(context: Context) {
             licenseType = cursor.getString(cursor.getColumnIndexOrThrow(LicenseDbHelper.COLUMN_LICENSE_TYPE)),
             licenseNumber = cursor.getString(cursor.getColumnIndexOrThrow(LicenseDbHelper.COLUMN_LICENSE_NUMBER)),
             nfcCardNumber = cursor.getString(cursor.getColumnIndexOrThrow(LicenseDbHelper.COLUMN_NFC_CARD_NUMBER)),
-            validityDate = cursor.getString(cursor.getColumnIndexOrThrow(LicenseDbHelper.COLUMN_VALIDITY_DATE))
+            validityDate = cursor.getString(cursor.getColumnIndexOrThrow(LicenseDbHelper.COLUMN_VALIDITY_DATE)),
+            // New fields for cross-platform compatibility
+            email = cursor.getString(cursor.getColumnIndexOrThrow(LicenseDbHelper.COLUMN_EMAIL)),
+            vehicleMake = cursor.getString(cursor.getColumnIndexOrThrow(LicenseDbHelper.COLUMN_VEHICLE_MAKE)),
+            vehicleModel = cursor.getString(cursor.getColumnIndexOrThrow(LicenseDbHelper.COLUMN_VEHICLE_MODEL)),
+            vehicleYear = if (cursor.isNull(cursor.getColumnIndexOrThrow(LicenseDbHelper.COLUMN_VEHICLE_YEAR))) null else cursor.getInt(cursor.getColumnIndexOrThrow(LicenseDbHelper.COLUMN_VEHICLE_YEAR)),
+            vehicleColor = cursor.getString(cursor.getColumnIndexOrThrow(LicenseDbHelper.COLUMN_VEHICLE_COLOR)),
+            vehicleVin = cursor.getString(cursor.getColumnIndexOrThrow(LicenseDbHelper.COLUMN_VEHICLE_VIN)),
+            status = cursor.getString(cursor.getColumnIndexOrThrow(LicenseDbHelper.COLUMN_STATUS)) ?: "Active",
+            issueDate = cursor.getString(cursor.getColumnIndexOrThrow(LicenseDbHelper.COLUMN_ISSUE_DATE)),
+            notes = cursor.getString(cursor.getColumnIndexOrThrow(LicenseDbHelper.COLUMN_NOTES)),
+            createdAt = cursor.getString(cursor.getColumnIndexOrThrow(LicenseDbHelper.COLUMN_CREATED_AT)),
+            updatedAt = cursor.getString(cursor.getColumnIndexOrThrow(LicenseDbHelper.COLUMN_UPDATED_AT))
         )
     }
 
@@ -91,6 +103,18 @@ class LicenseRepository(context: Context) {
         values.put(LicenseDbHelper.COLUMN_LICENSE_NUMBER, license.licenseNumber)
         values.put(LicenseDbHelper.COLUMN_NFC_CARD_NUMBER, license.nfcCardNumber)
         values.put(LicenseDbHelper.COLUMN_VALIDITY_DATE, license.validityDate)
+        // New fields for cross-platform compatibility
+        values.put(LicenseDbHelper.COLUMN_EMAIL, license.email)
+        values.put(LicenseDbHelper.COLUMN_VEHICLE_MAKE, license.vehicleMake)
+        values.put(LicenseDbHelper.COLUMN_VEHICLE_MODEL, license.vehicleModel)
+        values.put(LicenseDbHelper.COLUMN_VEHICLE_YEAR, license.vehicleYear)
+        values.put(LicenseDbHelper.COLUMN_VEHICLE_COLOR, license.vehicleColor)
+        values.put(LicenseDbHelper.COLUMN_VEHICLE_VIN, license.vehicleVin)
+        values.put(LicenseDbHelper.COLUMN_STATUS, license.status)
+        values.put(LicenseDbHelper.COLUMN_ISSUE_DATE, license.issueDate)
+        values.put(LicenseDbHelper.COLUMN_NOTES, license.notes)
+        values.put(LicenseDbHelper.COLUMN_CREATED_AT, license.createdAt)
+        values.put(LicenseDbHelper.COLUMN_UPDATED_AT, license.updatedAt)
         return values
     }
 } 

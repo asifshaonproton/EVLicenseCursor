@@ -1,181 +1,280 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:padding="16dp">
+    android:background="@color/white">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical">
+        android:orientation="vertical"
+        android:padding="16dp">
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Card Details"
-            android:textSize="24sp"
-            android:textStyle="bold"
-            android:textColor="#222244"
-            android:paddingBottom="8dp" />
-
-        <!-- Card Number -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Card Number:"
-            android:textSize="14sp"
-            android:textColor="#666666"
-            android:layout_marginTop="8dp"/>
-        <TextView
-            android:id="@+id/textCardNumber"
+        <!-- Modern License Card Header -->
+        <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="-"
-            android:textSize="20sp"
-            android:textColor="#000000"
-            android:paddingStart="4dp"
-            android:paddingEnd="4dp"
-            android:textStyle="bold"/>
+            android:layout_marginBottom="16dp"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="8dp"
+            app:cardBackgroundColor="@color/white">
 
-        <!-- License Number -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="License Number:"
-            android:textSize="14sp"
-            android:textColor="#666666"
-            android:layout_marginTop="12dp"/>
-        <TextView
-            android:id="@+id/textLicenseNumber"
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="20dp">
+
+                <!-- License Card Header with Gradient Background -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/license_card_header_gradient"
+                    android:orientation="vertical"
+                    android:padding="16dp"
+                    android:layout_margin="-20dp"
+                    android:layout_marginBottom="16dp">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="EV LICENSE"
+                        android:textSize="24sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/white"
+                        android:gravity="center"
+                        android:layout_marginBottom="8dp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="BANGLADESH"
+                        android:textSize="14sp"
+                        android:textColor="@color/white"
+                        android:gravity="center"
+                        android:alpha="0.9" />
+
+                </LinearLayout>
+
+                <!-- License Photo Placeholder -->
+                <FrameLayout
+                    android:layout_width="80dp"
+                    android:layout_height="100dp"
+                    android:layout_gravity="center_horizontal"
+                    android:layout_marginBottom="16dp"
+                    android:background="@drawable/license_photo_background">
+
+                    <ImageView
+                        android:layout_width="60dp"
+                        android:layout_height="60dp"
+                        android:layout_gravity="center"
+                        android:src="@drawable/ic_ev_logo"
+                        android:contentDescription="License Photo" />
+
+                </FrameLayout>
+
+                <!-- License Information Grid -->
+                <GridLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:columnCount="2"
+                    android:rowCount="6"
+                    android:alignmentMode="alignMargins"
+                    android:useDefaultMargins="true">
+
+                    <!-- License Number -->
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_columnWeight="1"
+                        android:text="LICENSE NO:"
+                        android:textSize="12sp"
+                        android:textColor="@color/gray_600"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/textLicenseNumber"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_columnWeight="1"
+                        android:text="LIC123456"
+                        android:textSize="14sp"
+                        android:textColor="@color/black"
+                        android:textStyle="bold" />
+
+                    <!-- Holder Name -->
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_columnWeight="1"
+                        android:text="HOLDER NAME:"
+                        android:textSize="12sp"
+                        android:textColor="@color/gray_600"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/textHolderName"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_columnWeight="1"
+                        android:text="John Doe"
+                        android:textSize="14sp"
+                        android:textColor="@color/black" />
+
+                    <!-- Mobile Number -->
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_columnWeight="1"
+                        android:text="MOBILE:"
+                        android:textSize="12sp"
+                        android:textColor="@color/gray_600"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/textMobile"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_columnWeight="1"
+                        android:text="+1234567890"
+                        android:textSize="14sp"
+                        android:textColor="@color/black" />
+
+                    <!-- City -->
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_columnWeight="1"
+                        android:text="CITY:"
+                        android:textSize="12sp"
+                        android:textColor="@color/gray_600"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/textCity"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_columnWeight="1"
+                        android:text="Rangpur"
+                        android:textSize="14sp"
+                        android:textColor="@color/black" />
+
+                    <!-- License Type -->
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_columnWeight="1"
+                        android:text="LICENSE TYPE:"
+                        android:textSize="12sp"
+                        android:textColor="@color/gray_600"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/textLicenseType"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_columnWeight="1"
+                        android:text="Auto (A)"
+                        android:textSize="14sp"
+                        android:textColor="@color/black" />
+
+                    <!-- Validity Date -->
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_columnWeight="1"
+                        android:text="VALIDITY:"
+                        android:textSize="12sp"
+                        android:textColor="@color/gray_600"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/textValidityDate"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_columnWeight="1"
+                        android:text="2025-12-31"
+                        android:textSize="14sp"
+                        android:textColor="@color/black" />
+
+                </GridLayout>
+
+                <!-- NFC Card Information -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:layout_marginTop="16dp"
+                    android:padding="12dp"
+                    android:background="@drawable/nfc_info_background">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="NFC CARD INFORMATION"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/primary"
+                        android:layout_marginBottom="8dp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Card Number:"
+                        android:textSize="12sp"
+                        android:textColor="@color/gray_600" />
+
+                    <TextView
+                        android:id="@+id/textCardNumber"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="1234567890"
+                        android:textSize="14sp"
+                        android:textColor="@color/black"
+                        android:textStyle="bold"
+                        android:layout_marginBottom="8dp" />
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+        </androidx.cardview.widget.CardView>
+
+        <!-- Additional Information Section -->
+        <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="-"
-            android:textSize="20sp"
-            android:textColor="#000000"
-            android:paddingStart="4dp"
-            android:paddingEnd="4dp"
-            android:textStyle="bold"/>
+            android:layout_marginBottom="16dp"
+            app:cardCornerRadius="8dp"
+            app:cardElevation="4dp">
 
-        <!-- Holder Name -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Holder Name:"
-            android:textSize="14sp"
-            android:textColor="#666666"
-            android:layout_marginTop="12dp"/>
-        <TextView
-            android:id="@+id/textHolderName"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="-"
-            android:textSize="20sp"
-            android:textColor="#000000"
-            android:paddingStart="4dp"
-            android:paddingEnd="4dp"
-            android:textStyle="bold"/>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
 
-        <!-- Mobile -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Mobile:"
-            android:textSize="14sp"
-            android:textColor="#666666"
-            android:layout_marginTop="12dp"/>
-        <TextView
-            android:id="@+id/textMobile"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="-"
-            android:textSize="20sp"
-            android:textColor="#000000"
-            android:paddingStart="4dp"
-            android:paddingEnd="4dp"
-            android:textStyle="bold"/>
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="ADDITIONAL INFORMATION"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/primary"
+                    android:layout_marginBottom="12dp" />
 
-        <!-- City -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="City:"
-            android:textSize="14sp"
-            android:textColor="#666666"
-            android:layout_marginTop="12dp"/>
-        <TextView
-            android:id="@+id/textCity"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="-"
-            android:textSize="20sp"
-            android:textColor="#000000"
-            android:paddingStart="4dp"
-            android:paddingEnd="4dp"
-            android:textStyle="bold"/>
+                <!-- Technical Details Table -->
+                <android.widget.TableLayout
+                    android:id="@+id/tableOtherInfo"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:stretchColumns="*" />
 
-        <!-- License Type -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="License Type:"
-            android:textSize="14sp"
-            android:textColor="#666666"
-            android:layout_marginTop="12dp"/>
-        <TextView
-            android:id="@+id/textLicenseType"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="-"
-            android:textSize="20sp"
-            android:textColor="#000000"
-            android:paddingStart="4dp"
-            android:paddingEnd="4dp"
-            android:textStyle="bold"/>
+            </LinearLayout>
 
-        <!-- Validity Date -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Validity Date:"
-            android:textSize="14sp"
-            android:textColor="#666666"
-            android:layout_marginTop="12dp"/>
-        <TextView
-            android:id="@+id/textValidityDate"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="-"
-            android:textSize="20sp"
-            android:textColor="#000000"
-            android:paddingStart="4dp"
-            android:paddingEnd="4dp"
-            android:textStyle="bold"/>
-
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="?android:attr/listDivider"
-            android:layout_marginTop="16dp"
-            android:layout_marginBottom="16dp"/>
-
-        <!-- Other Info Header -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Other Info"
-            android:textSize="20sp"
-            android:textStyle="bold"
-            android:textColor="#222244"
-            android:paddingBottom="8dp" />
-
-        <TableLayout
-            android:id="@+id/tableOtherInfo"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:stretchColumns="1"
-            android:background="#F5F5F5"
-            android:padding="12dp"
-            android:layout_marginBottom="16dp"/>
+        </androidx.cardview.widget.CardView>
 
     </LinearLayout>
+
 </ScrollView> 

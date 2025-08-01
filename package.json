@@ -1,41 +1,35 @@
 {
-  "name": "evlicense-cursor-workspace",
-  "version": "1.0.0",
-  "description": "EV License Management System - Workspace",
-  "private": true,
-  "workspaces": [
-    "EVLicenseDesktop",
-    "EVLicenseDesktopV2",
-    "EVLicenseApp"
-  ],
+  "name": "evlicense-desktop-v2",
+  "version": "2.0.0",
+  "description": "EV License Management System with NFC Support - Version 2",
+  "main": "src/main/main.js",
   "scripts": {
-    "start:v1": "cd EVLicenseDesktop && npm start",
-    "start:v2": "cd EVLicenseDesktopV2 && npm start",
-    "dev:v1": "cd EVLicenseDesktop && npm run dev",
-    "dev:v2": "cd EVLicenseDesktopV2 && npm run dev",
-    "build:v1": "cd EVLicenseDesktop && npm run build",
-    "build:v2": "cd EVLicenseDesktopV2 && npm run build",
-    "rebuild:v1": "cd EVLicenseDesktop && npm run rebuild",
-    "rebuild:v2": "cd EVLicenseDesktopV2 && npm run rebuild",
-    "install:all": "npm install && cd EVLicenseDesktop && npm install && cd ../EVLicenseDesktopV2 && npm install",
-    "clean": "rimraf node_modules EVLicenseDesktop/node_modules EVLicenseDesktopV2/node_modules",
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "build": "electron-builder",
+    "rebuild": "electron-rebuild",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
     "electron",
     "nfc",
     "license",
-    "desktop",
-    "android",
-    "workspace"
+    "desktop"
   ],
   "author": "Talukdar & Son's, Software Eng. Asif Hossain",
   "license": "MIT",
   "devDependencies": {
-    "rimraf": "^5.0.0"
+    "@electron/rebuild": "^4.0.1",
+    "electron": "^33.4.11",
+    "electron-builder": "^25.1.8",
+    "electron-rebuild": "^3.2.9"
   },
-  "engines": {
-    "node": ">=18.0.0",
-    "npm": ">=8.0.0"
+  "dependencies": {
+    "electron-updater": "^6.6.2",
+    "express": "^4.21.2",
+    "ndef": "^0.2.0",
+    "nfc-pcsc": "^0.8.1",
+    "socket.io": "^4.8.1",
+    "sqlite3": "^5.1.7"
   }
 } 

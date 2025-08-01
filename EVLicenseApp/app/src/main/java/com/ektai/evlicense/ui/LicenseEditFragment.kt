@@ -101,6 +101,7 @@ class LicenseEditFragment : Fragment() {
             setOnClickListener {
                 try {
                     val licenseJson = JSONObject()
+                    // Core fields
                     licenseJson.put("holderName", holderNameEdit.text.toString())
                     licenseJson.put("mobile", mobileEdit.text.toString())
                     licenseJson.put("city", citySpinner.selectedItem.toString())
@@ -108,6 +109,17 @@ class LicenseEditFragment : Fragment() {
                     licenseJson.put("licenseNumber", numberEdit.text.toString())
                     licenseJson.put("nfcCardNumber", nfcEdit.text.toString())
                     licenseJson.put("validityDate", validityEdit.text.toString())
+                    
+                    // New fields for cross-platform compatibility
+                    licenseJson.put("email", "")  // Will be added to UI later
+                    licenseJson.put("vehicleMake", "")  // Will be added to UI later
+                    licenseJson.put("vehicleModel", "")  // Will be added to UI later
+                    licenseJson.put("vehicleYear", 0)  // Will be added to UI later
+                    licenseJson.put("vehicleColor", "")  // Will be added to UI later
+                    licenseJson.put("vehicleVin", "")  // Will be added to UI later
+                    licenseJson.put("status", "Active")
+                    licenseJson.put("issueDate", "")  // Will be added to UI later
+                    licenseJson.put("notes", "")  // Will be added to UI later
 
                     val licenseData = licenseJson.toString()
                     val key = "YourSuperLongSecretKeyForNFCEncryption2024!@#"

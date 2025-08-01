@@ -60,26 +60,27 @@ class DatabaseManager {
 
     async createTables() {
         const tables = [
-            // Licenses table
+            // Licenses table - Updated with unified field names
             `CREATE TABLE IF NOT EXISTS licenses (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                license_number TEXT UNIQUE NOT NULL,
-                owner_name TEXT NOT NULL,
-                owner_email TEXT,
-                owner_phone TEXT,
-                vehicle_make TEXT NOT NULL,
-                vehicle_model TEXT NOT NULL,
-                vehicle_year INTEGER,
-                vehicle_vin TEXT,
-                vehicle_color TEXT,
-                license_type TEXT DEFAULT 'Standard',
-                issue_date TEXT NOT NULL,
-                expiry_date TEXT NOT NULL,
+                holderName TEXT NOT NULL,
+                mobile TEXT NOT NULL,
+                city TEXT,
+                licenseType TEXT DEFAULT 'Standard',
+                licenseNumber TEXT UNIQUE NOT NULL,
+                nfcCardNumber TEXT,
+                validityDate TEXT NOT NULL,
+                email TEXT,
+                vehicleMake TEXT,
+                vehicleModel TEXT,
+                vehicleYear INTEGER,
+                vehicleColor TEXT,
+                vehicleVin TEXT,
                 status TEXT DEFAULT 'Active',
-                nfc_card_id TEXT,
+                issueDate TEXT,
                 notes TEXT,
-                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-                updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+                createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
+                updatedAt TEXT DEFAULT CURRENT_TIMESTAMP
             )`,
             
             // NFC Cards table
@@ -289,7 +290,7 @@ class DatabaseManager {
                 SELECT l.*, c.card_uid, c.card_type 
                 FROM licenses l 
                 LEFT JOIN nfc_cards c ON l.id = c.license_id AND c.is_active = 1
-                ORDER BY l.created_at DESC
+                ORDER BY l.id DESC
             `);
             
             await this.logActivity('READ', 'licenses', null, 'Retrieved all licenses');
@@ -304,28 +305,30 @@ class DatabaseManager {
         try {
             const result = await this.runQuery(`
                 INSERT INTO licenses (
-                    license_number, owner_name, owner_email, owner_phone,
-                    vehicle_make, vehicle_model, vehicle_year, vehicle_vin, vehicle_color,
-                    license_type, issue_date, expiry_date, status, notes
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    holderName, mobile, city, licenseType, licenseNumber, nfcCardNumber,
+                    validityDate, email, vehicleMake, vehicleModel, vehicleYear, vehicleColor, vehicleVin,
+                    status, issueDate, notes
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `, [
-                licenseData.license_number,
-                licenseData.owner_name,
-                licenseData.owner_email || null,
-                licenseData.owner_phone || null,
-                licenseData.vehicle_make,
-                licenseData.vehicle_model,
-                licenseData.vehicle_year || null,
-                licenseData.vehicle_vin || null,
-                licenseData.vehicle_color || null,
-                licenseData.license_type || 'Standard',
-                licenseData.issue_date,
-                licenseData.expiry_date,
+                licenseData.holderName,
+                licenseData.mobile,
+                licenseData.city || null,
+                licenseData.licenseType || 'Standard',
+                licenseData.licenseNumber,
+                licenseData.nfcCardNumber || null,
+                licenseData.validityDate,
+                licenseData.email || null,
+                licenseData.vehicleMake || null,
+                licenseData.vehicleModel || null,
+                licenseData.vehicleYear || null,
+                licenseData.vehicleColor || null,
+                licenseData.vehicleVin || null,
                 licenseData.status || 'Active',
+                licenseData.issueDate || null,
                 licenseData.notes || null
             ]);
 
-            await this.logActivity('CREATE', 'license', result.id, `Created license ${licenseData.license_number}`);
+            await this.logActivity('CREATE', 'license', result.id, `Created license ${licenseData.licenseNumber}`);
             return result.id;
         } catch (error) {
             console.error('❌ Error adding license:', error);
@@ -337,30 +340,31 @@ class DatabaseManager {
         try {
             await this.runQuery(`
                 UPDATE licenses SET
-                    license_number = ?, owner_name = ?, owner_email = ?, owner_phone = ?,
-                    vehicle_make = ?, vehicle_model = ?, vehicle_year = ?, vehicle_vin = ?, vehicle_color = ?,
-                    license_type = ?, issue_date = ?, expiry_date = ?, status = ?, notes = ?,
-                    updated_at = CURRENT_TIMESTAMP
+                    holderName = ?, mobile = ?, city = ?, licenseType = ?, licenseNumber = ?, nfcCardNumber = ?,
+                    validityDate = ?, email = ?, vehicleMake = ?, vehicleModel = ?, vehicleYear = ?, vehicleColor = ?, vehicleVin = ?,
+                    status = ?, issueDate = ?, notes = ?, updatedAt = CURRENT_TIMESTAMP
                 WHERE id = ?
             `, [
-                licenseData.license_number,
-                licenseData.owner_name,
-                licenseData.owner_email || null,
-                licenseData.owner_phone || null,
-                licenseData.vehicle_make,
-                licenseData.vehicle_model,
-                licenseData.vehicle_year || null,
-                licenseData.vehicle_vin || null,
-                licenseData.vehicle_color || null,
-                licenseData.license_type || 'Standard',
-                licenseData.issue_date,
-                licenseData.expiry_date,
+                licenseData.holderName,
+                licenseData.mobile,
+                licenseData.city || null,
+                licenseData.licenseType || 'Standard',
+                licenseData.licenseNumber,
+                licenseData.nfcCardNumber || null,
+                licenseData.validityDate,
+                licenseData.email || null,
+                licenseData.vehicleMake || null,
+                licenseData.vehicleModel || null,
+                licenseData.vehicleYear || null,
+                licenseData.vehicleColor || null,
+                licenseData.vehicleVin || null,
                 licenseData.status || 'Active',
+                licenseData.issueDate || null,
                 licenseData.notes || null,
                 licenseData.id
             ]);
 
-            await this.logActivity('UPDATE', 'license', licenseData.id, `Updated license ${licenseData.license_number}`);
+            await this.logActivity('UPDATE', 'license', licenseData.id, `Updated license ${licenseData.licenseNumber}`);
             return true;
         } catch (error) {
             console.error('❌ Error updating license:', error);
@@ -370,12 +374,12 @@ class DatabaseManager {
 
     async deleteLicense(licenseId) {
         try {
-            const license = await this.getQuery('SELECT license_number FROM licenses WHERE id = ?', [licenseId]);
+            const license = await this.getQuery('SELECT licenseNumber FROM licenses WHERE id = ?', [licenseId]);
             
             await this.runQuery('DELETE FROM licenses WHERE id = ?', [licenseId]);
             
             await this.logActivity('DELETE', 'license', licenseId, 
-                `Deleted license ${license ? license.license_number : licenseId}`);
+                `Deleted license ${license ? license.licenseNumber : licenseId}`);
             return true;
         } catch (error) {
             console.error('❌ Error deleting license:', error);
@@ -391,16 +395,15 @@ class DatabaseManager {
                 FROM licenses l 
                 LEFT JOIN nfc_cards c ON l.id = c.license_id AND c.is_active = 1
                 WHERE 
-                    l.license_number LIKE ? OR 
-                    l.owner_name LIKE ? OR 
-                    l.owner_email LIKE ? OR 
-                    l.vehicle_make LIKE ? OR 
-                    l.vehicle_model LIKE ? OR 
-                    l.vehicle_vin LIKE ?
-                ORDER BY l.created_at DESC
+                    l.licenseNumber LIKE ? OR 
+                    l.holderName LIKE ? OR 
+                    l.email LIKE ? OR 
+                    l.vehicleMake LIKE ? OR 
+                    l.vehicleModel LIKE ? OR 
+                    l.vehicleVin LIKE ?
+                ORDER BY l.id DESC
             `, [searchPattern, searchPattern, searchPattern, searchPattern, searchPattern, searchPattern]);
             
-            await this.logActivity('SEARCH', 'licenses', null, `Searched licenses with term: ${searchTerm}`);
             return licenses;
         } catch (error) {
             console.error('❌ Error searching licenses:', error);
