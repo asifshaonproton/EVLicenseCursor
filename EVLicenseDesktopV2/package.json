@@ -23,7 +23,7 @@
     "build-script": "node scripts/build-release.js",
     "build-all": "node scripts/build-release.js --all --clean",
     "rebuild": "@electron/rebuild",
-    "postinstall": "@electron/rebuild",
+    "postinstall": "electron-builder install-app-deps",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
@@ -56,26 +56,28 @@
     "copyright": "Copyright © 2024 Talukdar & Son's",
     "directories": {
       "output": "dist",
-      "buildResources": "build"
+      "buildResources": "../assets"
     },
     "files": [
       "src/**/*",
-      "assets/**/*",
+      "../assets/**/*",
       "node_modules/**/*",
       "package.json"
     ],
     "extraResources": [
       {
-        "from": "assets/",
+        "from": "../assets/",
         "to": "assets/",
         "filter": [
           "**/*"
         ]
       }
     ],
+    "npmRebuild": false,
+    "buildDependenciesFromSource": false,
     "mac": {
       "category": "public.app-category.business",
-      "icon": "build/icon.icns",
+      "icon": "../assets/icon.icns",
       "target": [
         {
           "target": "dmg",
@@ -94,41 +96,32 @@
       ],
       "hardenedRuntime": true,
       "gatekeeperAssess": false,
-      "entitlements": "build/entitlements.mac.plist",
-      "entitlementsInherit": "build/entitlements.mac.plist"
+      "entitlements": "../assets/entitlements.mac.plist",
+      "entitlementsInherit": "../assets/entitlements.mac.plist"
     },
     "win": {
-      "icon": "build/icon.ico",
+      "icon": "../assets/icon.ico",
       "target": [
         {
           "target": "nsis",
           "arch": [
-            "x64",
-            "ia32"
+            "x64"
           ]
         },
         {
           "target": "portable",
           "arch": [
-            "x64",
-            "ia32"
+            "x64"
           ]
         }
       ],
+      "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
       "publisherName": "Talukdar & Son's",
       "verifyUpdateCodeSignature": false
     },
-    "nsis": {
-      "oneClick": false,
-      "perMachine": false,
-      "allowToChangeInstallationDirectory": true,
-      "deleteAppDataOnUninstall": false,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true,
-      "shortcutName": "EV License Desktop V2"
-    },
     "linux": {
-      "icon": "build/icon.png",
+      "category": "Utility",
+      "icon": "../assets/icon.png",
       "target": [
         {
           "target": "AppImage",
@@ -141,20 +134,27 @@
           "arch": [
             "x64"
           ]
-        },
-        {
-          "target": "rpm",
-          "arch": [
-            "x64"
-          ]
         }
       ],
-      "category": "Office"
+      "artifactName": "${productName}-${version}-${os}-${arch}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "EV License Desktop V2",
+      "uninstallDisplayName": "EV License Desktop V2",
+      "artifactName": "${productName}-${version}-${os}-${arch}-setup.${ext}"
     },
     "publish": {
       "provider": "github",
       "owner": "asifshaon",
-      "repo": "https://github.com/asifshaon/EVLicense"
-    }
+      "repo": "EVLicense",
+      "private": true,
+      "releaseType": "release"
+    },
+    "afterSign": "../scripts/notarize.js",
+    "afterAllArtifactBuild": "../scripts/after-build.js"
   }
 }
