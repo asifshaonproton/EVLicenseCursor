@@ -12,36 +12,49 @@
     "start:v1": "cd EVLicenseDesktop && npm start",
     "start:v2": "cd EVLicenseDesktopV2 && npm start",
     "start:all": "concurrently \"npm run start:v1\" \"npm run start:v2\"",
+
     "dev:v1": "cd EVLicenseDesktop && npm run dev",
     "dev:v2": "cd EVLicenseDesktopV2 && npm run dev",
     "dev:all": "concurrently \"npm run dev:v1\" \"npm run dev:v2\"",
+
     "build:v1": "cd EVLicenseDesktop && npm run build",
     "build:v2": "cd EVLicenseDesktopV2 && npm run build",
     "build:all": "npm run build:v1 && npm run build:v2",
-    "build:win": "npm run build:v1 -- --win && npm run build:v2 -- --win",
-    "build:mac": "npm run build:v1 -- --mac && npm run build:v2 -- --mac",
-    "build:linux": "npm run build:v1 -- --linux && npm run build:v2 -- --linux",
+
+    "build:win": "npm run build:v1 --win && npm run build:v2 --win",
+    "build:mac": "npm run build:v1 --mac && npm run build:v2 --mac",
+    "build:linux": "npm run build:v1 --linux && npm run build:v2 --linux",
+
     "rebuild:v1": "cd EVLicenseDesktop && npm run rebuild",
     "rebuild:v2": "cd EVLicenseDesktopV2 && npm run rebuild",
     "rebuild:all": "npm run rebuild:v1 && npm run rebuild:v2",
+
     "install:all": "npm install --ignore-scripts && cd EVLicenseDesktop && npm install --ignore-scripts && cd ../EVLicenseDesktopV2 && npm install --ignore-scripts",
-    "install:v1": "npm install --ignore-scripts && cd EVLicenseDesktop && npm install --ignore-scripts",
-    "install:v2": "npm install --ignore-scripts && cd EVLicenseDesktopV2 && npm install --ignore-scripts",
-    "install:clean": "npm run clean:manual && npm run install:all",
+    "install:v1": "cd EVLicenseDesktop && npm install --ignore-scripts",
+    "install:v2": "cd EVLicenseDesktopV2 && npm install --ignore-scripts",
+    "install:clean": "npm run clean && npm run install:all",
+
     "install:electron": "cd EVLicenseDesktop && npm install electron@^37.2.5 --save-dev --ignore-scripts && cd ../EVLicenseDesktopV2 && npm install electron@^37.2.5 --save-dev --ignore-scripts",
+
     "postinstall": "npm run install:electron",
-    "clean": "rimraf node_modules EVLicenseDesktop/node_modules EVLicenseDesktopV2/node_modules package-lock.json EVLicenseDesktop/package-lock.json EVLicenseDesktopV2/package-lock.json",
+
+    "clean": "rimraf node_modules package-lock.json EVLicenseDesktop/node_modules EVLicenseDesktop/package-lock.json EVLicenseDesktopV2/node_modules EVLicenseDesktopV2/package-lock.json",
+
     "clean:manual": "if exist node_modules rmdir /s /q node_modules && if exist EVLicenseDesktop\\node_modules rmdir /s /q EVLicenseDesktop\\node_modules && if exist EVLicenseDesktopV2\\node_modules rmdir /s /q EVLicenseDesktopV2\\node_modules && if exist package-lock.json del package-lock.json && if exist EVLicenseDesktop\\package-lock.json del EVLicenseDesktop\\package-lock.json && if exist EVLicenseDesktopV2\\package-lock.json del EVLicenseDesktopV2\\package-lock.json",
+
     "test:cross-platform": "node test-automation/simple-cross-platform-tests.js",
     "test:full": "node test-automation/run-tests.js",
     "test:all": "npm run test:cross-platform && npm run test:full",
+    "test": "echo \"Error: no test specified\" && exit 1",
+
     "lint": "echo \"Linting workspace...\"",
     "lint:fix": "echo \"Fixing linting issues...\"",
     "format": "echo \"Formatting code...\"",
+
     "check:deps": "npm audit && cd EVLicenseDesktop && npm audit && cd ../EVLicenseDesktopV2 && npm audit",
     "update:deps": "npm update && cd EVLicenseDesktop && npm update && cd ../EVLicenseDesktopV2 && npm update",
-    "version:check": "node scripts/check-versions.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+
+    "version:check": "node scripts/check-versions.js"
   },
   "keywords": [
     "electron",

@@ -14,15 +14,15 @@
     "dist-win": "npm run build-win",
     "dist-mac": "npm run build-mac",
     "dist-linux": "npm run build-linux",
-    "release": "electron-builder --publish=always",
-    "release-win": "electron-builder --win --publish=always",
-    "release-mac": "electron-builder --mac --publish=always",
-    "release-linux": "electron-builder --linux --publish=always",
+    "release": "electron-builder --publish always",
+    "release-win": "electron-builder --win --publish always",
+    "release-mac": "electron-builder --mac --publish always",
+    "release-linux": "electron-builder --linux --publish always",
     "pack": "electron-builder --dir",
     "prerelease": "npm run build",
     "build-script": "node scripts/build-release.js",
     "build-all": "node scripts/build-release.js --all --clean",
-    "rebuild": "@electron/rebuild",
+    "rebuild": "electron-rebuild -f",
     "postinstall": "electron-builder install-app-deps",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -37,12 +37,12 @@
   "author": "Talukdar & Son's, Software Eng. Asif Hossain",
   "license": "MIT",
   "devDependencies": {
-    "@electron/rebuild": "^4.0.1",
-    "electron": "^37.2.5",
-    "electron-builder": "^25.1.8"
+    "electron": "^36.2.0",
+    "electron-builder": "^26.0.12",
+    "electron-rebuild": "^3.7.2"
   },
   "dependencies": {
-    "electron-updater": "^6.6.2",
+    "electron-updater": "^6.6.5",
     "express": "^4.21.2",
     "ndef": "^0.2.0",
     "nfc-pcsc": "^0.8.1",
@@ -55,17 +55,17 @@
     "copyright": "Copyright © 2024 Talukdar & Son's",
     "directories": {
       "output": "dist",
-      "buildResources": "../assets"
+      "buildResources": "assets"
     },
     "files": [
       "src/**/*",
-      "../assets/**/*",
+      "assets/**/*",
       "node_modules/**/*",
       "package.json"
     ],
     "extraResources": [
       {
-        "from": "../assets/",
+        "from": "assets/",
         "to": "assets/",
         "filter": [
           "**/*"
@@ -76,7 +76,7 @@
     "buildDependenciesFromSource": false,
     "mac": {
       "category": "public.app-category.business",
-      "icon": "../assets/icon.icns",
+      "icon": "assets/icon.icns",
       "target": [
         {
           "target": "dmg",
@@ -95,11 +95,11 @@
       ],
       "hardenedRuntime": true,
       "gatekeeperAssess": false,
-      "entitlements": "../assets/entitlements.mac.plist",
-      "entitlementsInherit": "../assets/entitlements.mac.plist"
+      "entitlements": "assets/entitlements.mac.plist",
+      "entitlementsInherit": "assets/entitlements.mac.plist"
     },
     "win": {
-      "icon": "../assets/icon.ico",
+      "icon": "assets/icon.ico",
       "target": [
         {
           "target": "nsis",
@@ -120,7 +120,7 @@
     },
     "linux": {
       "category": "Utility",
-      "icon": "../assets/icon.png",
+      "icon": "assets/icon.png",
       "target": [
         {
           "target": "AppImage",
@@ -153,7 +153,7 @@
       "private": true,
       "releaseType": "release"
     },
-    "afterSign": "../scripts/notarize.js",
-    "afterAllArtifactBuild": "../scripts/after-build.js"
+    "afterSign": "scripts/notarize.js",
+    "afterAllArtifactBuild": "scripts/after-build.js"
   }
 }
