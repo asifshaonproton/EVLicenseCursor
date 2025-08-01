@@ -28,7 +28,7 @@
     "install:v1": "npm install --ignore-scripts && cd EVLicenseDesktop && npm install --ignore-scripts",
     "install:v2": "npm install --ignore-scripts && cd EVLicenseDesktopV2 && npm install --ignore-scripts",
     "install:clean": "npm run clean:manual && npm run install:all",
-    "install:electron": "cd EVLicenseDesktop && npm install electron@^33.2.1 --save-dev --ignore-scripts && cd ../EVLicenseDesktopV2 && npm install electron@^33.2.1 --save-dev --ignore-scripts",
+    "install:electron": "cd EVLicenseDesktop && npm install electron@^37.2.5 --save-dev --ignore-scripts && cd ../EVLicenseDesktopV2 && npm install electron@^37.2.5 --save-dev --ignore-scripts",
     "postinstall": "npm run install:electron",
     "clean": "rimraf node_modules EVLicenseDesktop/node_modules EVLicenseDesktopV2/node_modules package-lock.json EVLicenseDesktop/package-lock.json EVLicenseDesktopV2/package-lock.json",
     "clean:manual": "if exist node_modules rmdir /s /q node_modules && if exist EVLicenseDesktop\\node_modules rmdir /s /q EVLicenseDesktop\\node_modules && if exist EVLicenseDesktopV2\\node_modules rmdir /s /q EVLicenseDesktopV2\\node_modules && if exist package-lock.json del package-lock.json && if exist EVLicenseDesktop\\package-lock.json del EVLicenseDesktop\\package-lock.json && if exist EVLicenseDesktopV2\\package-lock.json del EVLicenseDesktopV2\\package-lock.json",
