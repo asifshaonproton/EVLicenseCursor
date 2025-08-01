@@ -1,0 +1,21 @@
+{
+  "timestamp": "2025-08-01T11:00:01.793Z",
+  "testDuration": 308,
+  "platforms": [
+    {
+      "platform": "Desktop V1",
+      "success": false,
+      "timestamp": "2025-08-01T11:00:01.791Z"
+    },
+    {
+      "platform": "Desktop V2",
+      "success": false,
+      "timestamp": "2025-08-01T11:00:01.792Z"
+    }
+  ],
+  "summary": {
+    "totalPlatforms": 2,
+    "successfulPlatforms": 0,
+    "failedPlatforms": 2
+  }
+}

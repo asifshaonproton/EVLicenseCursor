@@ -152,8 +152,8 @@
     },
     "publish": {
       "provider": "github",
-      "owner": "your-github-username",
-      "repo": "your-repo-name"
+      "owner": "asifshaon",
+      "repo": "https://github.com/asifshaon/EVLicense"
     }
   }
 }
