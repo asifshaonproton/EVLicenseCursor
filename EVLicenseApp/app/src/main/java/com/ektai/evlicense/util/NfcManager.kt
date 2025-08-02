@@ -11,6 +11,7 @@ import android.nfc.Tag
 import android.app.PendingIntent
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 
 
 class NfcManager(private val activity: AppCompatActivity) {
@@ -81,7 +82,12 @@ class NfcManager(private val activity: AppCompatActivity) {
             addAction(UsbManager.ACTION_USB_DEVICE_DETACHED)
             addAction(ACTION_USB_PERMISSION)
         }
-        activity.registerReceiver(usbReceiver, filter)
+        ContextCompat.registerReceiver(
+            activity,
+            usbReceiver,
+            filter,
+            ContextCompat.RECEIVER_NOT_EXPORTED
+        )
     }
     
     private fun checkForAcrDevices() {
