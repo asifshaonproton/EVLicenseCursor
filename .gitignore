@@ -155,3 +155,172 @@ temp/
 .idea/navEditor.xml
 .idea/other.xml
 .idea/misc.xml
+EVLicenseApp/app/.DS_Store
+EVLicenseApp/.DS_Store
+EVLicenseApp/.DS_Store
+EVLicenseApp/.gradle/8.7/executionHistory/executionHistory.bin
+
+# ====================================
+# 🧱 Core Node.js
+# ====================================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+bun.lockb
+.env*
+.env.*
+.npmrc
+
+# ====================================
+# 🔥 Build / Dist
+# ====================================
+dist/
+build/
+out/
+tmp/
+temp/
+.cache/
+.esbuild/
+.vite/
+.next/
+.nuxt/
+.svelte-kit/
+storybook-static/
+.cypress_cache/
+coverage/
+*.tsbuildinfo
+
+# ====================================
+# ⚙️ Tooling / Dev Stuff
+# ====================================
+.rpt2_cache/
+.rts2_cache_*/
+.nyc_output/
+.husky/_/
+.prettier-cache/
+.stylelintcache
+.jest/
+jest-cache/
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# ====================================
+# 💣 OS Junk
+# ====================================
+.DS_Store
+Thumbs.db
+ehthumbs.db
+*.swp
+*~
+*.log
+*.bak
+*.old
+*.orig
+
+# ====================================
+# 📜 Certificates / Keys / Secrets
+# ====================================
+*.pem
+*.key
+*.crt
+*.pfx
+*.cert
+*.asc
+*.gpg
+*.enc
+*.srl
+*.csr
+*.p12
+*.p7b
+*.jks
+
+# ====================================
+# 📦 Misc Tools
+# ====================================
+.npm/
+bower_components/
+jspm_packages/
+.terraform/
+.docker/
+docker-compose.override.yml
+*.tgz
+
+# ====================================
+# 🚀 Monorepo / Workspace Tools
+# ====================================
+lerna-debug.log
+.turbo/
+turbo/
+.pnpm-store/
+.vscode-test/
+
+# ====================================
+# 🧪 Testing
+# ====================================
+mochawesome-report/
+test-results/
+*.test.js
+*.spec.js
+*.test.ts
+*.spec.ts
+__tests__/
+__mocks__/
+*.snap
+*.lint
+
+# ====================================
+# 🧬 TypeScript
+# ====================================
+*.tsbuildinfo
+*.d.ts
+tsconfig.tsbuildinfo
+
+# ====================================
+# 💾 SQLite / Local DB
+# ====================================
+*.db
+*.sqlite
+*.sqlite3
+*.seed
+*.dump
+
+# ====================================
+# 💥 Output Archives / Installer
+# ====================================
+*.zip
+*.rar
+*.7z
+*.tar
+*.gz
+*.bz2
+*.xz
+*.exe
+*.msi
+*.dmg
+*.pkg
+*.AppImage
+
+# ====================================
+# 🛑 Deployment / Hosting
+# ====================================
+.vercel/
+.netlify/
+firebase-debug.log
+functions/lib/
+functions/node_modules/
+public/
+
+# ====================================
+# ⚙️ Misc
+# ====================================
+*.pid
+*.pid.lock
+yarn-error.log
+
