@@ -99,7 +99,7 @@ class EVLicenseApp {
 
         // License management
         document.getElementById('new-license-btn').addEventListener('click', () => {
-            this.showNewLicenseDialog();
+            this.showLicenseDialog();
         });
 
         document.getElementById('search-input').addEventListener('input', (e) => {
@@ -115,9 +115,17 @@ class EVLicenseApp {
             this.writeNfcCard();
         });
 
+        document.getElementById('test-card-btn').addEventListener('click', () => {
+            this.testCardReading();
+        });
+
+        document.getElementById('write-test-btn').addEventListener('click', () => {
+            this.writeTestLicense();
+        });
+
         // Menu event listeners
         window.electronAPI.menu.onNewLicense(() => {
-            this.showNewLicenseDialog();
+            this.showLicenseDialog();
         });
 
         window.electronAPI.menu.onReadCard(() => {
@@ -218,7 +226,7 @@ class EVLicenseApp {
                 activeLicenses: this.licenses.filter(l => l.status === 'Active').length,
                 expiredLicenses: this.licenses.filter(l => l.status === 'Expired').length,
                 expiringIn30Days: this.getExpiringLicenses().length,
-                associatedCards: this.licenses.filter(l => l.card_uid).length,
+                associatedCards: this.licenses.filter(l => l.nfcCardNumber).length,
                 recentActivity: []
             };
 
@@ -305,7 +313,7 @@ class EVLicenseApp {
         if (this.licenses.length === 0) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="7" class="text-center">No licenses found</td>
+                    <td colspan="8" class="text-center">No licenses found</td>
                 </tr>
             `;
             return;
@@ -315,16 +323,20 @@ class EVLicenseApp {
             const row = document.createElement('tr');
             row.className = 'mdc-data-table__row';
             row.innerHTML = `
-                <td class="mdc-data-table__cell">${license.license_number}</td>
-                <td class="mdc-data-table__cell">${license.owner_name}</td>
-                <td class="mdc-data-table__cell">${license.vehicle_make} ${license.vehicle_model} (${license.vehicle_year || 'N/A'})</td>
+                <td class="mdc-data-table__cell">${license.licenseNumber}</td>
+                <td class="mdc-data-table__cell">${license.holderName}</td>
+                <td class="mdc-data-table__cell">${license.vehicleMake || ''} ${license.vehicleModel || ''} (${license.vehicleYear || 'N/A'})</td>
                 <td class="mdc-data-table__cell">
                     <span class="status-badge ${license.status.toLowerCase()}">${license.status}</span>
                 </td>
-                <td class="mdc-data-table__cell">${this.formatDate(license.expiry_date)}</td>
-                <td class="mdc-data-table__cell">${license.card_uid || 'Not associated'}</td>
+                <td class="mdc-data-table__cell">${this.formatDate(license.validityDate)}</td>
+                <td class="mdc-data-table__cell">${license.nfcCardNumber || 'Not associated'}</td>
+                <td class="mdc-data-table__cell">${license.city || 'Not specified'}</td>
                 <td class="mdc-data-table__cell">
                     <div class="action-buttons">
+                        <button class="action-button" onclick="app.showLicenseDetails(${license.id})" title="View Details">
+                            <span class="material-icons">visibility</span>
+                        </button>
                         <button class="action-button" onclick="app.editLicense(${license.id})" title="Edit">
                             <span class="material-icons">edit</span>
                         </button>
@@ -533,6 +545,118 @@ class EVLicenseApp {
             console.log('💾 Card write result:', result);
         } catch (error) {
             console.error('❌ Error writing card:', error);
+            this.showError('Write Error', error.message);
+        } finally {
+            this.showLoading(false);
+        }
+    }
+
+    async testCardReading() {
+        if (!this.nfcStatus.connected) {
+            this.showError('NFC Error', 'No NFC device connected');
+            return;
+        }
+
+        try {
+            this.showLoading(true, 'Starting card reading test...');
+            
+            // Start the test mode
+            const result = await window.electronAPI.nfc.testCardReading();
+            
+            if (result.success) {
+                this.showNotification('Test Mode Started', 'Place different NFC cards on the reader to test. Check console for detailed results.', 'info');
+                
+                // Add a button to stop the test
+                const testSection = document.querySelector('.nfc-operations');
+                if (testSection && !document.getElementById('stop-test-btn')) {
+                    const stopButton = document.createElement('button');
+                    stopButton.id = 'stop-test-btn';
+                    stopButton.className = 'mdc-button mdc-button--outlined';
+                    stopButton.innerHTML = `
+                        <span class="mdc-button__ripple"></span>
+                        <i class="material-icons mdc-button__icon">stop</i>
+                        <span class="mdc-button__label">Stop Test</span>
+                    `;
+                    stopButton.addEventListener('click', () => {
+                        this.stopCardReadingTest();
+                    });
+                    testSection.appendChild(stopButton);
+                }
+            } else {
+                this.showError('Test Error', result.message || 'Failed to start test mode');
+            }
+            
+        } catch (error) {
+            console.error('❌ Error starting card reading test:', error);
+            this.showError('Test Error', error.message);
+        } finally {
+            this.showLoading(false);
+        }
+    }
+
+    async stopCardReadingTest() {
+        try {
+            this.showLoading(true, 'Stopping test...');
+            
+            const result = await window.electronAPI.nfc.stopCardReadingTest();
+            
+            // Remove the stop button
+            const stopButton = document.getElementById('stop-test-btn');
+            if (stopButton) {
+                stopButton.remove();
+            }
+            
+            if (result.success) {
+                this.showNotification('Test Complete', result.message, 'success');
+                
+                // Show summary in console if there are results
+                if (result.results && result.results.length > 0) {
+                    console.log('\n🧪 CARD READING TEST SUMMARY:');
+                    console.log('=====================================');
+                    result.results.forEach((result, index) => {
+                        console.log(`${index + 1}. UID: ${result.uid} | Text: "${result.extractedText}"`);
+                    });
+                    
+                    // Check if all cards show the same text
+                    const uniqueTexts = [...new Set(result.results.map(r => r.extractedText))];
+                    if (uniqueTexts.length === 1 && result.results.length > 1) {
+                        console.log(`\n⚠️ WARNING: All ${result.results.length} cards show the same text: "${uniqueTexts[0]}"`);
+                        console.log('This suggests the text might be static data or a reading error.');
+                    } else if (uniqueTexts.length > 1) {
+                        console.log(`\n✅ Different cards show different text (${uniqueTexts.length} unique texts)`);
+                        console.log('This suggests the text is coming from actual card data.');
+                    }
+                    console.log('=====================================\n');
+                }
+            } else {
+                this.showError('Test Error', result.message || 'Failed to stop test mode');
+            }
+        } catch (error) {
+            console.error('❌ Error stopping card reading test:', error);
+            this.showError('Test Error', error.message);
+        } finally {
+            this.showLoading(false);
+        }
+    }
+
+    async writeTestLicense() {
+        if (!this.nfcStatus.connected) {
+            this.showError('NFC Error', 'No NFC device connected');
+            return;
+        }
+
+        try {
+            this.showLoading(true, 'Writing test license to card...');
+            const result = await window.electronAPI.nfc.writeTestLicense();
+            
+            if (result.success) {
+                this.showNotification('Test License Written', 'Test license data has been written to the card successfully. Now try reading it to see the decrypted data.', 'success');
+                console.log('📝 Test license written:', result.licenseData);
+            } else {
+                this.showError('Write Error', result.message || 'Failed to write test license');
+            }
+        } catch (error) {
+            console.error('❌ Error writing test license:', error);
             this.showError('Write Error', error.message);
         } finally {
             this.showLoading(false);
@@ -839,6 +963,266 @@ class EVLicenseApp {
         }
         
         this.displayCardData(cardData);
+        
+        // Check if this card is associated with a license
+        this.checkCardForLicense(cardData.uid);
+    }
+
+    async checkCardForLicense(cardUid) {
+        try {
+            // Search for license with this NFC card number
+            const license = this.licenses.find(l => l.nfcCardNumber === cardUid);
+            
+            if (license) {
+                // Show license display screen
+                this.showLicenseDisplayScreen(license);
+            } else {
+                // Show option to create new license or associate with existing
+                this.showCardAssociationOptions(cardUid);
+            }
+        } catch (error) {
+            console.error('❌ Error checking card for license:', error);
+        }
+    }
+
+    showLicenseDisplayScreen(license) {
+        const screen = document.createElement('div');
+        screen.className = 'license-display-screen';
+        screen.innerHTML = `
+            <div class="license-display-card">
+                <button class="license-display-close" onclick="this.closest('.license-display-screen').remove()">
+                    <span class="material-icons">close</span>
+                </button>
+                
+                <div class="license-display-header">
+                    <div class="license-display-title">${license.licenseNumber}</div>
+                    <div class="license-display-subtitle">EV License</div>
+                </div>
+                
+                <div class="license-display-content">
+                    <div class="license-display-section">
+                        <h3>License Holder</h3>
+                        <div class="license-display-row">
+                            <span class="license-display-label">Name:</span>
+                            <span class="license-display-value">${license.holderName}</span>
+                        </div>
+                        <div class="license-display-row">
+                            <span class="license-display-label">Mobile:</span>
+                            <span class="license-display-value">${license.mobile}</span>
+                        </div>
+                        <div class="license-display-row">
+                            <span class="license-display-label">City:</span>
+                            <span class="license-display-value">${license.city || 'Not specified'}</span>
+                        </div>
+                        <div class="license-display-row">
+                            <span class="license-display-label">Email:</span>
+                            <span class="license-display-value">${license.email || 'Not provided'}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="license-display-section">
+                        <h3>License Details</h3>
+                        <div class="license-display-row">
+                            <span class="license-display-label">Type:</span>
+                            <span class="license-display-value">${license.licenseType}</span>
+                        </div>
+                        <div class="license-display-row">
+                            <span class="license-display-label">Status:</span>
+                            <span class="license-display-value ${license.status.toLowerCase()}">${license.status}</span>
+                        </div>
+                        <div class="license-display-row">
+                            <span class="license-display-label">Issue Date:</span>
+                            <span class="license-display-value">${this.formatDate(license.issueDate) || 'Not specified'}</span>
+                        </div>
+                        <div class="license-display-row">
+                            <span class="license-display-label">Valid Until:</span>
+                            <span class="license-display-value ${this.isExpired(license.validityDate) ? 'expired' : ''}">${this.formatDate(license.validityDate)}</span>
+                        </div>
+                    </div>
+                    
+                    ${license.vehicleMake || license.vehicleModel ? `
+                    <div class="license-display-section">
+                        <h3>Vehicle Information</h3>
+                        ${license.vehicleMake ? `
+                        <div class="license-display-row">
+                            <span class="license-display-label">Make:</span>
+                            <span class="license-display-value">${license.vehicleMake}</span>
+                        </div>
+                        ` : ''}
+                        ${license.vehicleModel ? `
+                        <div class="license-display-row">
+                            <span class="license-display-label">Model:</span>
+                            <span class="license-display-value">${license.vehicleModel}</span>
+                        </div>
+                        ` : ''}
+                        ${license.vehicleYear ? `
+                        <div class="license-display-row">
+                            <span class="license-display-label">Year:</span>
+                            <span class="license-display-value">${license.vehicleYear}</span>
+                        </div>
+                        ` : ''}
+                        ${license.vehicleColor ? `
+                        <div class="license-display-row">
+                            <span class="license-display-label">Color:</span>
+                            <span class="license-display-value">${license.vehicleColor}</span>
+                        </div>
+                        ` : ''}
+                        ${license.vehicleVin ? `
+                        <div class="license-display-row">
+                            <span class="license-display-label">VIN:</span>
+                            <span class="license-display-value">${license.vehicleVin}</span>
+                        </div>
+                        ` : ''}
+                    </div>
+                    ` : ''}
+                    
+                    ${license.notes ? `
+                    <div class="license-display-section">
+                        <h3>Notes</h3>
+                        <div class="license-display-row">
+                            <span class="license-display-value" style="text-align: left; font-style: italic;">${license.notes}</span>
+                        </div>
+                    </div>
+                    ` : ''}
+                </div>
+                
+                <div class="license-display-actions">
+                    <button onclick="app.showLicenseDetails(${license.id})" class="btn-secondary">
+                        <span class="material-icons">visibility</span>
+                        View Details
+                    </button>
+                    <button onclick="app.editLicense(${license.id})" class="btn-secondary">
+                        <span class="material-icons">edit</span>
+                        Edit License
+                    </button>
+                    <button onclick="this.closest('.license-display-screen').remove()" class="btn-primary">
+                        <span class="material-icons">check</span>
+                        Close
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(screen);
+        
+        // Auto-close after 30 seconds
+        setTimeout(() => {
+            if (screen.parentNode) {
+                screen.remove();
+            }
+        }, 30000);
+    }
+
+    showCardAssociationOptions(cardUid) {
+        const dialog = document.createElement('div');
+        dialog.className = 'license-dialog-overlay';
+        dialog.innerHTML = `
+            <div class="license-dialog">
+                <div class="dialog-header">
+                    <h2>NFC Card Detected</h2>
+                    <button class="close-btn" onclick="this.closest('.license-dialog-overlay').remove()">
+                        <span class="material-icons">close</span>
+                    </button>
+                </div>
+                <div class="dialog-content" style="padding: 32px;">
+                    <div class="card-info">
+                        <h3>Card Information</h3>
+                        <p><strong>UID:</strong> ${cardUid}</p>
+                        <p>This NFC card is not associated with any license.</p>
+                    </div>
+                    
+                    <div class="association-options">
+                        <h3>What would you like to do?</h3>
+                        <div class="option-buttons">
+                            <button onclick="app.createLicenseForCard('${cardUid}')" class="btn-primary">
+                                <span class="material-icons">add_circle</span>
+                                Create New License
+                            </button>
+                            <button onclick="app.associateWithExistingLicense('${cardUid}')" class="btn-secondary">
+                                <span class="material-icons">link</span>
+                                Associate with Existing License
+                            </button>
+                            <button onclick="this.closest('.license-dialog-overlay').remove()" class="btn-secondary">
+                                <span class="material-icons">close</span>
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(dialog);
+    }
+
+    createLicenseForCard(cardUid) {
+        // Close the association options dialog
+        const overlay = document.querySelector('.license-dialog-overlay');
+        if (overlay) overlay.remove();
+        
+        // Show license creation dialog with pre-filled NFC card number
+        this.showLicenseDialog(null, cardUid);
+    }
+
+    async associateWithExistingLicense(cardUid) {
+        // Close the association options dialog
+        const overlay = document.querySelector('.license-dialog-overlay');
+        if (overlay) overlay.remove();
+        
+        // Show license selection dialog
+        this.showLicenseSelectionDialog(cardUid);
+    }
+
+    async showLicenseSelectionDialog(cardUid) {
+        const dialog = document.createElement('div');
+        dialog.className = 'license-dialog-overlay';
+        dialog.innerHTML = `
+            <div class="license-dialog">
+                <div class="dialog-header">
+                    <h2>Select License to Associate</h2>
+                    <button class="close-btn" onclick="this.closest('.license-dialog-overlay').remove()">
+                        <span class="material-icons">close</span>
+                    </button>
+                </div>
+                <div class="dialog-content" style="padding: 32px;">
+                    <p>Select a license to associate with NFC card <strong>${cardUid}</strong>:</p>
+                    
+                    <div class="license-selection-list">
+                        ${this.licenses.map(license => `
+                            <div class="license-selection-item">
+                                <div class="license-info">
+                                    <div class="license-name">${license.holderName}</div>
+                                    <div class="license-number">${license.licenseNumber}</div>
+                                    <div class="license-status ${license.status.toLowerCase()}">${license.status}</div>
+                                </div>
+                                <button onclick="app.associateCardToLicense('${cardUid}', ${license.id})" class="btn-primary">
+                                    <span class="material-icons">link</span>
+                                    Associate
+                                </button>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(dialog);
+    }
+
+    async associateCardToLicense(cardUid, licenseId) {
+        try {
+            await window.electronAPI.database.associateCard(cardUid, licenseId);
+            this.showNotification('Card Associated', 'NFC card has been associated with the license', 'success');
+            await this.loadLicenses();
+            
+            // Close the selection dialog
+            const overlay = document.querySelector('.license-dialog-overlay');
+            if (overlay) overlay.remove();
+            
+        } catch (error) {
+            console.error('❌ Error associating card:', error);
+            this.showError('Association Error', error.message || 'Failed to associate card');
+        }
     }
 
     async searchLicenses(searchTerm) {
@@ -887,8 +1271,7 @@ class EVLicenseApp {
 
     // Dialog and notification methods
     showNewLicenseDialog() {
-        // Simplified for now - in a full implementation, this would show a proper dialog
-        alert('New License dialog would open here. This will be implemented in the next phase.');
+        this.showLicenseDialog();
     }
 
     showLoading(show, message = 'Loading...') {
@@ -952,7 +1335,7 @@ class EVLicenseApp {
         thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
         
         return this.licenses.filter(license => {
-            const expiryDate = new Date(license.expiry_date);
+            const expiryDate = new Date(license.validityDate);
             return expiryDate <= thirtyDaysFromNow && license.status === 'Active';
         });
     }
@@ -1001,20 +1384,477 @@ class EVLicenseApp {
     // License management methods (stubs for now)
     editLicense(licenseId) {
         console.log('✏️ Edit license:', licenseId);
-        alert('Edit license dialog would open here.');
+        this.showLicenseDialog(licenseId);
     }
 
     deleteLicense(licenseId) {
         console.log('🗑️ Delete license:', licenseId);
-        if (confirm('Are you sure you want to delete this license?')) {
-            // Implementation would go here
-            alert('License deletion would be implemented here.');
-        }
+        this.showDeleteConfirmation(licenseId);
     }
 
     associateCard(licenseId) {
         console.log('🔗 Associate card with license:', licenseId);
-        alert('Card association dialog would open here.');
+        this.showCardAssociationDialog(licenseId);
+    }
+
+    // New comprehensive license management methods
+    async showLicenseDialog(licenseId = null, prefillNfcCard = null) {
+        const isEdit = licenseId !== null;
+        const license = isEdit ? this.licenses.find(l => l.id === licenseId) : null;
+        
+        // Use pre-filled NFC card number if provided
+        const nfcCardNumber = prefillNfcCard || license?.nfcCardNumber || '';
+        
+        const dialog = document.createElement('div');
+        dialog.className = 'license-dialog-overlay';
+        dialog.innerHTML = `
+            <div class="license-dialog">
+                <div class="dialog-header">
+                    <h2>${isEdit ? 'Edit License' : 'New License'}</h2>
+                    <button class="close-btn" onclick="this.closest('.license-dialog-overlay').remove()">
+                        <span class="material-icons">close</span>
+                    </button>
+                </div>
+                <form id="licenseForm" class="license-form">
+                    <div class="form-grid">
+                        <div class="form-section">
+                            <h3>License Holder Information</h3>
+                            <div class="form-row">
+                                <div class="form-field">
+                                    <label for="holderName">Holder Name *</label>
+                                    <input type="text" id="holderName" name="holderName" required 
+                                           value="${license?.holderName || ''}" />
+                                </div>
+                                <div class="form-field">
+                                    <label for="mobile">Mobile *</label>
+                                    <input type="tel" id="mobile" name="mobile" required 
+                                           value="${license?.mobile || ''}" />
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-field">
+                                    <label for="email">Email</label>
+                                    <input type="email" id="email" name="email" 
+                                           value="${license?.email || ''}" />
+                                </div>
+                                <div class="form-field">
+                                    <label for="city">City</label>
+                                    <select id="city" name="city">
+                                        <option value="">Select City</option>
+                                        <option value="Rangpur" ${license?.city === 'Rangpur' ? 'selected' : ''}>Rangpur</option>
+                                        <option value="Narayanganj" ${license?.city === 'Narayanganj' ? 'selected' : ''}>Narayanganj</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-section">
+                            <h3>License Details</h3>
+                            <div class="form-row">
+                                <div class="form-field">
+                                    <label for="licenseNumber">License Number *</label>
+                                    <input type="text" id="licenseNumber" name="licenseNumber" required 
+                                           value="${license?.licenseNumber || ''}" />
+                                </div>
+                                <div class="form-field">
+                                    <label for="licenseType">License Type *</label>
+                                    <select id="licenseType" name="licenseType" required>
+                                        <option value="">Select Type</option>
+                                        <option value="A" ${license?.licenseType === 'A' ? 'selected' : ''}>A - Motorcycle</option>
+                                        <option value="R" ${license?.licenseType === 'R' ? 'selected' : ''}>R - Car</option>
+                                        <option value="V" ${license?.licenseType === 'V' ? 'selected' : ''}>V - Van</option>
+                                        <option value="M" ${license?.licenseType === 'M' ? 'selected' : ''}>M - Motorcycle</option>
+                                        <option value="P" ${license?.licenseType === 'P' ? 'selected' : ''}>P - Passenger</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-field">
+                                    <label for="issueDate">Issue Date</label>
+                                    <input type="date" id="issueDate" name="issueDate" 
+                                           value="${license?.issueDate || ''}" />
+                                </div>
+                                <div class="form-field">
+                                    <label for="validityDate">Validity Date *</label>
+                                    <input type="date" id="validityDate" name="validityDate" required 
+                                           value="${license?.validityDate || ''}" />
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-field">
+                                    <label for="status">Status</label>
+                                    <select id="status" name="status">
+                                        <option value="Active" ${license?.status === 'Active' ? 'selected' : ''}>Active</option>
+                                        <option value="Expired" ${license?.status === 'Expired' ? 'selected' : ''}>Expired</option>
+                                        <option value="Suspended" ${license?.status === 'Suspended' ? 'selected' : ''}>Suspended</option>
+                                    </select>
+                                </div>
+                                <div class="form-field">
+                                    <label for="nfcCardNumber">NFC Card Number</label>
+                                    <input type="text" id="nfcCardNumber" name="nfcCardNumber" 
+                                           value="${nfcCardNumber}" ${prefillNfcCard ? 'readonly' : ''} />
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-section">
+                            <h3>Vehicle Information</h3>
+                            <div class="form-row">
+                                <div class="form-field">
+                                    <label for="vehicleMake">Vehicle Make</label>
+                                    <input type="text" id="vehicleMake" name="vehicleMake" 
+                                           value="${license?.vehicleMake || ''}" />
+                                </div>
+                                <div class="form-field">
+                                    <label for="vehicleModel">Vehicle Model</label>
+                                    <input type="text" id="vehicleModel" name="vehicleModel" 
+                                           value="${license?.vehicleModel || ''}" />
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-field">
+                                    <label for="vehicleYear">Vehicle Year</label>
+                                    <input type="number" id="vehicleYear" name="vehicleYear" min="1900" max="2030" 
+                                           value="${license?.vehicleYear || ''}" />
+                                </div>
+                                <div class="form-field">
+                                    <label for="vehicleColor">Vehicle Color</label>
+                                    <input type="text" id="vehicleColor" name="vehicleColor" 
+                                           value="${license?.vehicleColor || ''}" />
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-field full-width">
+                                    <label for="vehicleVin">Vehicle VIN</label>
+                                    <input type="text" id="vehicleVin" name="vehicleVin" 
+                                           value="${license?.vehicleVin || ''}" />
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-section">
+                            <h3>Additional Information</h3>
+                            <div class="form-row">
+                                <div class="form-field full-width">
+                                    <label for="notes">Notes</label>
+                                    <textarea id="notes" name="notes" rows="3">${license?.notes || ''}</textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="dialog-actions">
+                        <button type="button" class="btn-secondary" onclick="this.closest('.license-dialog-overlay').remove()">
+                            Cancel
+                        </button>
+                        <button type="submit" class="btn-primary">
+                            ${isEdit ? 'Update License' : 'Create License'}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        `;
+        
+        document.body.appendChild(dialog);
+        
+        // Handle form submission
+        const form = dialog.querySelector('#licenseForm');
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await this.handleLicenseSubmit(form, isEdit, licenseId);
+        });
+    }
+
+    async handleLicenseSubmit(form, isEdit, licenseId) {
+        try {
+            const formData = new FormData(form);
+            const licenseData = {
+                holderName: formData.get('holderName'),
+                mobile: formData.get('mobile'),
+                email: formData.get('email'),
+                city: formData.get('city'),
+                licenseType: formData.get('licenseType'),
+                licenseNumber: formData.get('licenseNumber'),
+                nfcCardNumber: formData.get('nfcCardNumber'),
+                validityDate: formData.get('validityDate'),
+                issueDate: formData.get('issueDate'),
+                status: formData.get('status'),
+                vehicleMake: formData.get('vehicleMake'),
+                vehicleModel: formData.get('vehicleModel'),
+                vehicleYear: formData.get('vehicleYear') ? parseInt(formData.get('vehicleYear')) : null,
+                vehicleColor: formData.get('vehicleColor'),
+                vehicleVin: formData.get('vehicleVin'),
+                notes: formData.get('notes')
+            };
+            
+            if (isEdit) {
+                licenseData.id = licenseId;
+                await window.electronAPI.database.updateLicense(licenseData);
+                this.showNotification('License Updated', 'License has been updated successfully', 'success');
+            } else {
+                await window.electronAPI.database.addLicense(licenseData);
+                this.showNotification('License Created', 'New license has been created successfully', 'success');
+            }
+            
+            // Refresh licenses and close dialog
+            await this.loadLicenses();
+            form.closest('.license-dialog-overlay').remove();
+            
+        } catch (error) {
+            console.error('❌ Error saving license:', error);
+            this.showError('Save Error', error.message || 'Failed to save license');
+        }
+    }
+
+    async showDeleteConfirmation(licenseId) {
+        const license = this.licenses.find(l => l.id === licenseId);
+        if (!license) return;
+        
+        const result = await window.electronAPI.system.showMessageBox({
+            type: 'warning',
+            title: 'Delete License',
+            message: 'Are you sure you want to delete this license?',
+            detail: `This will permanently delete the license for ${license.holderName} (${license.licenseNumber}). This action cannot be undone.`,
+            buttons: ['Cancel', 'Delete'],
+            defaultId: 0,
+            cancelId: 0
+        });
+        
+        if (result.response === 1) {
+            try {
+                await window.electronAPI.database.deleteLicense(licenseId);
+                this.showNotification('License Deleted', 'License has been deleted successfully', 'success');
+                await this.loadLicenses();
+            } catch (error) {
+                console.error('❌ Error deleting license:', error);
+                this.showError('Delete Error', error.message || 'Failed to delete license');
+            }
+        }
+    }
+
+    async showCardAssociationDialog(licenseId) {
+        const license = this.licenses.find(l => l.id === licenseId);
+        if (!license) return;
+        
+        const dialog = document.createElement('div');
+        dialog.className = 'license-dialog-overlay';
+        dialog.innerHTML = `
+            <div class="license-dialog">
+                <div class="dialog-header">
+                    <h2>Associate NFC Card</h2>
+                    <button class="close-btn" onclick="this.closest('.license-dialog-overlay').remove()">
+                        <span class="material-icons">close</span>
+                    </button>
+                </div>
+                <div class="dialog-content">
+                    <p><strong>License:</strong> ${license.holderName} (${license.licenseNumber})</p>
+                    <p><strong>Current NFC Card:</strong> ${license.nfcCardNumber || 'None'}</p>
+                    
+                    <div class="nfc-association-section">
+                        <h3>Scan NFC Card</h3>
+                        <p>Place an NFC card on the reader to associate it with this license.</p>
+                        
+                        <div class="nfc-status">
+                            <div class="nfc-indicator ${this.nfcStatus.connected ? 'connected' : 'disconnected'}">
+                                <span class="material-icons">nfc</span>
+                                <span>${this.nfcStatus.connected ? 'Reader Connected' : 'No Reader'}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="card-info" id="cardInfo" style="display: none;">
+                            <h4>Detected Card:</h4>
+                            <div id="cardDetails"></div>
+                        </div>
+                        
+                        <div class="association-actions">
+                            <button id="scanCardBtn" class="btn-primary" ${!this.nfcStatus.connected ? 'disabled' : ''}>
+                                <span class="material-icons">nfc</span>
+                                Scan Card
+                            </button>
+                            <button id="associateBtn" class="btn-secondary" style="display: none;">
+                                <span class="material-icons">link</span>
+                                Associate Card
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(dialog);
+        
+        let detectedCard = null;
+        
+        // Handle scan card button
+        const scanBtn = dialog.querySelector('#scanCardBtn');
+        scanBtn.addEventListener('click', async () => {
+            try {
+                scanBtn.disabled = true;
+                scanBtn.innerHTML = '<span class="material-icons">hourglass_empty</span> Scanning...';
+                
+                const cardData = await window.electronAPI.nfc.readCard();
+                detectedCard = cardData;
+                
+                const cardInfo = dialog.querySelector('#cardInfo');
+                const cardDetails = dialog.querySelector('#cardDetails');
+                const associateBtn = dialog.querySelector('#associateBtn');
+                
+                cardDetails.innerHTML = `
+                    <p><strong>UID:</strong> ${cardData.uid}</p>
+                    <p><strong>Type:</strong> ${cardData.type || 'Unknown'}</p>
+                    <p><strong>Size:</strong> ${cardData.size || 'Unknown'}</p>
+                `;
+                
+                cardInfo.style.display = 'block';
+                associateBtn.style.display = 'inline-flex';
+                
+                scanBtn.innerHTML = '<span class="material-icons">check</span> Card Detected';
+                
+            } catch (error) {
+                console.error('❌ Error scanning card:', error);
+                this.showError('Scan Error', error.message || 'Failed to scan card');
+                scanBtn.disabled = false;
+                scanBtn.innerHTML = '<span class="material-icons">nfc</span> Scan Card';
+            }
+        });
+        
+        // Handle associate button
+        const associateBtn = dialog.querySelector('#associateBtn');
+        associateBtn.addEventListener('click', async () => {
+            if (!detectedCard) return;
+            
+            try {
+                await window.electronAPI.database.associateCard(detectedCard.uid, licenseId);
+                this.showNotification('Card Associated', 'NFC card has been associated with the license', 'success');
+                await this.loadLicenses();
+                dialog.remove();
+            } catch (error) {
+                console.error('❌ Error associating card:', error);
+                this.showError('Association Error', error.message || 'Failed to associate card');
+            }
+        });
+    }
+
+    // Enhanced license display with NFC reading
+    async showLicenseDetails(licenseId) {
+        const license = this.licenses.find(l => l.id === licenseId);
+        if (!license) return;
+        
+        const dialog = document.createElement('div');
+        dialog.className = 'license-dialog license-details-dialog';
+        dialog.innerHTML = `
+            <div class="license-dialog license-details-dialog">
+                <div class="dialog-header">
+                    <h2>License Details</h2>
+                    <button class="close-btn" onclick="this.closest('.license-dialog-overlay').remove()">
+                        <span class="material-icons">close</span>
+                    </button>
+                </div>
+                <div class="license-details-content">
+                    <div class="license-header">
+                        <div class="license-number">${license.licenseNumber}</div>
+                        <div class="license-status ${license.status.toLowerCase()}">${license.status}</div>
+                    </div>
+                    
+                    <div class="details-grid">
+                        <div class="detail-section">
+                            <h3>Holder Information</h3>
+                            <div class="detail-row">
+                                <span class="detail-label">Name:</span>
+                                <span class="detail-value">${license.holderName}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Mobile:</span>
+                                <span class="detail-value">${license.mobile}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Email:</span>
+                                <span class="detail-value">${license.email || 'Not provided'}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">City:</span>
+                                <span class="detail-value">${license.city || 'Not specified'}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="detail-section">
+                            <h3>License Information</h3>
+                            <div class="detail-row">
+                                <span class="detail-label">Type:</span>
+                                <span class="detail-value">${license.licenseType}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Issue Date:</span>
+                                <span class="detail-value">${this.formatDate(license.issueDate) || 'Not specified'}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Valid Until:</span>
+                                <span class="detail-value ${this.isExpired(license.validityDate) ? 'expired' : ''}">${this.formatDate(license.validityDate)}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">NFC Card:</span>
+                                <span class="detail-value">${license.nfcCardNumber || 'Not associated'}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="detail-section">
+                            <h3>Vehicle Information</h3>
+                            <div class="detail-row">
+                                <span class="detail-label">Make:</span>
+                                <span class="detail-value">${license.vehicleMake || 'Not specified'}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Model:</span>
+                                <span class="detail-value">${license.vehicleModel || 'Not specified'}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Year:</span>
+                                <span class="detail-value">${license.vehicleYear || 'Not specified'}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Color:</span>
+                                <span class="detail-value">${license.vehicleColor || 'Not specified'}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">VIN:</span>
+                                <span class="detail-value">${license.vehicleVin || 'Not specified'}</span>
+                            </div>
+                        </div>
+                        
+                        ${license.notes ? `
+                        <div class="detail-section">
+                            <h3>Notes</h3>
+                            <div class="notes-content">${license.notes}</div>
+                        </div>
+                        ` : ''}
+                    </div>
+                    
+                    <div class="license-actions">
+                        <button onclick="app.editLicense(${license.id})" class="btn-secondary">
+                            <span class="material-icons">edit</span>
+                            Edit License
+                        </button>
+                        <button onclick="app.associateCard(${license.id})" class="btn-secondary">
+                            <span class="material-icons">nfc</span>
+                            Associate NFC Card
+                        </button>
+                        <button onclick="app.readNfcCard()" class="btn-primary">
+                            <span class="material-icons">visibility</span>
+                            Read NFC Card
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(dialog);
+    }
+
+    isExpired(dateString) {
+        if (!dateString) return false;
+        const expiryDate = new Date(dateString);
+        const today = new Date();
+        return expiryDate < today;
     }
 }
 

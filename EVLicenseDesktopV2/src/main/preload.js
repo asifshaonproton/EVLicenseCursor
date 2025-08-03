@@ -19,6 +19,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
         readCard: () => ipcRenderer.invoke('nfc-read-card'),
         writeCard: (data) => ipcRenderer.invoke('nfc-write-card', data),
         refreshDevices: () => ipcRenderer.invoke('nfc-refresh-devices'),
+        testCardReading: () => ipcRenderer.invoke('nfc-test-card-reading'),
+        stopCardReadingTest: () => ipcRenderer.invoke('nfc-stop-card-reading-test'),
+        writeTestLicense: () => ipcRenderer.invoke('nfc-write-test-license'),
         
         // Event listeners for NFC events
         onReaderConnected: (callback) => {

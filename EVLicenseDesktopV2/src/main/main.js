@@ -253,6 +253,33 @@ class EVLicenseDesktop {
             }
         });
 
+        ipcMain.handle('nfc-test-card-reading', async () => {
+            try {
+                return await this.nfcManager.testCardReading();
+            } catch (error) {
+                console.error('Error starting NFC card reading test:', error);
+                throw error;
+            }
+        });
+
+        ipcMain.handle('nfc-stop-card-reading-test', async () => {
+            try {
+                return await this.nfcManager.stopCardReadingTest();
+            } catch (error) {
+                console.error('Error stopping NFC card reading test:', error);
+                throw error;
+            }
+        });
+
+        ipcMain.handle('nfc-write-test-license', async () => {
+            try {
+                return await this.nfcManager.writeTestLicenseToCard();
+            } catch (error) {
+                console.error('Error writing test license to card:', error);
+                throw error;
+            }
+        });
+
         // System operations
         ipcMain.handle('app-get-version', () => {
             return app.getVersion();

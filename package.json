@@ -25,8 +25,8 @@
     "build:mac": "npm run build:v1 --mac && npm run build:v2 --mac",
     "build:linux": "npm run build:v1 --linux && npm run build:v2 --linux",
 
-    "rebuild:v1": "cd EVLicenseDesktop && npm run rebuild",
-    "rebuild:v2": "cd EVLicenseDesktopV2 && npm run rebuild",
+    "rebuild:v1": "cd EVLicenseDesktop && npm run electron-rebuild -f -w nfc-pcsc",
+    "rebuild:v2": "cd EVLicenseDesktopV2 && electron-rebuild -f -w nfc-pcsc",
     "rebuild:all": "npm run rebuild:v1 && npm run rebuild:v2",
 
     "install:all": "npm install --ignore-scripts && cd EVLicenseDesktop && npm install --ignore-scripts && cd ../EVLicenseDesktopV2 && npm install --ignore-scripts",
@@ -34,7 +34,7 @@
     "install:v2": "cd EVLicenseDesktopV2 && npm install --ignore-scripts",
     "install:clean": "npm run clean && npm run install:all",
 
-    "install:electron": "cd EVLicenseDesktop && npm install electron@^37.2.5 --save-dev --ignore-scripts && cd ../EVLicenseDesktopV2 && npm install electron@^37.2.5 --save-dev --ignore-scripts",
+    "install:electron": "cd EVLicenseDesktop && npm install electron@^30.0.0 --save-dev --ignore-scripts && cd ../EVLicenseDesktopV2 && npm install electron@^30.0.0 --save-dev --ignore-scripts",
 
     "postinstall": "npm run install:electron",
 
@@ -72,7 +72,7 @@
   "license": "MIT",
   "devDependencies": {
     "concurrently": "^8.2.2",
-    "electron": "^37.2.5",
+    "electron": "^30.0.0",
     "rimraf": "^5.0.0"
   },
   "engines": {

@@ -253,6 +253,8 @@ class NFCPCSCManager extends EventEmitter {
                             textContent: this.extractTextFromBlock(block4Response)
                         });
                         console.log(`📊 Read block 4: ${block4Response.toString('hex')}`);
+                        console.log(`🔍 DEBUG: Block 4 as ASCII: "${block4Response.toString('ascii')}"`);
+                        console.log(`🔍 DEBUG: Block 4 as UTF-8: "${block4Response.toString('utf8')}"`);
 
                         // Check if block 4 starts with NDEF TLV (0x03)
                         if (block4Response[0] === 0x03) {
@@ -312,6 +314,8 @@ class NFCPCSCManager extends EventEmitter {
                                 textContent: this.extractTextFromBlock(blockResponse)
                             });
                             console.log(`📊 Read block ${block}: ${blockResponse.toString('hex')}`);
+                            console.log(`🔍 DEBUG: Block ${block} as ASCII: "${blockResponse.toString('ascii')}"`);
+                            console.log(`🔍 DEBUG: Block ${block} as UTF-8: "${blockResponse.toString('utf8')}"`);
                         } catch (blockError) {
                             console.log(`⚠️ Could not read block ${block}: ${blockError.message}`);
                             break;
@@ -374,26 +378,86 @@ class NFCPCSCManager extends EventEmitter {
                 }
             }
             if (allData.length === 0) return;
+            
+            // DEBUG: Log the raw data being processed
+            console.log(`🔍 DEBUG: Raw hex data from blocks: ${allData.toString('hex')}`);
+            console.log(`🔍 DEBUG: Raw data length: ${allData.length} bytes`);
+            console.log(`🔍 DEBUG: First 16 bytes as hex: ${allData.slice(0, 16).toString('hex')}`);
+            console.log(`🔍 DEBUG: First 16 bytes as ASCII: ${allData.slice(0, 16).toString('ascii')}`);
+            
+            // DEBUG: Check if this might be encrypted/encoded data
+            const rawTextDebug = allData.toString('utf8').replace(/[\x00-\x1F\x7F]/g, '').trim();
+            console.log(`🔍 DEBUG: Raw UTF-8 text: "${rawTextDebug}"`);
+            
+            // Check if it looks like base64 encoded data
+            const base64Pattern = /^[A-Za-z0-9+/]*={0,2}$/;
+            if (base64Pattern.test(rawTextDebug)) {
+                console.log(`🔍 DEBUG: Data appears to be base64 encoded`);
+                try {
+                    const decoded = Buffer.from(rawTextDebug, 'base64');
+                    console.log(`🔍 DEBUG: Base64 decoded length: ${decoded.length} bytes`);
+                    console.log(`🔍 DEBUG: Base64 decoded hex: ${decoded.toString('hex')}`);
+                    
+                    // Try to decrypt if it's our encrypted format
+                    try {
+                        const CryptoUtils = require('./crypto-utils');
+                        const decrypted = CryptoUtils.decrypt(rawTextDebug);
+                        console.log(`🔍 DEBUG: Decrypted data: "${decrypted}"`);
+                        
+                        // Try to parse as JSON
+                        try {
+                            const jsonData = JSON.parse(decrypted);
+                            console.log(`🔍 DEBUG: Parsed JSON:`, jsonData);
+                            cardData.extractedText = `Decrypted License: ${jsonData.holderName || 'Unknown'} - ${jsonData.licenseNumber || 'No License'}`;
+                            cardData.decryptedData = jsonData;
+                            return;
+                        } catch (jsonError) {
+                            console.log(`🔍 DEBUG: Not valid JSON after decryption: ${jsonError.message}`);
+                        }
+                    } catch (decryptError) {
+                        console.log(`🔍 DEBUG: Decryption failed: ${decryptError.message}`);
+                    }
+                } catch (base64Error) {
+                    console.log(`🔍 DEBUG: Base64 decoding failed: ${base64Error.message}`);
+                }
+            }
+            
+            // Check if it's a simple repeated pattern (like "cccc")
+            const uniqueChars = [...new Set(rawTextDebug)];
+            if (uniqueChars.length === 1 && rawTextDebug.length > 1) {
+                console.log(`🔍 DEBUG: Detected repeated character pattern: "${rawTextDebug}" (${rawTextDebug.length} times)`);
+                console.log(`🔍 DEBUG: This might be padding, null bytes, or a reading error`);
+            }
+            
             // --- Use ndef npm library for NDEF parsing ---
             // If block 4 starts with 0x03, treat as TLV and extract NDEF
             if (allData[0] === 0x03) {
+                console.log('🔍 DEBUG: Detected TLV format (0x03)');
                 // TLV format: 0x03, length, NDEF, 0xFE
                 // Extract NDEF message from TLV
                 const tlvLen = allData[1];
                 const ndefMsg = allData.slice(2, 2 + tlvLen);
+                console.log(`🔍 DEBUG: TLV length: ${tlvLen}, NDEF message hex: ${ndefMsg.toString('hex')}`);
                 const ndefText = NdefUtils.parseNdefMessage(ndefMsg);
                 if (ndefText) {
                     cardData.extractedText = ndefText;
                     cardData.isAndroidCompatible = true;
+                    console.log(`🔍 DEBUG: Successfully extracted NDEF text: "${ndefText}"`);
                     return;
+                } else {
+                    console.log('🔍 DEBUG: NDEF parsing failed for TLV data');
                 }
             } else {
+                console.log(`🔍 DEBUG: First byte is 0x${allData[0].toString(16)}, not TLV format`);
                 // Try to parse as NDEF message directly
                 const ndefText = NdefUtils.parseNdefMessage(allData);
                 if (ndefText) {
                     cardData.extractedText = ndefText;
                     cardData.isAndroidCompatible = true;
+                    console.log(`🔍 DEBUG: Successfully extracted NDEF text: "${ndefText}"`);
                     return;
+                } else {
+                    console.log('🔍 DEBUG: Direct NDEF parsing failed');
                 }
             }
             // Fallback: try simple text extraction (legacy format)
@@ -401,15 +465,25 @@ class NFCPCSCManager extends EventEmitter {
                 const simpleText = NdefUtils.parseSimpleTextRecord(allData);
                 if (simpleText) {
                     cardData.extractedText = `Simple Text: "${simpleText}"`;
+                    console.log(`🔍 DEBUG: Extracted simple text: "${simpleText}"`);
                     return;
+                } else {
+                    console.log('🔍 DEBUG: Simple text parsing failed');
                 }
-            } catch (simpleError) {}
+            } catch (simpleError) {
+                console.log(`🔍 DEBUG: Simple text parsing error: ${simpleError.message}`);
+            }
             // Last resort: raw text extraction
             const rawText = allData.toString('utf8').replace(/[\x00-\x1F\x7F]/g, '').trim();
             if (rawText && rawText.length > 0) {
                 cardData.extractedText = `Raw Text: "${rawText}"`;
+                console.log(`🔍 DEBUG: Raw text extraction result: "${rawText}"`);
+                console.log(`🔍 DEBUG: This is likely binary data interpreted as UTF-8 text`);
+            } else {
+                console.log('🔍 DEBUG: No readable text found in raw data');
             }
         } catch (error) {
+            console.log(`🔍 DEBUG: Error in extractCleanText: ${error.message}`);
             // ignore
         }
     }
@@ -770,6 +844,57 @@ class NFCPCSCManager extends EventEmitter {
         }
     }
 
+    async writeTestLicenseToCard() {
+        try {
+            if (!this.currentCard) {
+                throw new Error('No card present for writing');
+            }
+
+            const readerInfo = Array.from(this.readers.values())
+                .find(r => r.card && r.card.uid === this.currentCard.uid);
+            if (!readerInfo) {
+                throw new Error('Reader with current card not found');
+            }
+            const reader = readerInfo.reader;
+            
+            console.log(`📝 Writing test license to card type: ${this.currentCard.type}, UID: ${this.currentCard.uid}`);
+
+            // Create test license data
+            const testLicenseData = {
+                holderName: "John Doe",
+                mobile: "+1234567890",
+                city: "Rangpur",
+                licenseType: "A",
+                licenseNumber: "LIC123456",
+                nfcCardNumber: this.currentCard.uid,
+                validityDate: "2025-12-31",
+                email: "john@example.com",
+                vehicleMake: "Toyota",
+                vehicleModel: "Corolla",
+                vehicleYear: 2020,
+                vehicleColor: "White",
+                vehicleVin: "1HGBH41JXMN109186",
+                status: "Active",
+                issueDate: "2024-01-15",
+                notes: "Test license for debugging"
+            };
+
+            // Write the test data
+            const result = await this.writeCard(testLicenseData);
+            
+            console.log('✅ Test license written successfully');
+            return {
+                success: true,
+                message: 'Test license written successfully',
+                licenseData: testLicenseData,
+                writeResult: result
+            };
+        } catch (error) {
+            console.error('❌ Error writing test license:', error);
+            throw error;
+        }
+    }
+
     getStatus() {
         const readers = Array.from(this.readers.values()).map(reader => ({
             name: reader.name,
@@ -920,10 +1045,118 @@ class NFCPCSCManager extends EventEmitter {
         // Read the card data
         const cardData = await this.readCardData(readerInfo.reader, card);
         
+        // Add detailed debugging information
+        this.logDetailedCardInfo(cardData);
+        
         return {
             ...this.currentCard,
             ...cardData
         };
+    }
+
+    async testCardReading() {
+        console.log('\n🧪 CARD READING TEST MODE');
+        console.log('=====================================');
+        console.log('This will help determine if "cccc" is static data or varies between cards.');
+        console.log('Please place different NFC cards on the reader to test.');
+        console.log('=====================================\n');
+        
+        // Set up a test listener
+        this.testResults = [];
+        this.testModeActive = true;
+        
+        // Store the original card detected handler
+        this.originalCardDetectedHandler = this.listeners('card-detected')[0];
+        
+        // Set up test handler
+        this.testHandler = async (cardData) => {
+            console.log(`\n🧪 TEST RESULT - Card ${this.testResults.length + 1}:`);
+            console.log(`UID: ${cardData.uid}`);
+            console.log(`Type: ${cardData.type}`);
+            console.log(`Extracted Text: "${cardData.extractedText}"`);
+            
+            this.testResults.push({
+                uid: cardData.uid,
+                type: cardData.type,
+                extractedText: cardData.extractedText,
+                timestamp: new Date().toISOString()
+            });
+            
+            console.log(`\n📊 TEST SUMMARY (${this.testResults.length} cards tested):`);
+            this.testResults.forEach((result, index) => {
+                console.log(`${index + 1}. UID: ${result.uid} | Text: "${result.extractedText}"`);
+            });
+            
+            // Check if all cards show the same text
+            const uniqueTexts = [...new Set(this.testResults.map(r => r.extractedText))];
+            if (uniqueTexts.length === 1) {
+                console.log(`\n⚠️ WARNING: All ${this.testResults.length} cards show the same text: "${uniqueTexts[0]}"`);
+                console.log('This suggests the text might be static data or a reading error.');
+            } else {
+                console.log(`\n✅ Different cards show different text (${uniqueTexts.length} unique texts)`);
+                console.log('This suggests the text is coming from actual card data.');
+            }
+            console.log('=====================================\n');
+        };
+        
+        // Listen for card detection during test
+        this.on('card-detected', this.testHandler);
+        
+        return { success: true, message: 'Test mode started' };
+    }
+
+    async stopCardReadingTest() {
+        if (!this.testModeActive) {
+            return { success: false, message: 'Test mode not active' };
+        }
+        
+        // Remove test handler
+        if (this.testHandler) {
+            this.off('card-detected', this.testHandler);
+            this.testHandler = null;
+        }
+        
+        this.testModeActive = false;
+        
+        console.log('\n🧪 TEST MODE ENDED');
+        console.log(`Total cards tested: ${this.testResults.length}`);
+        
+        const results = [...this.testResults];
+        this.testResults = [];
+        
+        return { 
+            success: true, 
+            message: `Test completed. ${results.length} cards tested.`,
+            results: results
+        };
+    }
+
+    logDetailedCardInfo(cardData) {
+        console.log('\n🔍 DETAILED CARD ANALYSIS:');
+        console.log('=====================================');
+        console.log(`Card UID: ${cardData.uid}`);
+        console.log(`Card Type: ${cardData.type}`);
+        console.log(`ATR: ${cardData.atr ? cardData.atr.toString('hex') : 'N/A'}`);
+        console.log(`Standard: ${cardData.standard}`);
+        console.log(`Total Blocks Read: ${cardData.blocks ? cardData.blocks.length : 0}`);
+        
+        if (cardData.blocks && cardData.blocks.length > 0) {
+            console.log('\n📊 BLOCK ANALYSIS:');
+            cardData.blocks.forEach(block => {
+                console.log(`Block ${block.block}:`);
+                console.log(`  Hex: ${block.data}`);
+                console.log(`  Length: ${block.length} bytes`);
+                console.log(`  ASCII: "${Buffer.from(block.data, 'hex').toString('ascii')}"`);
+                console.log(`  UTF-8: "${Buffer.from(block.data, 'hex').toString('utf8')}"`);
+                if (block.textContent) {
+                    console.log(`  Extracted Text: "${block.textContent}"`);
+                }
+                console.log('');
+            });
+        }
+        
+        console.log(`Final Extracted Text: "${cardData.extractedText}"`);
+        console.log('=====================================\n');
     }
 }
 

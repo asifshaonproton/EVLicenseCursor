@@ -25,11 +25,23 @@ class DatabaseManager {
             this.dbPath = path.join(dbDir, 'evlicense.db');
             console.log(`📁 Database path: ${this.dbPath}`);
             
+            // Check if database exists and has schema issues
+            if (fs.existsSync(this.dbPath)) {
+                const needsReset = await this.checkDatabaseSchema();
+                if (needsReset) {
+                    console.log('🔄 Database schema issues detected, resetting database...');
+                    await this.resetDatabase();
+                }
+            }
+            
             // Open database connection
             await this.openDatabase();
             
             // Create tables if they don't exist
             await this.createTables();
+            
+            // Migrate existing database if needed
+            await this.migrateDatabase();
             
             // Insert sample data if database is empty
             await this.insertSampleData();
@@ -40,6 +52,64 @@ class DatabaseManager {
             return true;
         } catch (error) {
             console.error('❌ Failed to initialize Database Manager:', error);
+            throw error;
+        }
+    }
+
+    async checkDatabaseSchema() {
+        try {
+            // Temporarily open database to check schema
+            const tempDb = new sqlite3.Database(this.dbPath);
+            
+            return new Promise((resolve, reject) => {
+                tempDb.get("PRAGMA table_info(licenses)", (error, row) => {
+                    if (error) {
+                        // Table doesn't exist or other error
+                        tempDb.close();
+                        resolve(true); // Needs reset
+                    } else {
+                        // Check if table has old schema
+                        tempDb.all("PRAGMA table_info(licenses)", (error, rows) => {
+                            tempDb.close();
+                            if (error) {
+                                resolve(true);
+                            } else {
+                                const columnNames = rows.map(col => col.name);
+                                const hasOldSchema = columnNames.includes('owner_name') || columnNames.includes('license_number');
+                                const hasNewSchema = columnNames.includes('holderName') || columnNames.includes('licenseNumber');
+                                
+                                // If we have old schema but not new schema, we need to reset
+                                resolve(hasOldSchema && !hasNewSchema);
+                            }
+                        });
+                    }
+                });
+            });
+        } catch (error) {
+            console.error('❌ Error checking database schema:', error);
+            return true; // Reset on error
+        }
+    }
+
+    async resetDatabase() {
+        try {
+            console.log('🔄 Resetting database...');
+            
+            // Close existing connection if open
+            if (this.db) {
+                this.db.close();
+                this.db = null;
+            }
+            
+            // Delete the database file
+            if (fs.existsSync(this.dbPath)) {
+                fs.unlinkSync(this.dbPath);
+                console.log('🗑️ Deleted old database file');
+            }
+            
+            console.log('✅ Database reset completed');
+        } catch (error) {
+            console.error('❌ Error resetting database:', error);
             throw error;
         }
     }
@@ -60,7 +130,7 @@ class DatabaseManager {
 
     async createTables() {
         const tables = [
-            // Licenses table - Updated with unified field names
+            // Licenses table - Updated to match Android app structure
             `CREATE TABLE IF NOT EXISTS licenses (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 holderName TEXT NOT NULL,
@@ -101,43 +171,28 @@ class DatabaseManager {
             // Activity Log table
             `CREATE TABLE IF NOT EXISTS activity_log (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                timestamp TEXT DEFAULT CURRENT_TIMESTAMP,
                 action_type TEXT NOT NULL,
                 entity_type TEXT NOT NULL,
                 entity_id INTEGER,
                 description TEXT,
-                user_info TEXT,
-                additional_data TEXT
+                additional_data TEXT,
+                timestamp TEXT DEFAULT CURRENT_TIMESTAMP
             )`,
             
-            // System Settings table
+            // Settings table
             `CREATE TABLE IF NOT EXISTS settings (
-                key TEXT PRIMARY KEY,
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                key TEXT UNIQUE NOT NULL,
                 value TEXT,
-                description TEXT,
                 updated_at TEXT DEFAULT CURRENT_TIMESTAMP
             )`
         ];
 
-        for (const tableSQL of tables) {
-            await this.runQuery(tableSQL);
+        for (const table of tables) {
+            await this.runQuery(table);
         }
-
-        // Create indexes for better performance
-        const indexes = [
-            'CREATE INDEX IF NOT EXISTS idx_licenses_number ON licenses(license_number)',
-            'CREATE INDEX IF NOT EXISTS idx_licenses_status ON licenses(status)',
-            'CREATE INDEX IF NOT EXISTS idx_licenses_expiry ON licenses(expiry_date)',
-            'CREATE INDEX IF NOT EXISTS idx_nfc_cards_uid ON nfc_cards(card_uid)',
-            'CREATE INDEX IF NOT EXISTS idx_activity_log_timestamp ON activity_log(timestamp)',
-            'CREATE INDEX IF NOT EXISTS idx_activity_log_type ON activity_log(action_type)'
-        ];
-
-        for (const indexSQL of indexes) {
-            await this.runQuery(indexSQL);
-        }
-
-        console.log('✅ Database tables and indexes created successfully');
+        
+        console.log('✅ Database tables created successfully');
     }
 
     async insertSampleData() {
@@ -151,69 +206,78 @@ class DatabaseManager {
 
             console.log('📊 Inserting sample data...');
 
+            // Insert sample licenses - Updated to match Android app structure
             const sampleLicenses = [
                 {
-                    license_number: 'EV001-2024',
-                    owner_name: 'John Smith',
-                    owner_email: 'john.smith@email.com',
-                    owner_phone: '+1-555-0101',
-                    vehicle_make: 'Tesla',
-                    vehicle_model: 'Model 3',
-                    vehicle_year: 2023,
-                    vehicle_vin: '5YJ3E1EA1KF123456',
-                    vehicle_color: 'Pearl White',
-                    license_type: 'Premium',
-                    issue_date: '2024-01-15',
-                    expiry_date: '2025-01-15',
+                    holderName: 'John Smith',
+                    mobile: '+1-555-0101',
+                    city: 'Rangpur',
+                    licenseType: 'A',
+                    licenseNumber: 'EV001-2024',
+                    nfcCardNumber: '04A1B2C3D4E5F6',
+                    validityDate: '2025-01-15',
+                    email: 'john.smith@email.com',
+                    vehicleMake: 'Tesla',
+                    vehicleModel: 'Model 3',
+                    vehicleYear: 2023,
+                    vehicleColor: 'Pearl White',
+                    vehicleVin: '5YJ3E1EA1KF123456',
                     status: 'Active',
+                    issueDate: '2024-01-15',
                     notes: 'First time EV owner, requires basic training'
                 },
                 {
-                    license_number: 'EV002-2024',
-                    owner_name: 'Sarah Johnson',
-                    owner_email: 'sarah.johnson@email.com',
-                    owner_phone: '+1-555-0102',
-                    vehicle_make: 'Nissan',
-                    vehicle_model: 'Leaf',
-                    vehicle_year: 2022,
-                    vehicle_vin: '1N4AZ1CP1KC234567',
-                    vehicle_color: 'Electric Blue',
-                    license_type: 'Standard',
-                    issue_date: '2024-02-01',
-                    expiry_date: '2025-02-01',
+                    holderName: 'Sarah Johnson',
+                    mobile: '+1-555-0102',
+                    city: 'Narayanganj',
+                    licenseType: 'R',
+                    licenseNumber: 'EV002-2024',
+                    nfcCardNumber: '04B2C3D4E5F6A1',
+                    validityDate: '2025-02-01',
+                    email: 'sarah.johnson@email.com',
+                    vehicleMake: 'Nissan',
+                    vehicleModel: 'Leaf',
+                    vehicleYear: 2022,
+                    vehicleColor: 'Electric Blue',
+                    vehicleVin: '1N4AZ1CP1KC234567',
                     status: 'Active',
+                    issueDate: '2024-02-01',
                     notes: 'Experienced EV driver'
                 },
                 {
-                    license_number: 'EV003-2024',
-                    owner_name: 'Michael Chen',
-                    owner_email: 'michael.chen@email.com',
-                    owner_phone: '+1-555-0103',
-                    vehicle_make: 'BMW',
-                    vehicle_model: 'iX',
-                    vehicle_year: 2024,
-                    vehicle_vin: 'WBY8P8C04P7345678',
-                    vehicle_color: 'Mineral Grey',
-                    license_type: 'Commercial',
-                    issue_date: '2024-01-20',
-                    expiry_date: '2025-01-20',
+                    holderName: 'Michael Chen',
+                    mobile: '+1-555-0103',
+                    city: 'Rangpur',
+                    licenseType: 'V',
+                    licenseNumber: 'EV003-2024',
+                    nfcCardNumber: '04C3D4E5F6A1B2',
+                    validityDate: '2025-01-20',
+                    email: 'michael.chen@email.com',
+                    vehicleMake: 'BMW',
+                    vehicleModel: 'iX',
+                    vehicleYear: 2024,
+                    vehicleColor: 'Mineral Grey',
+                    vehicleVin: 'WBY8P8C04P7345678',
                     status: 'Active',
+                    issueDate: '2024-01-20',
                     notes: 'Commercial fleet vehicle'
                 },
                 {
-                    license_number: 'EV004-2023',
-                    owner_name: 'Emily Davis',
-                    owner_email: 'emily.davis@email.com',
-                    owner_phone: '+1-555-0104',
-                    vehicle_make: 'Chevrolet',
-                    vehicle_model: 'Bolt EV',
-                    vehicle_year: 2023,
-                    vehicle_vin: '1G1FY6S01N4456789',
-                    vehicle_color: 'Summit White',
-                    license_type: 'Standard',
-                    issue_date: '2023-12-01',
-                    expiry_date: '2024-12-01',
+                    holderName: 'Emily Davis',
+                    mobile: '+1-555-0104',
+                    city: 'Narayanganj',
+                    licenseType: 'M',
+                    licenseNumber: 'EV004-2023',
+                    nfcCardNumber: '04D4E5F6A1B2C3',
+                    validityDate: '2024-12-01',
+                    email: 'emily.davis@email.com',
+                    vehicleMake: 'Chevrolet',
+                    vehicleModel: 'Bolt EV',
+                    vehicleYear: 2023,
+                    vehicleColor: 'Summit White',
+                    vehicleVin: '1G1FY6S01N4456789',
                     status: 'Expired',
+                    issueDate: '2023-12-01',
                     notes: 'License expired, renewal required'
                 }
             ];
@@ -224,17 +288,17 @@ class DatabaseManager {
 
             // Insert sample settings
             const sampleSettings = [
-                { key: 'app_version', value: '1.0.0', description: 'Application version' },
-                { key: 'database_version', value: '1.0', description: 'Database schema version' },
-                { key: 'last_backup', value: '', description: 'Last database backup timestamp' },
-                { key: 'auto_backup_enabled', value: 'true', description: 'Enable automatic database backups' },
-                { key: 'nfc_polling_interval', value: '1000', description: 'NFC card polling interval in milliseconds' }
+                { key: 'app_version', value: '1.0.0' },
+                { key: 'database_version', value: '1.0' },
+                { key: 'last_backup', value: '' },
+                { key: 'auto_backup_enabled', value: 'true' },
+                { key: 'nfc_polling_interval', value: '1000' }
             ];
 
             for (const setting of sampleSettings) {
                 await this.runQuery(
-                    'INSERT OR REPLACE INTO settings (key, value, description) VALUES (?, ?, ?)',
-                    [setting.key, setting.value, setting.description]
+                    'INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)',
+                    [setting.key, setting.value]
                 );
             }
 
@@ -524,6 +588,147 @@ class DatabaseManager {
             return stats;
         } catch (error) {
             console.error('❌ Error getting dashboard stats:', error);
+            throw error;
+        }
+    }
+
+    async migrateDatabase() {
+        try {
+            console.log('🔄 Migrating database schema...');
+
+            // Get current table structure
+            const licensesTableInfo = await this.getAllQuery('PRAGMA table_info(licenses)');
+            const existingColumns = licensesTableInfo.map(col => col.name);
+            
+            console.log('📊 Current licenses table columns:', existingColumns);
+
+            // Check if we need to migrate from old schema to new schema
+            const hasOldSchema = existingColumns.includes('owner_name') || existingColumns.includes('license_number');
+            const hasNewSchema = existingColumns.includes('holderName') || existingColumns.includes('licenseNumber');
+
+            if (hasOldSchema && !hasNewSchema) {
+                console.log('🔄 Migrating from old schema to new schema...');
+                await this.migrateFromOldSchema();
+            } else if (!hasOldSchema && !hasNewSchema) {
+                console.log('📝 Creating new database with current schema...');
+                // Table will be created with new schema in createTables()
+            } else {
+                console.log('✅ Database schema is up to date.');
+            }
+
+            // Add any missing columns for the new schema
+            await this.addMissingColumns();
+
+            console.log('✅ Database schema migration completed.');
+        } catch (error) {
+            console.error('❌ Error during database migration:', error);
+            throw error;
+        }
+    }
+
+    async migrateFromOldSchema() {
+        try {
+            console.log('🔄 Starting schema migration...');
+
+            // Create a backup of the current data
+            const oldData = await this.getAllQuery('SELECT * FROM licenses');
+            console.log(`📊 Found ${oldData.length} existing licenses to migrate`);
+
+            // Drop the old table
+            await this.runQuery('DROP TABLE IF EXISTS licenses');
+
+            // Recreate the table with new schema
+            await this.createTables();
+
+            // Migrate the data with field mapping
+            for (const oldLicense of oldData) {
+                const newLicense = {
+                    holderName: oldLicense.owner_name || oldLicense.holderName,
+                    mobile: oldLicense.owner_phone || oldLicense.mobile,
+                    city: oldLicense.city,
+                    licenseType: oldLicense.license_type || oldLicense.licenseType || 'Standard',
+                    licenseNumber: oldLicense.license_number || oldLicense.licenseNumber,
+                    nfcCardNumber: oldLicense.nfc_card_id || oldLicense.nfcCardNumber,
+                    validityDate: oldLicense.expiry_date || oldLicense.validityDate,
+                    email: oldLicense.owner_email || oldLicense.email,
+                    vehicleMake: oldLicense.vehicle_make || oldLicense.vehicleMake,
+                    vehicleModel: oldLicense.vehicle_model || oldLicense.vehicleModel,
+                    vehicleYear: oldLicense.vehicle_year || oldLicense.vehicleYear,
+                    vehicleColor: oldLicense.vehicle_color || oldLicense.vehicleColor,
+                    vehicleVin: oldLicense.vehicle_vin || oldLicense.vehicleVin,
+                    status: oldLicense.status || 'Active',
+                    issueDate: oldLicense.issue_date || oldLicense.issueDate,
+                    notes: oldLicense.notes
+                };
+
+                await this.addLicense(newLicense);
+            }
+
+            console.log(`✅ Successfully migrated ${oldData.length} licenses to new schema`);
+        } catch (error) {
+            console.error('❌ Error during schema migration:', error);
+            throw error;
+        }
+    }
+
+    async addMissingColumns() {
+        try {
+            const licensesTableInfo = await this.getAllQuery('PRAGMA table_info(licenses)');
+            const existingColumns = licensesTableInfo.map(col => col.name);
+
+            // Define required columns for new schema
+            const requiredColumns = [
+                { name: 'holderName', type: 'TEXT NOT NULL' },
+                { name: 'mobile', type: 'TEXT NOT NULL' },
+                { name: 'city', type: 'TEXT' },
+                { name: 'licenseType', type: 'TEXT DEFAULT \'Standard\'' },
+                { name: 'licenseNumber', type: 'TEXT UNIQUE NOT NULL' },
+                { name: 'nfcCardNumber', type: 'TEXT' },
+                { name: 'validityDate', type: 'TEXT NOT NULL' },
+                { name: 'email', type: 'TEXT' },
+                { name: 'vehicleMake', type: 'TEXT' },
+                { name: 'vehicleModel', type: 'TEXT' },
+                { name: 'vehicleYear', type: 'INTEGER' },
+                { name: 'vehicleColor', type: 'TEXT' },
+                { name: 'vehicleVin', type: 'TEXT' },
+                { name: 'status', type: 'TEXT DEFAULT \'Active\'' },
+                { name: 'issueDate', type: 'TEXT' },
+                { name: 'notes', type: 'TEXT' },
+                { name: 'createdAt', type: 'TEXT DEFAULT CURRENT_TIMESTAMP' },
+                { name: 'updatedAt', type: 'TEXT DEFAULT CURRENT_TIMESTAMP' }
+            ];
+
+            // Add missing columns
+            for (const column of requiredColumns) {
+                if (!existingColumns.includes(column.name)) {
+                    console.log(`➕ Adding missing column: ${column.name}`);
+                    await this.runQuery(`ALTER TABLE licenses ADD COLUMN ${column.name} ${column.type}`);
+                }
+            }
+
+            // Handle NFC cards table
+            const nfcCardsTableInfo = await this.getAllQuery('PRAGMA table_info(nfc_cards)');
+            const nfcExistingColumns = nfcCardsTableInfo.map(col => col.name);
+
+            const nfcRequiredColumns = [
+                { name: 'card_type', type: 'TEXT' },
+                { name: 'data_content', type: 'TEXT' },
+                { name: 'is_active', type: 'INTEGER DEFAULT 1' },
+                { name: 'first_detected', type: 'TEXT DEFAULT CURRENT_TIMESTAMP' },
+                { name: 'last_seen', type: 'TEXT DEFAULT CURRENT_TIMESTAMP' },
+                { name: 'read_count', type: 'INTEGER DEFAULT 0' },
+                { name: 'write_count', type: 'INTEGER DEFAULT 0' }
+            ];
+
+            for (const column of nfcRequiredColumns) {
+                if (!nfcExistingColumns.includes(column.name)) {
+                    console.log(`➕ Adding missing NFC column: ${column.name}`);
+                    await this.runQuery(`ALTER TABLE nfc_cards ADD COLUMN ${column.name} ${column.type}`);
+                }
+            }
+
+        } catch (error) {
+            console.error('❌ Error adding missing columns:', error);
             throw error;
         }
     }
