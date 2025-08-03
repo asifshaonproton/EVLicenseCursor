@@ -66,22 +66,22 @@ class DatabaseManager {
             // Licenses table - Updated with unified field names
             `CREATE TABLE IF NOT EXISTS licenses (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                holderName TEXT NOT NULL,
-                mobile TEXT NOT NULL,
-                city TEXT,
+                holderName TEXT NULL,
+                mobile TEXT NULL,
+                city TEXT NULL,
                 licenseType TEXT DEFAULT 'Standard',
                 licenseNumber TEXT UNIQUE NOT NULL,
-                nfcCardNumber TEXT,
+                nfcCardNumber TEXT NULL,
                 validityDate TEXT NOT NULL,
-                email TEXT,
-                vehicleMake TEXT,
-                vehicleModel TEXT,
-                vehicleYear INTEGER,
-                vehicleColor TEXT,
-                vehicleVin TEXT,
+                email TEXT NULL,
+                vehicleMake TEXT NULL,
+                vehicleModel TEXT NULL,
+                vehicleYear INTEGER NULL,
+                vehicleColor TEXT NULL,
+                vehicleVin TEXT NULL,
                 status TEXT DEFAULT 'Active',
-                issueDate TEXT,
-                notes TEXT,
+                issueDate TEXT NULL,
+                notes TEXT NULL,
                 createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
                 updatedAt TEXT DEFAULT CURRENT_TIMESTAMP
             )`,
@@ -135,8 +135,8 @@ class DatabaseManager {
                 last_login TEXT,
                 login_attempts INTEGER DEFAULT 0,
                 locked_until TEXT,
-                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-                updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
+                updatedAt TEXT DEFAULT CURRENT_TIMESTAMP,
                 created_by INTEGER,
                 FOREIGN KEY (role_id) REFERENCES roles (id),
                 FOREIGN KEY (created_by) REFERENCES users (id)
@@ -150,7 +150,7 @@ class DatabaseManager {
                 description TEXT,
                 permissions TEXT NOT NULL, -- JSON string of permissions
                 is_active INTEGER DEFAULT 1,
-                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
                 updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
                 created_by INTEGER,
                 FOREIGN KEY (created_by) REFERENCES users (id)
@@ -162,7 +162,7 @@ class DatabaseManager {
                 user_id INTEGER NOT NULL,
                 session_token TEXT UNIQUE NOT NULL,
                 expires_at TEXT NOT NULL,
-                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
                 last_activity TEXT DEFAULT CURRENT_TIMESTAMP,
                 ip_address TEXT,
                 user_agent TEXT,
@@ -188,9 +188,9 @@ class DatabaseManager {
 
         // Create indexes for better performance
         const indexes = [
-            'CREATE INDEX IF NOT EXISTS idx_licenses_number ON licenses(license_number)',
+            'CREATE INDEX IF NOT EXISTS idx_licenses_number ON licenses(licenseNumber)',
             'CREATE INDEX IF NOT EXISTS idx_licenses_status ON licenses(status)',
-            'CREATE INDEX IF NOT EXISTS idx_licenses_expiry ON licenses(expiry_date)',
+            'CREATE INDEX IF NOT EXISTS idx_licenses_expiry ON licenses(validityDate)',
             'CREATE INDEX IF NOT EXISTS idx_nfc_cards_uid ON nfc_cards(card_uid)',
             'CREATE INDEX IF NOT EXISTS idx_activity_log_timestamp ON activity_log(timestamp)',
             'CREATE INDEX IF NOT EXISTS idx_activity_log_type ON activity_log(action_type)',
@@ -236,7 +236,7 @@ class DatabaseManager {
                     vehicle_color: 'Pearl White',
                     license_type: 'Premium',
                     issue_date: '2024-01-15',
-                    expiry_date: '2025-01-15',
+                    validityDate: '2025-01-15',
                     status: 'Active',
                     notes: 'First time EV owner, requires basic training'
                 },
@@ -252,7 +252,7 @@ class DatabaseManager {
                     vehicle_color: 'Electric Blue',
                     license_type: 'Standard',
                     issue_date: '2024-02-01',
-                    expiry_date: '2025-02-01',
+                    validityDate: '2025-02-01',
                     status: 'Active',
                     notes: 'Experienced EV driver'
                 },
@@ -268,7 +268,7 @@ class DatabaseManager {
                     vehicle_color: 'Mineral Grey',
                     license_type: 'Commercial',
                     issue_date: '2024-01-20',
-                    expiry_date: '2025-01-20',
+                    validityDate: '2025-01-20',
                     status: 'Active',
                     notes: 'Commercial fleet vehicle'
                 },
@@ -284,7 +284,7 @@ class DatabaseManager {
                     vehicle_color: 'Summit White',
                     license_type: 'Standard',
                     issue_date: '2023-12-01',
-                    expiry_date: '2024-12-01',
+                    validityDate: '2024-12-01',
                     status: 'Expired',
                     notes: 'License expired, renewal required'
                 }
@@ -362,7 +362,7 @@ class DatabaseManager {
                 SELECT l.*, c.card_uid, c.card_type 
                 FROM licenses l 
                 LEFT JOIN nfc_cards c ON l.id = c.license_id AND c.is_active = 1
-                ORDER BY l.created_at DESC
+                ORDER BY l.createdAt DESC
             `);
             
             await this.logActivity('READ', 'licenses', null, 'Retrieved all licenses');
@@ -534,7 +534,7 @@ class DatabaseManager {
             thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
             const expiringResult = await this.getQuery(`
                 SELECT COUNT(*) as count FROM licenses 
-                WHERE date(expiry_date) <= date(?) AND status = 'Active'
+                WHERE date(validityDate) <= date(?) AND status = 'Active'
             `, [thirtyDaysFromNow.toISOString().split('T')[0]]);
             stats.expiringIn30Days = expiringResult.count;
 
@@ -813,13 +813,13 @@ class DatabaseManager {
     async getAllUsers() {
         try {
             return await this.getAllQuery(`
-                SELECT u.id, u.username, u.email, u.full_name, u.is_active, u.last_login, u.created_at,
+                SELECT u.id, u.username, u.email, u.full_name, u.is_active, u.last_login, u.createdAt,
                        r.display_name as role_name, r.name as role_code,
                        creator.full_name as created_by_name
                 FROM users u
                 JOIN roles r ON u.role_id = r.id
                 LEFT JOIN users creator ON u.created_by = creator.id
-                ORDER BY u.created_at DESC
+                ORDER BY u.createdAt DESC
             `);
         } catch (error) {
             console.error('❌ Error getting all users:', error);
@@ -830,7 +830,7 @@ class DatabaseManager {
     async getAllRoles() {
         try {
             return await this.getAllQuery(`
-                SELECT id, name, display_name, description, permissions, is_active, created_at
+                SELECT id, name, display_name, description, permissions, is_active, createdAt
                 FROM roles
                 WHERE is_active = 1
                 ORDER BY name
