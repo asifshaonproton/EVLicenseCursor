@@ -1,172 +1,326 @@
-# OS generated files
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-
-# Node.js
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-lerna-debug.log*
-
-# Electron
-dist/
-build/
-out/
-*.tgz
-*.tar.gz
-
-# Environment variables
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-
-# IDE and Editor files
-.vscode/
+# ====================================
+# ⚙️  Android Studio / Gradle Defaults
+# ====================================
+.gradle/
 .idea/
-*.swp
-*.swo
-*~
+*.iml
+*.ipr
+*.iws
+build/
+captures/
+local.properties
+.externalNativeBuild/
+.cxx/
+.gradle/
+.kts
 
-# Logs
-logs
-*.log
+# Kotlin DSL caches
+.kotlinc/
 
-# Runtime data
-pids
-*.pid
-*.seed
-*.pid.lock
+# Jetpack Compose build cache
+compose-compiler/
 
-# Coverage directory used by tools like istanbul
-coverage/
-*.lcov
+# Unit test logs and outputs
+test-results/
+test-output/
 
-# nyc test coverage
-.nyc_output
-
-# Dependency directories
-jspm_packages/
-
-# Optional npm cache directory
-.npm
-
-# Optional eslint cache
-.eslintcache
-
-# Microbundle cache
-.rpt2_cache/
-.rts2_cache_cjs/
-.rts2_cache_es/
-.rts2_cache_umd/
-
-# Optional REPL history
-.node_repl_history
-
-# Output of 'npm pack'
-*.tgz
-
-# Yarn Integrity file
-.yarn-integrity
-
-# parcel-bundler cache (https://parceljs.org/)
-.cache
-.parcel-cache
-
-# Next.js build output
-.next
-
-# Nuxt.js build / generate output
-.nuxt
-
-# Gatsby files
-.cache/
-public
-
-# Storybook build outputs
-.out
-.storybook-out
-
-# Temporary folders
-tmp/
-temp/
-
-# Electron Builder
-dist_electron/
-
-# Database files
-*.db
-*.sqlite
-*.sqlite3
-
-# NFC Reader specific
+# ====================================
+# 🔐 Security / Secrets
+# ====================================
+*.keystore
+*.jks
 *.pem
 *.key
 *.crt
+*.p12
+*.der
+*.asc
+*.gpg
+*.env
+.env.*
+google-services.json
+firebase-debug.log
+secrets.xml
 
-# Android specific (for EVLicenseApp)
-EVLicenseApp/.gradle/
-EVLicenseApp/app/build/
-EVLicenseApp/build/
-EVLicenseApp/local.properties
-EVLicenseApp/.idea/
-EVLicenseApp/*.iml
-EVLicenseApp/app/release/
-EVLicenseApp/app/debug/
+# ====================================
+# 📦 Dependency Caches
+# ====================================
+/.mvn/
+/node_modules/
+/.yarn/
+/.pnpm-store/
+/.pnpm-debug.log
+*.lock
+*.tgz
 
-# macOS specific
-EVLicenseApp/.DS_Store
-EVLicenseApp/app/.DS_Store
+# Gradle cache
+.gradle/
+build/
 
-# Windows specific
-EVLicenseApp/app/Thumbs.db
-EVLicenseApp/app/ehthumbs.db
+# Android Gradle Plugin cache
+.intermediates/
+.generated/
 
-# Linux specific
-EVLicenseApp/app/*~
+# ====================================
+# 🧪 Test Coverage & Reports
+# ====================================
+coverage/
+*.ec
+*.exec
+*.hprof
 
-# Build artifacts
-EVLicenseApp/app/build/
-EVLicenseApp/build/
-EVLicenseApp/release/
-EVLicenseApp/debug/
+# Jacoco
+jacoco.exec
+jacocoTest.exec
 
-# Generated files
-EVLicenseApp/app/src/main/assets/generated/
-EVLicenseApp/app/src/main/res/generated/
+# Lint
+lint/
+lint-report.html
+lint-results.xml
 
-# Test coverage
-EVLicenseApp/app/coverage/
-EVLicenseApp/coverage/
+# ====================================
+# 🧪 Emulator / Device / Debug
+# ====================================
+*.ap_
+*.apk
+*.aab
+*.dex
+*.class
+*.so
+*.o
+*.obj
 
-# Local configuration
-EVLicenseApp/local.properties
-EVLicenseApp/gradle.properties.local
+# Crash logs
+*.stacktrace
+crashlytics-build.properties
 
-# Backup files
+# Profiler
+*.hprof
+
+# adb pull files
+*.sqlite
+*.db
+*.log
+
+# ====================================
+# 🪟 OS / Editor Junk
+# ====================================
+.DS_Store
+Thumbs.db
+ehthumbs.db
+desktop.ini
+*.swp
+*~
+*#
+
+# VSCode
+.vscode/
+.history/
+
+# ====================================
+# 📦 Output Archives
+# ====================================
+*.zip
+*.tar.gz
+*.7z
+*.rar
 *.bak
 *.backup
 *.old
 
-# Archive files
+# ====================================
+# 📤 CI/CD & Build Tools
+# ====================================
+.ci/
+output/
+dist/
+release/
+out/
+tmp/
+temp/
+.idea/libraries/
+.idea/modules.xml
+.idea/workspace.xml
+
+# ====================================
+# 🛠️ Android Studio UX Settings (optional)
+# ====================================
+.idea/gradle.xml
+.idea/assetWizardSettings.xml
+.idea/compiler.xml
+.idea/caches/
+.idea/tasks.xml
+.idea/usage.statistics.xml
+.idea/dictionaries/
+.idea/navEditor.xml
+.idea/other.xml
+.idea/misc.xml
+EVLicenseApp/app/.DS_Store
+EVLicenseApp/.DS_Store
+EVLicenseApp/.DS_Store
+EVLicenseApp/.gradle/8.7/executionHistory/executionHistory.bin
+
+# ====================================
+# 🧱 Core Node.js
+# ====================================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+bun.lockb
+.env*
+.env.*
+.npmrc
+
+# ====================================
+# 🔥 Build / Dist
+# ====================================
+dist/
+build/
+out/
+tmp/
+temp/
+.cache/
+.esbuild/
+.vite/
+.next/
+.nuxt/
+.svelte-kit/
+storybook-static/
+.cypress_cache/
+coverage/
+*.tsbuildinfo
+
+# ====================================
+# ⚙️ Tooling / Dev Stuff
+# ====================================
+.rpt2_cache/
+.rts2_cache_*/
+.nyc_output/
+.husky/_/
+.prettier-cache/
+.stylelintcache
+.jest/
+jest-cache/
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# ====================================
+# 💣 OS Junk
+# ====================================
+.DS_Store
+Thumbs.db
+ehthumbs.db
+*.swp
+*~
+*.log
+*.bak
+*.old
+*.orig
+
+# ====================================
+# 📜 Certificates / Keys / Secrets
+# ====================================
+*.pem
+*.key
+*.crt
+*.pfx
+*.cert
+*.asc
+*.gpg
+*.enc
+*.srl
+*.csr
+*.p12
+*.p7b
+*.jks
+
+# ====================================
+# 📦 Misc Tools
+# ====================================
+.npm/
+bower_components/
+jspm_packages/
+.terraform/
+.docker/
+docker-compose.override.yml
+*.tgz
+
+# ====================================
+# 🚀 Monorepo / Workspace Tools
+# ====================================
+lerna-debug.log
+.turbo/
+turbo/
+.pnpm-store/
+.vscode-test/
+
+# ====================================
+# 🧪 Testing
+# ====================================
+mochawesome-report/
+test-results/
+*.test.js
+*.spec.js
+*.test.ts
+*.spec.ts
+__tests__/
+__mocks__/
+*.snap
+*.lint
+
+# ====================================
+# 🧬 TypeScript
+# ====================================
+*.tsbuildinfo
+*.d.ts
+tsconfig.tsbuildinfo
+
+# ====================================
+# 💾 SQLite / Local DB
+# ====================================
+*.db
+*.sqlite
+*.sqlite3
+*.seed
+*.dump
+
+# ====================================
+# 💥 Output Archives / Installer
+# ====================================
 *.zip
 *.rar
 *.7z
-
-# Executable files
+*.tar
+*.gz
+*.bz2
+*.xz
 *.exe
+*.msi
 *.dmg
-*.deb
-*.rpm
+*.pkg
 *.AppImage
 
-# Package files
-*.msi
-*.pkg
+# ====================================
+# 🛑 Deployment / Hosting
+# ====================================
+.vercel/
+.netlify/
+firebase-debug.log
+functions/lib/
+functions/node_modules/
+public/
+
+# ====================================
+# ⚙️ Misc
+# ====================================
+*.pid
+*.pid.lock
+yarn-error.log
+

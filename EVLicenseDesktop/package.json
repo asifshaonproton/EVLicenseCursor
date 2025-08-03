@@ -5,8 +5,9 @@
   "main": "src/main/main.js",
   "scripts": {
     "start": "electron .",
-    "dev": "electron . --dev",
     "build": "electron-builder",
+    "rebuild": "electron-rebuild -f -w nfc-pcsc",
+    "dev": "electron . --dev",
     "build-win": "electron-builder --win",
     "build-mac": "electron-builder --mac",
     "build-linux": "electron-builder --linux",
@@ -14,16 +15,15 @@
     "dist-win": "npm run build-win",
     "dist-mac": "npm run build-mac",
     "dist-linux": "npm run build-linux",
-    "release": "electron-builder --publish always",
-    "release-win": "electron-builder --win --publish always",
-    "release-mac": "electron-builder --mac --publish always",
-    "release-linux": "electron-builder --linux --publish always",
+    "release": "electron-builder --publish=always",
+    "release-win": "electron-builder --win --publish=always",
+    "release-mac": "electron-builder --mac --publish=always",
+    "release-linux": "electron-builder --linux --publish=always",
     "pack": "electron-builder --dir",
     "prerelease": "npm run build",
     "build-script": "node scripts/build-release.js",
     "build-all": "node scripts/build-release.js --all --clean",
-    "rebuild": "electron-rebuild -f",
-    "postinstall": "electron-builder install-app-deps",
+    "postinstall": "electron-rebuild",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
@@ -37,12 +37,12 @@
   "author": "Talukdar & Son's, Software Eng. Asif Hossain",
   "license": "MIT",
   "devDependencies": {
-    "electron": "^36.2.0",
-    "electron-builder": "^26.0.12",
-    "electron-rebuild": "^3.7.2"
+    "electron": "^30.0.0",
+    "electron-builder": "^24.13.0",
+    "electron-rebuild": "^3.2.9"
   },
   "dependencies": {
-    "electron-updater": "^6.6.5",
+    "electron-updater": "^6.6.2",
     "express": "^4.21.2",
     "ndef": "^0.2.0",
     "nfc-pcsc": "^0.8.1",
@@ -55,7 +55,7 @@
     "copyright": "Copyright © 2024 Talukdar & Son's",
     "directories": {
       "output": "dist",
-      "buildResources": "assets"
+      "buildResources": "build"
     },
     "files": [
       "src/**/*",
@@ -72,11 +72,9 @@
         ]
       }
     ],
-    "npmRebuild": false,
-    "buildDependenciesFromSource": false,
     "mac": {
       "category": "public.app-category.business",
-      "icon": "assets/icon.icns",
+      "icon": "build/icon.icns",
       "target": [
         {
           "target": "dmg",
@@ -95,32 +93,41 @@
       ],
       "hardenedRuntime": true,
       "gatekeeperAssess": false,
-      "entitlements": "assets/entitlements.mac.plist",
-      "entitlementsInherit": "assets/entitlements.mac.plist"
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist"
     },
     "win": {
-      "icon": "assets/icon.ico",
+      "icon": "build/icon.ico",
       "target": [
         {
           "target": "nsis",
           "arch": [
-            "x64"
+            "x64",
+            "ia32"
           ]
         },
         {
           "target": "portable",
           "arch": [
-            "x64"
+            "x64",
+            "ia32"
           ]
         }
       ],
-      "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
       "publisherName": "Talukdar & Son's",
       "verifyUpdateCodeSignature": false
     },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "deleteAppDataOnUninstall": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "EV License Desktop"
+    },
     "linux": {
-      "category": "Utility",
-      "icon": "assets/icon.png",
+      "icon": "build/icon.png",
       "target": [
         {
           "target": "AppImage",
@@ -133,27 +140,20 @@
           "arch": [
             "x64"
           ]
+        },
+        {
+          "target": "rpm",
+          "arch": [
+            "x64"
+          ]
         }
       ],
-      "artifactName": "${productName}-${version}-${os}-${arch}.${ext}"
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true,
-      "shortcutName": "EV License Desktop",
-      "uninstallDisplayName": "EV License Desktop",
-      "artifactName": "${productName}-${version}-${os}-${arch}-setup.${ext}"
+      "category": "Office"
     },
     "publish": {
       "provider": "github",
       "owner": "asifshaon",
-      "repo": "EVLicense",
-      "private": true,
-      "releaseType": "release"
-    },
-    "afterSign": "scripts/notarize.js",
-    "afterAllArtifactBuild": "scripts/after-build.js"
+      "repo": "https://github.com/asifshaon/EVLicense"
+    }
   }
 }
